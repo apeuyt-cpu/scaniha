@@ -12,7 +12,7 @@ export default async function SuperAdminDashboard() {
   await requireSuperAdmin()
 
   // Only fetch sensitive data if user is confirmed super_admin
-  let businesses = []
+  let businesses: any[] = []
   try {
     businesses = await getAllBusinesses()
   } catch (error) {

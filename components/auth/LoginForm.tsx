@@ -70,14 +70,14 @@ export default function LoginForm() {
       }
 
       // Get user profile to determine redirect
-      const { data: profile } = await supabase
-        .from('profiles')
+      const { data: profile } = await (supabase
+        .from('profiles') as any)
         .select('role')
         .eq('user_id', data.user.id)
         .maybeSingle()
 
       // Determine redirect URL based on role
-      const redirectUrl = profile?.role === 'super_admin' ? '/super-admin' : '/admin'
+      const redirectUrl = (profile as any)?.role === 'super_admin' ? '/super-admin' : '/admin'
       
       // Use router.push for client-side navigation
       router.push(redirectUrl)

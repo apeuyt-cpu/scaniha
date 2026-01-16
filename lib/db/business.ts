@@ -178,8 +178,8 @@ export async function getAllBusinesses() {
       // Query each profile individually to ensure we get the data
       for (const ownerId of ownerIds) {
         try {
-          const { data: profile, error: profileError } = await profileSupabase
-            .from('profiles')
+          const { data: profile, error: profileError } = await (profileSupabase
+            .from('profiles') as any)
             .select('user_id, email, phone_number')
             .eq('user_id', ownerId)
             .maybeSingle()
@@ -190,9 +190,10 @@ export async function getAllBusinesses() {
           }
           
           if (profile) {
-            const email = profile.email ? String(profile.email).trim() : null
-            const phone = profile.phone_number ? String(profile.phone_number).trim() : null
-            profileMap.set(profile.user_id, {
+            const profileData = profile as any
+            const email = profileData.email ? String(profileData.email).trim() : null
+            const phone = profileData.phone_number ? String(profileData.phone_number).trim() : null
+            profileMap.set(profileData.user_id, {
               email: email,
               phone_number: phone
             })

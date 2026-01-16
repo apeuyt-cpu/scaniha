@@ -10,8 +10,8 @@ export async function POST(request: NextRequest) {
     const adminClient = supabase as any
     
     // Get all businesses to find owner IDs
-    const { data: businesses, error: businessesError } = await supabase
-      .from('businesses')
+    const { data: businesses, error: businessesError } = await (supabase
+      .from('businesses') as any)
       .select('owner_id')
       .not('owner_id', 'is', null)
     
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const ownerIds = Array.from(new Set(businesses?.map(b => b.owner_id).filter(Boolean) || []))
+    const ownerIds = Array.from(new Set((businesses as any[])?.map((b: any) => b.owner_id).filter(Boolean) || []))
     
     if (ownerIds.length === 0) {
       return NextResponse.json({
@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
     }
     
     // Get existing profiles
-    const { data: existingProfiles, error: profilesError } = await supabase
-      .from('profiles')
+    const { data: existingProfiles, error: profilesError } = await (supabase
+      .from('profiles') as any)
       .select('user_id')
       .in('user_id', ownerIds)
     
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       console.error('Error fetching existing profiles:', profilesError)
     }
     
-    const existingProfileIds = new Set(existingProfiles?.map(p => p.user_id) || [])
+    const existingProfileIds = new Set((existingProfiles as any[])?.map((p: any) => p.user_id) || [])
     const missingOwnerIds = ownerIds.filter(id => !existingProfileIds.has(id))
     
     let created = 0
@@ -104,12 +104,11 @@ export async function POST(request: NextRequest) {
           
           if (profileExists) {
             // Update existing profile
-            const { error: updateError } = await supabase
-              .from('profiles')
+            const { error: updateError } = await (supabase
+              .from('profiles') as any)
               .update({
                 email: email,
-                phone_number: phone,
-                updated_at: new Date().toISOString()
+                phone_number: phone
               })
               .eq('user_id', ownerId)
             
@@ -120,14 +119,14 @@ export async function POST(request: NextRequest) {
             }
           } else {
             // Create new profile
-            const { error: insertError } = await supabase
-              .from('profiles')
+            const { error: insertError } = await (supabase
+              .from('profiles') as any)
               .insert({
                 user_id: ownerId,
                 email: email,
                 phone_number: phone,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                role: 'owner',
+                created_at: new Date().toISOString()
               })
             
             if (insertError) {

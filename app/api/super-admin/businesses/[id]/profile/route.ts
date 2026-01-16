@@ -21,8 +21,8 @@ export async function PATCH(
     const supabase = await createServiceRoleClient()
     
     // First, get the business to find owner_id
-    const { data: business, error: businessError } = await supabase
-      .from('businesses')
+    const { data: business, error: businessError } = await (supabase
+      .from('businesses') as any)
       .select('owner_id')
       .eq('id', params.id)
       .single()
@@ -34,12 +34,12 @@ export async function PATCH(
       )
     }
     
-    const ownerId = business.owner_id
+    const ownerId = business.owner_id as string
     
     // Check if profile exists
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('user_id')
+    const { data: existingProfile } = await (supabase
+      .from('profiles') as any)
+      .select('user_id, email, phone_number')
       .eq('user_id', ownerId)
       .maybeSingle()
     
@@ -48,10 +48,9 @@ export async function PATCH(
       const updateData: any = {}
       if (email !== undefined) updateData.email = email || null
       if (phone_number !== undefined) updateData.phone_number = phone_number || null
-      updateData.updated_at = new Date().toISOString()
       
-      const { error: updateError } = await supabase
-        .from('profiles')
+      const { error: updateError } = await (supabase
+        .from('profiles') as any)
         .update(updateData)
         .eq('user_id', ownerId)
       
@@ -72,15 +71,14 @@ export async function PATCH(
       })
     } else {
       // Create new profile
-      const { error: insertError } = await supabase
-        .from('profiles')
+      const { error: insertError } = await (supabase
+        .from('profiles') as any)
         .insert({
           user_id: ownerId,
-          email: email || '',
-          phone_number: phone_number || '',
+          email: email || null,
+          phone_number: phone_number || null,
           role: 'owner',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: new Date().toISOString()
         })
       
       if (insertError) {

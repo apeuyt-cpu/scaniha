@@ -58,7 +58,7 @@ export async function getBusinessWithCategoriesAndItems(businessId: string) {
   // Sort items by position within each category
   // Supabase doesn't support ordering nested relations, so we sort in JavaScript
   if (categories) {
-    categories.forEach(category => {
+    (categories as any[]).forEach((category: any) => {
       if (category.items && Array.isArray(category.items)) {
         category.items.sort((a: any, b: any) => {
           // Sort by position first, then by created_at if position is null or equal

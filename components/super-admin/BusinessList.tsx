@@ -7,7 +7,7 @@ type Business = Database['public']['Tables']['businesses']['Row'] & {
   profiles: {
     email: string
     phone_number: string
-  }
+  } | null
 }
 
 interface BusinessListProps {
@@ -219,10 +219,10 @@ export default function BusinessList({ businesses: initialBusinesses }: Business
                   
                   <div className="space-y-1 text-sm">
                     <p className="text-zinc-600">
-                      <span className="text-zinc-400">البريد:</span> {business.profiles.email}
+                      <span className="text-zinc-400">البريد:</span> {business.profiles?.email || 'غير متوفر'}
                     </p>
                     <p className="text-zinc-600">
-                      <span className="text-zinc-400">الهاتف:</span> {business.profiles.phone_number}
+                      <span className="text-zinc-400">الهاتف:</span> {business.profiles?.phone_number || 'غير متوفر'}
                     </p>
                     <a
                       href={`/${business.slug}`}

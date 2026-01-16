@@ -25,7 +25,11 @@ export async function generateMetadata(): Promise<Metadata> {
         apple: '/logo-icon.png',
       },
     }
-  } catch {
+  } catch (error: any) {
+    // Don't catch redirect errors - let them propagate
+    if (error?.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error
+    }
     return {
       title: 'لوحة التحكم',
       icons: {
@@ -41,12 +45,17 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  let business = null
-  try {
-    const { user } = await requireOwner()
-    business = await getBusinessByOwner(user.id)
-  } catch (error) {
-    // Error handled in AdminLayoutClient
+  // requireOwner will redirect if user is not authenticated or doesn't have owner role
+  // It automatically redirects super_admin users to /super-admin
+  const { user, profile } = await requireOwner()
+  
+  // Get business owned by this user only
+  let business = await getBusinessByOwner(user.id)
+  
+  // Verify business belongs to this user if it exists
+  if (business && business.owner_id !== user.id) {
+    // Security check: business doesn't belong to user
+    business = null // Don't show business if ownership doesn't match
   }
 
   return (

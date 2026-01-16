@@ -4,6 +4,8 @@ import SignupForm from '@/components/auth/SignupForm'
 import Image from 'next/image'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default function SignupPage() {
   return (
     <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-4" dir="rtl">

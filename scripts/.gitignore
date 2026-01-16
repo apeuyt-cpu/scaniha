@@ -1,6 +1,0 @@
-# Ignore backup files generated during migration
-*.json.backup
-*_backup.json
-*_mapping.json
-*_results.json
-

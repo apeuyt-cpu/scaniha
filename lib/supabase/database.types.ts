@@ -12,24 +12,27 @@ export interface Database {
       profiles: {
         Row: {
           user_id: string
-          email: string
-          phone_number: string
+          email: string | null
+          phone_number: string | null
           role: 'owner' | 'super_admin'
           created_at: string
+          updated_at?: string | null
         }
         Insert: {
           user_id: string
-          email: string
-          phone_number: string
+          email?: string | null
+          phone_number?: string | null
           role?: 'owner' | 'super_admin'
           created_at?: string
+          updated_at?: string | null
         }
         Update: {
           user_id?: string
-          email?: string
-          phone_number?: string
+          email?: string | null
+          phone_number?: string | null
           role?: 'owner' | 'super_admin'
           created_at?: string
+          updated_at?: string | null
         }
       }
       businesses: {

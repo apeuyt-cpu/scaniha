@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/supabase/database.types'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
@@ -12,47 +12,80 @@ export default function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     e.stopPropagation()
-    setError(null)
-    setLoading(true)
-
-    const { error: authError, data } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (authError) {
-      setError(authError.message === 'Invalid login credentials' 
-        ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
-        : authError.message)
-      setLoading(false)
+    
+    // Prevent multiple submissions
+    if (isSubmitting || loading) {
       return
     }
+    
+    setError(null)
+    setIsSubmitting(true)
+    setLoading(true)
 
-    // Check user role to redirect appropriately
     try {
+      const { error: authError, data } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (authError) {
+        console.error('Login error:', authError)
+        // Handle rate limiting specifically
+        if (authError.message.includes('rate limit') || authError.message.includes('429') || authError.status === 429) {
+          setError('تم تجاوز الحد المسموح من المحاولات. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.')
+        } else if (authError.message === 'Invalid login credentials' || authError.message.includes('Invalid login')) {
+          setError('البريد الإلكتروني أو كلمة المرور غير صحيحة')
+        } else if (authError.status === 400) {
+          setError('طلب غير صحيح. يرجى التحقق من بياناتك والمحاولة مرة أخرى.')
+        } else {
+          setError(authError.message || 'حدث خطأ أثناء تسجيل الدخول')
+        }
+        setLoading(false)
+        setIsSubmitting(false)
+        return
+      }
+
+      if (!data?.user) {
+        setError('فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.')
+        setLoading(false)
+        setIsSubmitting(false)
+        return
+      }
+
+      // Verify session is established
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        setError('فشل في إنشاء الجلسة. يرجى المحاولة مرة أخرى.')
+        setLoading(false)
+        setIsSubmitting(false)
+        return
+      }
+
+      // Get user profile to determine redirect
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
         .eq('user_id', data.user.id)
-        .single() as { data: Profile | null }
+        .maybeSingle()
 
-      setTimeout(() => {
-        if (profile?.role === 'super_admin') {
-          window.location.href = '/super-admin'
-        } else {
-          window.location.href = '/admin'
-        }
-      }, 100)
-    } catch (err) {
-      setTimeout(() => {
-        window.location.href = '/admin'
-      }, 100)
+      // Determine redirect URL based on role
+      const redirectUrl = profile?.role === 'super_admin' ? '/super-admin' : '/admin'
+      
+      // Use router.push for client-side navigation
+      router.push(redirectUrl)
+      router.refresh() // Refresh to ensure middleware picks up the session
+    } catch (err: any) {
+      setError(err.message || 'حدث خطأ غير متوقع')
+      setLoading(false)
+      setIsSubmitting(false)
     }
   }
 
@@ -111,8 +144,8 @@ export default function LoginForm() {
       <div>
         <button
           type="submit"
-          disabled={loading}
-          className="w-full py-3 px-4 bg-zinc-900 text-white rounded-xl text-base font-medium hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 transition-colors"
+          disabled={loading || isSubmitting}
+          className="w-full py-3 px-4 bg-zinc-900 text-white rounded-xl text-base font-medium hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
         </button>

@@ -43,6 +43,7 @@ export async function createServiceRoleClient(): Promise<SupabaseClient<Database
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
   }
   
+  // Use dynamic import to avoid webpack bundling issues
   const { createClient } = await import('@supabase/supabase-js')
   const client = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

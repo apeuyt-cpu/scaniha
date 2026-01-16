@@ -1,10 +1,25 @@
 import { requireSuperAdmin } from '@/lib/auth'
 import { getAllBusinesses } from '@/lib/db/business'
 import BusinessList from '@/components/super-admin/BusinessList'
+import { redirect } from 'next/navigation'
+
+export const dynamic = 'force-dynamic'
 
 export default async function SuperAdminDashboard() {
+  // requireSuperAdmin will redirect if user is not super_admin
+  // It automatically blocks owners and redirects them to /admin
+  // This happens before any data fetching or rendering
   await requireSuperAdmin()
-  const businesses = await getAllBusinesses()
+
+  // Only fetch sensitive data if user is confirmed super_admin
+  let businesses = []
+  try {
+    businesses = await getAllBusinesses()
+  } catch (error) {
+    console.error('Error loading businesses:', error)
+    // Continue with empty array instead of crashing
+    businesses = []
+  }
 
   return (
     <div className="super-admin-page" dir="rtl">

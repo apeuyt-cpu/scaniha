@@ -35,6 +35,10 @@ export default function BusinessList({ businesses: initialBusinesses }: Business
   const [customDays, setCustomDays] = useState('')
   const [customHours, setCustomHours] = useState('')
   const [customMinutes, setCustomMinutes] = useState('')
+  const [syncing, setSyncing] = useState(false)
+  const [editingProfile, setEditingProfile] = useState<string | null>(null)
+  const [editEmail, setEditEmail] = useState('')
+  const [editPhone, setEditPhone] = useState('')
 
   const filteredBusinesses = businesses.filter(
     (b) =>
@@ -88,6 +92,113 @@ export default function BusinessList({ businesses: initialBusinesses }: Business
     
     const totalMinutes = (days * 24 * 60) + (hours * 60) + minutes
     handleSetTime(businessId, totalMinutes)
+  }
+
+  const handleEditProfile = (business: Business) => {
+    setEditingProfile(business.id)
+    setEditEmail(business.profiles?.email || '')
+    setEditPhone(business.profiles?.phone_number || '')
+  }
+
+  const handleSaveProfile = async (businessId: string) => {
+    setLoading(`profile-${businessId}`)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const response = await fetch(`/api/super-admin/businesses/${businessId}/profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: editEmail.trim() || null,
+          phone_number: editPhone.trim() || null
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'فشل في تحديث الملف الشخصي')
+      }
+
+      const result = await response.json()
+      
+      // Update local state
+      setBusinesses(
+        businesses.map((b) =>
+          b.id === businessId
+            ? {
+                ...b,
+                profiles: {
+                  email: result.profile.email || '',
+                  phone_number: result.profile.phone_number || ''
+                }
+              }
+            : b
+        )
+      )
+      
+      setEditingProfile(null)
+      setEditEmail('')
+      setEditPhone('')
+      setSuccess('تم تحديث الملف الشخصي بنجاح')
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err: any) {
+      setError(err.message || 'حدث خطأ أثناء التحديث')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingProfile(null)
+    setEditEmail('')
+    setEditPhone('')
+  }
+
+  const handleSyncProfiles = async () => {
+    setSyncing(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      // Try the direct REST API approach first
+      let response = await fetch('/api/super-admin/sync-profiles-direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      // If direct approach fails, try the regular approach
+      if (!response.ok) {
+        response = await fetch('/api/super-admin/sync-profiles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || data.hint || 'فشل في مزامنة الملفات الشخصية')
+      }
+
+      const result = await response.json()
+      
+      if (result.errors && result.errors.length > 0) {
+        setSuccess(`${result.message} (${result.errors.length} أخطاء)`)
+        setError(`بعض الأخطاء: ${result.errors.slice(0, 3).join(', ')}${result.errors.length > 3 ? '...' : ''}`)
+      } else {
+        setSuccess(result.message || 'تمت المزامنة بنجاح')
+      }
+      
+      setSyncing(false)
+      
+      // Reload the page after a short delay to show updated profiles
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
+    } catch (err: any) {
+      setError(err.message || 'حدث خطأ أثناء المزامنة')
+      setSyncing(false)
+    }
   }
 
   const handleDeleteBusiness = async (businessId: string, businessName: string) => {
@@ -163,15 +274,38 @@ export default function BusinessList({ businesses: initialBusinesses }: Business
         </div>
       )}
 
-      {/* Search */}
-      <div className="mb-6">
+      {/* Search and Sync */}
+      <div className="mb-6 flex gap-3">
         <input
           type="text"
           placeholder="بحث بالاسم أو الرابط..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white text-base"
+          className="flex-1 px-4 py-3 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white text-base"
         />
+        <button
+          onClick={handleSyncProfiles}
+          disabled={syncing}
+          className="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+          title="مزامنة الملفات الشخصية من auth.users"
+        >
+          {syncing ? (
+            <>
+              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              جاري المزامنة...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              مزامنة الملفات الشخصية
+            </>
+          )}
+        </button>
       </div>
 
       {/* Stats */}
@@ -218,12 +352,76 @@ export default function BusinessList({ businesses: initialBusinesses }: Business
                   </div>
                   
                   <div className="space-y-1 text-sm">
-                    <p className="text-zinc-600">
-                      <span className="text-zinc-400">البريد:</span> {business.profiles?.email || 'غير متوفر'}
-                    </p>
-                    <p className="text-zinc-600">
-                      <span className="text-zinc-400">الهاتف:</span> {business.profiles?.phone_number || 'غير متوفر'}
-                    </p>
+                    {editingProfile === business.id ? (
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-xs text-zinc-500 mb-1">البريد الإلكتروني</label>
+                          <input
+                            type="email"
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                            placeholder="example@email.com"
+                            className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            dir="ltr"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-zinc-500 mb-1">رقم الهاتف</label>
+                          <input
+                            type="tel"
+                            value={editPhone}
+                            onChange={(e) => setEditPhone(e.target.value)}
+                            placeholder="+21612345678"
+                            className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            dir="ltr"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSaveProfile(business.id)}
+                            disabled={loading === `profile-${business.id}`}
+                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            {loading === `profile-${business.id}` ? 'جاري...' : 'حفظ'}
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            disabled={loading === `profile-${business.id}`}
+                            className="px-3 py-1.5 bg-zinc-200 text-zinc-700 rounded-lg text-xs font-medium hover:bg-zinc-300 disabled:opacity-50"
+                          >
+                            إلغاء
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <p className="text-zinc-600">
+                            <span className="text-zinc-400">البريد:</span>{' '}
+                            {business.profiles?.email ? (
+                              <span className="text-zinc-900" dir="ltr">{business.profiles.email}</span>
+                            ) : (
+                              <span className="text-zinc-400">غير متوفر</span>
+                            )}
+                          </p>
+                          <button
+                            onClick={() => handleEditProfile(business)}
+                            className="text-blue-600 hover:text-blue-800 text-xs"
+                            title="تعديل"
+                          >
+                            ✏️
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-zinc-600">
+                            <span className="text-zinc-400">الهاتف:</span>{' '}
+                            {business.profiles?.phone_number ? (
+                              <span className="text-zinc-900" dir="ltr">{business.profiles.phone_number}</span>
+                            ) : (
+                              <span className="text-zinc-400">غير متوفر</span>
+                            )}
+                          </p>
+                        </div>
                     <a
                       href={`/${business.slug}`}
                       target="_blank"
@@ -233,6 +431,8 @@ export default function BusinessList({ businesses: initialBusinesses }: Business
                     >
                       /{business.slug}
                     </a>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -261,14 +461,14 @@ export default function BusinessList({ businesses: initialBusinesses }: Business
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowTimeModal(business.id)}
-                      disabled={loading === business.id || loading === `delete-${business.id}`}
+                      disabled={loading === business.id || loading === `delete-${business.id}` || loading === `profile-${business.id}` || editingProfile === business.id}
                       className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm font-medium hover:bg-zinc-800 disabled:opacity-50"
                     >
                       {loading === business.id ? 'جاري...' : 'تحديد الوقت'}
                     </button>
                     <button
                       onClick={() => setShowDeleteConfirm(business.id)}
-                      disabled={loading === business.id || loading === `delete-${business.id}`}
+                      disabled={loading === business.id || loading === `delete-${business.id}` || loading === `profile-${business.id}` || editingProfile === business.id}
                       className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 disabled:opacity-50 flex items-center gap-1"
                     >
                       {loading === `delete-${business.id}` ? (

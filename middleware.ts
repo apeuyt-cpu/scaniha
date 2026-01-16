@@ -1,7 +1,78 @@
 import { createServerClient as createSupabaseServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+type UserRole = 'owner' | 'super_admin' | null
+
+/**
+ * Public routes that don't require authentication
+ */
+const PUBLIC_ROUTES = ['/login', '/signup', '/']
+
+/**
+ * Check if a path is a public route
+ */
+function isPublicRoute(pathname: string): boolean {
+  // Allow login and signup
+  if (pathname.startsWith('/login') || pathname.startsWith('/signup')) {
+    return true
+  }
+  
+  // Allow root path
+  if (pathname === '/') {
+    return true
+  }
+  
+  // Allow public menu routes (slug routes)
+  if (pathname.match(/^\/[^\/]+$/) && !pathname.startsWith('/admin') && !pathname.startsWith('/super-admin')) {
+    return true
+  }
+  
+  return false
+}
+
+/**
+ * Get user role from profile
+ */
+async function getUserRole(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  userId: string
+): Promise<UserRole> {
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', userId)
+      .maybeSingle()
+    
+    return (profile?.role as UserRole) || null
+  } catch (error) {
+    return null
+  }
+}
+
+/**
+ * Get the correct dashboard URL for a role
+ */
+function getDashboardUrl(role: UserRole): string {
+  switch (role) {
+    case 'super_admin':
+      return '/super-admin'
+    case 'owner':
+      return '/admin'
+    default:
+      return '/login'
+  }
+}
+
 export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl
+  
+  // Allow public routes
+  if (isPublicRoute(pathname)) {
+    return NextResponse.next()
+  }
+  
+  // Create Supabase client for middleware
   let response = NextResponse.next({
     request: {
       headers: req.headers,
@@ -54,39 +125,48 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // Public routes - allow through
-  if (req.nextUrl.pathname.startsWith('/login') || 
-      req.nextUrl.pathname.startsWith('/signup') ||
-      (req.nextUrl.pathname.length > 1 && 
-       !req.nextUrl.pathname.startsWith('/admin') && 
-       !req.nextUrl.pathname.startsWith('/super-admin') &&
-       !req.nextUrl.pathname.startsWith('/api'))) {
-    return response
-  }
+  // Check authentication
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-  // Protected routes
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  if (authError || !user) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = '/login'
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Check super admin routes
-  if (req.nextUrl.pathname.startsWith('/super-admin')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
+  // Get user role
+  const userRole = await getUserRole(supabase, user.id)
 
-    if (!profile || profile.role !== 'super_admin') {
+  // Protect /admin routes - only allow owners
+  if (pathname.startsWith('/admin')) {
+    if (userRole !== 'owner') {
+      const redirectUrl = req.nextUrl.clone()
+      
+      // Redirect super_admin to their dashboard
+      if (userRole === 'super_admin') {
+        redirectUrl.pathname = '/super-admin'
+        return NextResponse.redirect(redirectUrl, 307)
+      }
+      
+      // Redirect others to login
+      redirectUrl.pathname = '/login'
+      return NextResponse.redirect(redirectUrl, 307)
+    }
+  }
+
+  // Protect /super-admin routes - only allow super_admin
+  // CRITICAL: Block owners from accessing super-admin
+  if (pathname.startsWith('/super-admin')) {
+    if (userRole === 'owner') {
       const redirectUrl = req.nextUrl.clone()
       redirectUrl.pathname = '/admin'
-      return NextResponse.redirect(redirectUrl)
+      return NextResponse.redirect(redirectUrl, 307)
+    }
+    
+    if (userRole !== 'super_admin') {
+      const redirectUrl = req.nextUrl.clone()
+      redirectUrl.pathname = '/login'
+      return NextResponse.redirect(redirectUrl, 307)
     }
   }
 
@@ -95,8 +175,9 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    '/admin',
     '/admin/:path*',
+    '/super-admin',
     '/super-admin/:path*',
   ],
 }
-

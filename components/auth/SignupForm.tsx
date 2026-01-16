@@ -175,7 +175,7 @@ export default function SignupForm() {
             id="email"
             name="email"
             type="email"
-            autoComplete="username"
+            autoComplete="email"
             required
             className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent bg-white"
             placeholder="example@email.com"

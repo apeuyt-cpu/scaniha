@@ -6,17 +6,32 @@ import { generateSlug } from '@/lib/utils/slug'
 
 export async function GET() {
   try {
+    // requireOwner already ensures user is owner and redirects super_admin
     const { user } = await requireOwner()
+    
+    // Get business owned by this user only
     const business = await getBusinessByOwner(user.id)
 
     if (!business) {
       return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+    }
+    
+    // Verify the business actually belongs to this user (extra security check)
+    if (business.owner_id !== user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Business does not belong to this user' },
+        { status: 403 }
+      )
     }
 
     // Don't auto-pause here - owners should always access their dashboard
     // Return business as-is, even if expired - dashboard will show warning
     return NextResponse.json(business)
   } catch (error: any) {
+    // Don't catch redirect errors - let them propagate
+    if (error?.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error
+    }
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
@@ -26,7 +41,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    // requireOwner already ensures user is owner and redirects super_admin
     const { user } = await requireOwner()
+    
     const { businessName } = await request.json()
 
     if (!businessName || !businessName.trim()) {
@@ -38,6 +55,14 @@ export async function POST(request: Request) {
 
     const supabase = await createServerClient()
     const slug = generateSlug(businessName.trim())
+
+    // Prevent using reserved slugs
+    if (slug === 'super-admin' || slug === 'admin' || slug === 'login' || slug === 'signup') {
+      return NextResponse.json(
+        { error: 'هذا الاسم محجوز ولا يمكن استخدامه. يرجى اختيار اسم آخر.' },
+        { status: 400 }
+      )
+    }
 
     // Check if business name already exists
     const { data: existingBusinessName } = await (supabase
@@ -98,6 +123,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(business)
   } catch (error: any) {
+    // Don't catch redirect errors - let them propagate
+    if (error?.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error
+    }
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }

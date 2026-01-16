@@ -245,7 +245,7 @@ export default function LandingPage() {
                   src="/hero img.jpeg"
                   alt="Scaniha"
                   fill
-                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 50vw"
                   className="object-cover rounded-3xl"
                   priority
                   quality={90}

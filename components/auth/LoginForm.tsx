@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/supabase/database.types'
@@ -13,8 +13,25 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [lastAttemptTime, setLastAttemptTime] = useState<number>(0)
   const router = useRouter()
   const supabase = createClient()
+
+  // Clear any invalid sessions on mount
+  useEffect(() => {
+    const clearInvalidSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          // Clear any invalid tokens
+          await supabase.auth.signOut()
+        }
+      } catch {
+        // Ignore errors
+      }
+    }
+    clearInvalidSession()
+  }, [supabase])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -24,24 +41,75 @@ export default function LoginForm() {
     if (isSubmitting || loading) {
       return
     }
+
+    // Validate inputs
+    const trimmedEmail = email.trim()
+    const trimmedPassword = password.trim()
+    
+    if (!trimmedEmail || !trimmedPassword) {
+      setError('يرجى إدخال البريد الإلكتروني وكلمة المرور')
+      return
+    }
+
+    // Rate limiting: prevent rapid successive attempts
+    const now = Date.now()
+    const timeSinceLastAttempt = now - lastAttemptTime
+    if (timeSinceLastAttempt < 2000) {
+      setError('يرجى الانتظار قليلاً قبل المحاولة مرة أخرى')
+      return
+    }
+    setLastAttemptTime(now)
     
     setError(null)
     setIsSubmitting(true)
     setLoading(true)
 
     try {
+      // Clear any invalid sessions first
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          // Verify session is still valid
+          const { error: verifyError } = await supabase.auth.getUser()
+          if (verifyError) {
+            // Clear invalid session
+            await supabase.auth.signOut()
+          }
+        }
+      } catch {
+        // Ignore errors, continue with login
+      }
+
       const { error: authError, data } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: trimmedEmail,
+        password: trimmedPassword,
       })
 
       if (authError) {
         console.error('Login error:', authError)
+        
+        // Clear invalid tokens on error
+        if (authError.message.includes('Refresh Token') || authError.message.includes('Invalid Refresh')) {
+          try {
+            await supabase.auth.signOut()
+          } catch {
+            // Ignore sign out errors
+          }
+        }
+        
         // Handle rate limiting specifically
-        if (authError.message.includes('rate limit') || authError.message.includes('429') || authError.status === 429) {
-          setError('تم تجاوز الحد المسموح من المحاولات. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.')
+        if (authError.message.includes('rate limit') || authError.message.includes('429') || authError.message.includes('Request rate limit') || authError.status === 429) {
+          setError('تم تجاوز الحد المسموح من المحاولات. يرجى الانتظار 30 ثانية ثم المحاولة مرة أخرى.')
+          // Disable form for 30 seconds
+          setTimeout(() => {
+            setLoading(false)
+            setIsSubmitting(false)
+          }, 30000)
+          return
         } else if (authError.message === 'Invalid login credentials' || authError.message.includes('Invalid login')) {
           setError('البريد الإلكتروني أو كلمة المرور غير صحيحة')
+        } else if (authError.message.includes('missing email') || authError.message.includes('missing phone')) {
+          setError('يرجى إدخال البريد الإلكتروني وكلمة المرور')
         } else if (authError.status === 400) {
           setError('طلب غير صحيح. يرجى التحقق من بياناتك والمحاولة مرة أخرى.')
         } else {

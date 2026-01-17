@@ -7,6 +7,9 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 
 export default function SignupPage() {
+  // Removed client-side auth check - middleware handles redirecting authenticated users
+  // This prevents infinite redirect loops
+
   return (
     <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-md">
@@ -31,6 +34,7 @@ export default function SignupPage() {
                 width={180}
                 height={60}
                 className="object-contain"
+                priority
               />
             </div>
             <h1 className="text-2xl lg:text-3xl font-bold text-zinc-900 mb-2">

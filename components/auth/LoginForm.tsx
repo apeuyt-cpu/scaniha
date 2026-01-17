@@ -17,20 +17,29 @@ export default function LoginForm() {
   const router = useRouter()
   const supabase = createClient()
 
-  // Clear any invalid sessions on mount
+  // Check if user is already authenticated and redirect them
+  // Do NOT call signOut() here as it can clear valid sessions that are still loading
   useEffect(() => {
-    const clearInvalidSession = async () => {
+    const checkExistingSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-          // Clear any invalid tokens
-          await supabase.auth.signOut()
+        if (session) {
+          // User is already authenticated, get their role and redirect
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .maybeSingle() as { data: { role: string } | null }
+          
+          const redirectUrl = profile?.role === 'super_admin' ? '/super-admin' : '/admin'
+          console.log('[LoginForm] User already authenticated, redirecting to', redirectUrl)
+          window.location.replace(redirectUrl)
         }
       } catch {
-        // Ignore errors
+        // Ignore errors - user will stay on login page
       }
     }
-    clearInvalidSession()
+    checkExistingSession()
   }, [supabase])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -42,12 +51,19 @@ export default function LoginForm() {
       return
     }
 
-    // Validate inputs
-    const trimmedEmail = email.trim()
+    // Validate and normalize inputs
+    const trimmedEmail = email.trim().toLowerCase()
     const trimmedPassword = password.trim()
     
     if (!trimmedEmail || !trimmedPassword) {
       setError('يرجى إدخال البريد الإلكتروني وكلمة المرور')
+      return
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('يرجى إدخال بريد إلكتروني صحيح')
       return
     }
 
@@ -65,17 +81,11 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
-      // Clear any invalid sessions first
+      // Clear any invalid sessions first to prevent conflicts
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          // Verify session is still valid
-          const { error: verifyError } = await supabase.auth.getUser()
-          if (verifyError) {
-            // Clear invalid session
-            await supabase.auth.signOut()
-          }
-        }
+        await supabase.auth.signOut()
+        // Small delay to ensure session is cleared
+        await new Promise(resolve => setTimeout(resolve, 100))
       } catch {
         // Ignore errors, continue with login
       }
@@ -88,17 +98,15 @@ export default function LoginForm() {
       if (authError) {
         console.error('Login error:', authError)
         
-        // Clear invalid tokens on error
-        if (authError.message.includes('Refresh Token') || authError.message.includes('Invalid Refresh')) {
-          try {
-            await supabase.auth.signOut()
-          } catch {
-            // Ignore sign out errors
-          }
+        // Always clear session on error to prevent stale state
+        try {
+          await supabase.auth.signOut()
+        } catch {
+          // Ignore sign out errors
         }
         
-        // Handle rate limiting specifically
-        if (authError.message.includes('rate limit') || authError.message.includes('429') || authError.message.includes('Request rate limit') || authError.status === 429) {
+        // Handle specific error cases
+        if (authError.status === 429 || authError.message.includes('rate limit') || authError.message.includes('429') || authError.message.includes('Request rate limit')) {
           setError('تم تجاوز الحد المسموح من المحاولات. يرجى الانتظار 30 ثانية ثم المحاولة مرة أخرى.')
           // Disable form for 30 seconds
           setTimeout(() => {
@@ -106,12 +114,19 @@ export default function LoginForm() {
             setIsSubmitting(false)
           }, 30000)
           return
-        } else if (authError.message === 'Invalid login credentials' || authError.message.includes('Invalid login')) {
-          setError('البريد الإلكتروني أو كلمة المرور غير صحيحة')
+        } else if (authError.status === 400) {
+          // 400 errors can mean invalid credentials or malformed request
+          if (authError.message.includes('Invalid login credentials') || authError.message.includes('Invalid login') || authError.message.includes('Email not confirmed')) {
+            if (authError.message.includes('Email not confirmed')) {
+              setError('يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول')
+            } else {
+              setError('البريد الإلكتروني أو كلمة المرور غير صحيحة')
+            }
+          } else {
+            setError('طلب غير صحيح. يرجى التحقق من بياناتك والمحاولة مرة أخرى.')
+          }
         } else if (authError.message.includes('missing email') || authError.message.includes('missing phone')) {
           setError('يرجى إدخال البريد الإلكتروني وكلمة المرور')
-        } else if (authError.status === 400) {
-          setError('طلب غير صحيح. يرجى التحقق من بياناتك والمحاولة مرة أخرى.')
         } else {
           setError(authError.message || 'حدث خطأ أثناء تسجيل الدخول')
         }
@@ -127,30 +142,34 @@ export default function LoginForm() {
         return
       }
 
-      // Verify session is established
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        setError('فشل في إنشاء الجلسة. يرجى المحاولة مرة أخرى.')
-        setLoading(false)
-        setIsSubmitting(false)
-        return
-      }
+      console.log('[LoginForm] Login successful, user:', data.user.id)
 
-      // Get user profile to determine redirect
-      const { data: profile } = await (supabase
-        .from('profiles') as any)
+      // Get user profile to determine correct redirect URL
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
         .select('role')
         .eq('user_id', data.user.id)
-        .maybeSingle()
+        .maybeSingle() as { data: { role: string } | null, error: any }
+
+      if (profileError) {
+        console.error('[LoginForm] Profile fetch error:', profileError)
+      }
 
       // Determine redirect URL based on role
-      const redirectUrl = (profile as any)?.role === 'super_admin' ? '/super-admin' : '/admin'
+      let redirectUrl = '/admin'
+      if (profile?.role === 'super_admin') {
+        redirectUrl = '/super-admin'
+      } else if (profile?.role === 'owner') {
+        redirectUrl = '/admin'
+      }
+
+      console.log('[LoginForm] Redirecting to', redirectUrl, 'Role:', profile?.role)
       
-      // Use router.push for client-side navigation
+      // Use router.push for client-side navigation - cookies are already set by Supabase SSR
       router.push(redirectUrl)
-      router.refresh() // Refresh to ensure middleware picks up the session
+      router.refresh()
     } catch (err: any) {
+      console.error('[LoginForm] Unexpected error:', err)
       setError(err.message || 'حدث خطأ غير متوقع')
       setLoading(false)
       setIsSubmitting(false)

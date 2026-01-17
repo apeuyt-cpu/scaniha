@@ -67,11 +67,6 @@ function getDashboardUrl(role: UserRole): string {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   
-  // Allow public routes
-  if (isPublicRoute(pathname)) {
-    return NextResponse.next()
-  }
-  
   // Create Supabase client for middleware
   let response = NextResponse.next({
     request: {
@@ -125,13 +120,67 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // Check authentication
+  // Check authentication - this will automatically refresh the session if needed
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
+  // Debug logging
+  if (pathname === '/admin' || pathname === '/login') {
+    console.log('[Middleware]', pathname, '- User:', user?.id || 'none', 'Error:', authError?.message || 'none')
+  }
+
+  // If user is authenticated and trying to access login/signup, redirect to their dashboard
+  if (user && !authError) {
+    if (pathname === '/login' || pathname === '/signup') {
+      try {
+        const userRole = await getUserRole(supabase, user.id)
+        const dashboardUrl = getDashboardUrl(userRole)
+        
+        console.log('[Middleware] Redirecting authenticated user from', pathname, 'to', dashboardUrl)
+        const redirectUrl = req.nextUrl.clone()
+        redirectUrl.pathname = dashboardUrl
+        // Use 302 (temporary redirect) instead of 307 to allow browser to handle cookies properly
+        const redirectResponse = NextResponse.redirect(redirectUrl, 302)
+        // Copy cookies from the response to preserve session
+        response.cookies.getAll().forEach(cookie => {
+          redirectResponse.cookies.set(cookie.name, cookie.value)
+        })
+        return redirectResponse
+      } catch (error) {
+        console.error('[Middleware] Error getting user role:', error)
+        // If we can't get role but user is authenticated, redirect to admin as default
+        const redirectUrl = req.nextUrl.clone()
+        redirectUrl.pathname = '/admin'
+        const redirectResponse = NextResponse.redirect(redirectUrl, 302)
+        response.cookies.getAll().forEach(cookie => {
+          redirectResponse.cookies.set(cookie.name, cookie.value)
+        })
+        return redirectResponse
+      }
+    }
+  }
+  
+  // Allow public routes (but only if user is not authenticated)
+  if (isPublicRoute(pathname)) {
+    // If user is authenticated, don't allow access to login/signup (handled above)
+    // But allow other public routes
+    return response
+  }
+
+  // For protected routes, check authentication
   if (authError || !user) {
-    const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/login'
-    return NextResponse.redirect(redirectUrl)
+    // Only redirect to login if we're not already on login/signup
+    if (pathname !== '/login' && pathname !== '/signup') {
+      console.log('[Middleware] Redirecting unauthenticated user from', pathname, 'to /login')
+      const redirectUrl = req.nextUrl.clone()
+      redirectUrl.pathname = '/login'
+      const redirectResponse = NextResponse.redirect(redirectUrl)
+      response.cookies.getAll().forEach(cookie => {
+        redirectResponse.cookies.set(cookie.name, cookie.value)
+      })
+      return redirectResponse
+    }
+    // If already on login/signup and not authenticated, allow access
+    return response
   }
 
   // Get user role
@@ -145,12 +194,20 @@ export async function middleware(req: NextRequest) {
       // Redirect super_admin to their dashboard
       if (userRole === 'super_admin') {
         redirectUrl.pathname = '/super-admin'
-        return NextResponse.redirect(redirectUrl, 307)
+        const redirectResponse = NextResponse.redirect(redirectUrl, 307)
+        response.cookies.getAll().forEach(cookie => {
+          redirectResponse.cookies.set(cookie.name, cookie.value)
+        })
+        return redirectResponse
       }
       
       // Redirect others to login
       redirectUrl.pathname = '/login'
-      return NextResponse.redirect(redirectUrl, 307)
+      const redirectResponse = NextResponse.redirect(redirectUrl, 307)
+      response.cookies.getAll().forEach(cookie => {
+        redirectResponse.cookies.set(cookie.name, cookie.value)
+      })
+      return redirectResponse
     }
   }
 
@@ -160,13 +217,21 @@ export async function middleware(req: NextRequest) {
     if (userRole === 'owner') {
       const redirectUrl = req.nextUrl.clone()
       redirectUrl.pathname = '/admin'
-      return NextResponse.redirect(redirectUrl, 307)
+      const redirectResponse = NextResponse.redirect(redirectUrl, 307)
+      response.cookies.getAll().forEach(cookie => {
+        redirectResponse.cookies.set(cookie.name, cookie.value)
+      })
+      return redirectResponse
     }
     
     if (userRole !== 'super_admin') {
       const redirectUrl = req.nextUrl.clone()
       redirectUrl.pathname = '/login'
-      return NextResponse.redirect(redirectUrl, 307)
+      const redirectResponse = NextResponse.redirect(redirectUrl, 307)
+      response.cookies.getAll().forEach(cookie => {
+        redirectResponse.cookies.set(cookie.name, cookie.value)
+      })
+      return redirectResponse
     }
   }
 
@@ -179,5 +244,7 @@ export const config = {
     '/admin/:path*',
     '/super-admin',
     '/super-admin/:path*',
+    '/login',
+    '/signup',
   ],
 }

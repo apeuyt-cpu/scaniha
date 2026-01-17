@@ -15,12 +15,43 @@ export default function MenuPage() {
   const fetchBusiness = async () => {
     try {
       const res = await fetch('/api/admin/business')
+      
+      // Check if response is OK and is JSON
       if (res.ok) {
-        const data = await res.json()
-        setBusinessId(data.id)
+        const contentType = res.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json()
+          setBusinessId(data.id)
+        } else {
+          // Response is not JSON (likely HTML redirect or error page)
+          console.error('Error fetching business: Response is not JSON')
+          // Try to reload the page to handle redirects
+          if (res.status === 401 || res.status === 403) {
+            window.location.href = '/login'
+          }
+        }
+      } else {
+        // Handle non-OK responses
+        const contentType = res.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await res.json()
+          console.error('Error fetching business:', errorData.error || 'Unknown error')
+        } else {
+          console.error('Error fetching business: HTTP', res.status)
+          // If unauthorized, redirect to login
+          if (res.status === 401 || res.status === 403) {
+            window.location.href = '/login'
+          }
+        }
       }
     } catch (err) {
       console.error('Error fetching business:', err)
+      // If it's a JSON parse error, it means we got HTML instead of JSON
+      if (err instanceof SyntaxError && err.message.includes('JSON')) {
+        console.error('Received HTML instead of JSON - possible redirect or error page')
+        // Try to reload to handle redirects
+        window.location.reload()
+      }
     } finally {
       setLoading(false)
     }

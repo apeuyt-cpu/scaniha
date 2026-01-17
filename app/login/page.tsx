@@ -7,6 +7,9 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 
 export default function LoginPage() {
+  // Removed client-side auth check - middleware handles redirecting authenticated users
+  // This prevents infinite redirect loops
+
   return (
     <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-md">

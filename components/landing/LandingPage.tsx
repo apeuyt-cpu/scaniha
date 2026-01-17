@@ -20,6 +20,7 @@ export default function LandingPage() {
               width={160}
               height={56}
               className="object-contain"
+              priority
               style={{ width: 'auto', height: 'auto' }}
             />
           </Link>

@@ -50,6 +50,7 @@ export interface Database {
           twitter_url: string | null
           whatsapp_number: string | null
           website_url: string | null
+          primary_color: string | null
           created_at: string
         }
         Insert: {
@@ -66,6 +67,7 @@ export interface Database {
           twitter_url?: string | null
           whatsapp_number?: string | null
           website_url?: string | null
+          primary_color?: string | null
           created_at?: string
         }
         Update: {
@@ -82,6 +84,7 @@ export interface Database {
           twitter_url?: string | null
           whatsapp_number?: string | null
           website_url?: string | null
+          primary_color?: string | null
           created_at?: string
         }
       }

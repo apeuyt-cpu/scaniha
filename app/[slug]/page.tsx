@@ -53,7 +53,7 @@ export default async function PublicMenuPage({
     }
   }
 
-  const theme = getTheme(business.theme_id)
+  const theme = getTheme(business.theme_id, business.primary_color)
 
   // Create a business object with modified status for display
   const businessForDisplay = {

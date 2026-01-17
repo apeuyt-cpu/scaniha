@@ -15,6 +15,7 @@ interface Business {
   status: 'active' | 'paused'
   logo_url: string | null
   expires_at: string | null
+  primary_color: string | null
 }
 
 export default function AdminDashboard() {

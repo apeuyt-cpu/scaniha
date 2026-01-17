@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import LogoUpload from '@/components/business/LogoUpload'
 import SocialMediaManager from '@/components/admin/SocialMediaManager'
+import MenuColorPicker from '@/components/admin/MenuColorPicker'
 import { createClient } from '@/lib/supabase/client'
 
 interface Business {
@@ -10,6 +11,7 @@ interface Business {
   name: string
   slug: string
   logo_url: string | null
+  primary_color?: string | null
 }
 
 export default function SettingsManager({ 
@@ -121,6 +123,15 @@ export default function SettingsManager({
               نسخ
             </button>
           </div>
+        </div>
+
+        {/* Menu Color */}
+        <div>
+          <MenuColorPicker
+            businessId={business.id}
+            currentColor={business.primary_color || null}
+            onColorUpdated={onUpdate}
+          />
         </div>
       </div>
       

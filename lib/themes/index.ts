@@ -10,6 +10,18 @@ export const themes = {
   dark,
 } as const
 
-export function getTheme(themeId: string): Theme {
-  return themes[themeId as keyof typeof themes] || classic
+export function getTheme(themeId: string, customPrimaryColor?: string | null): Theme {
+  const baseTheme = themes[themeId as keyof typeof themes] || classic
+  
+  if (customPrimaryColor) {
+    return {
+      ...baseTheme,
+      colors: {
+        ...baseTheme.colors,
+        primary: customPrimaryColor,
+      },
+    }
+  }
+  
+  return baseTheme
 }

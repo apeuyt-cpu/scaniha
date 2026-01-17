@@ -1,19 +1,19 @@
 export const minimal = {
-  id: 'minimal',
-  name: 'Nordic Clean',
+  id: 'classic',
+  name: 'Classic Elegance',
   colors: {
-    background: '#F7F7F5',        // Warm off-white
-    text: '#1A1A1A',              // Near black
-    primary: '#2D2D2D',           // Charcoal
-    secondary: '#FFFFFF',         // Pure white
-    accent: '#E85D04',            // Burnt orange pop
-    muted: '#6B6B6B',             // Soft gray
-    border: '#E5E5E3',            // Warm light border
+    background: '#FFFDF9',       // Warm off-white
+    text: '#2C2C2C',             // Soft black
+    primary: '#D3AF37',          // Deep wine red
+    secondary: '#FFFFFF',        // Pure white
+    accent: '#C9A962',           // Muted gold
+    muted: '#463a22',            // Elegant gray
+    border: '#E8E4DD',           // Warm light border
   },
   font: {
-    heading: '"DM Sans", "Space Grotesk", system-ui, sans-serif',
-    body: '"DM Sans", system-ui, sans-serif',
+    heading: '"Playfair Display", "Cormorant Garamond", Georgia, serif',
+    body: '"Source Sans Pro", system-ui, -apple-system, sans-serif',
   },
   card: 'rounded-lg',
-  shadows: false,
+  shadows: true,
 }

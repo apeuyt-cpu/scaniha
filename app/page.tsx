@@ -4,7 +4,7 @@ import LandingPage from '@/components/landing/LandingPage'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Scaniha - QR Menu Builder | Free Digital Restaurant Menus',
+  title: 'Scaniha - QR Menu Builder By -Hamed Dhieb-| Free Digital Restaurant Menus ',
   description: 'Create beautiful, customizable digital menus for your restaurant, cafe, or food business. Generate QR codes instantly, manage menu items easily, and share your menu with customers. Free QR menu builder for restaurants, cafes, bars, and food trucks. Perfect for contactless dining.',
   keywords: [
     'QR menu builder', 'QR code menu', 'digital menu', 'online menu', 'restaurant menu builder', 'cafe menu',

@@ -4,47 +4,13 @@ import { getTheme } from '@/lib/themes'
 import PublicMenu from '@/components/menu/PublicMenu'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Metadata } from 'next'
-"use client"
-import { useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+
 
 
 type Category = Database['public']['Tables']['categories']['Row'] & {
   items: Database['public']['Tables']['items']['Row'][]
 }
-export default function MenuPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
 
-  const expires = Number(searchParams.get("expires"))
-
-  useEffect(() => {
-    if (!expires || Date.now() > expires) {
-      router.replace("/expired")
-      return
-    }
-
-    const timeout = setTimeout(() => {
-      router.replace("/expired")
-    }, expires - Date.now())
-
-    // تعطيل right click
-    const block = (e: Event) => e.preventDefault()
-    document.addEventListener("contextmenu", block)
-
-    return () => {
-      clearTimeout(timeout)
-      document.removeEventListener("contextmenu", block)
-    }
-  }, [expires, router])
-
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold">Menu ☕</h1>
-      <p>هذه اللائحة صالحة لمدة 10 دقائق فقط</p>
-    </div>
-  )
-}
 
 
 export default async function PublicMenuPage({

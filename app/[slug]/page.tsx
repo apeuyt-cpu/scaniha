@@ -8,6 +8,17 @@ import type { Metadata } from 'next'
 type Category = Database['public']['Tables']['categories']['Row'] & {
   items: Database['public']['Tables']['items']['Row'][]
 }
+if (!session || session.expired) {
+  redirect("/expired")
+}
+useEffect(() => {
+  const timer = setTimeout(() => {
+    window.location.href = "/expired"
+  }, 10 * 60 * 1000)
+
+  return () => clearTimeout(timer)
+}, [])
+
 
 export default async function PublicMenuPage({
   params,

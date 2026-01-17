@@ -8,16 +8,39 @@ import type { Metadata } from 'next'
 type Category = Database['public']['Tables']['categories']['Row'] & {
   items: Database['public']['Tables']['items']['Row'][]
 }
-if (!session || session.expired) {
-  redirect("/expired")
-}
-useEffect(() => {
-  const timer = setTimeout(() => {
-    window.location.href = "/expired"
-  }, 10 * 60 * 1000)
+export default function MenuPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
-  return () => clearTimeout(timer)
-}, [])
+  const expires = Number(searchParams.get("expires"))
+
+  useEffect(() => {
+    if (!expires || Date.now() > expires) {
+      router.replace("/expired")
+      return
+    }
+
+    const timeout = setTimeout(() => {
+      router.replace("/expired")
+    }, expires - Date.now())
+
+    // تعطيل right click
+    const block = (e: Event) => e.preventDefault()
+    document.addEventListener("contextmenu", block)
+
+    return () => {
+      clearTimeout(timeout)
+      document.removeEventListener("contextmenu", block)
+    }
+  }, [expires, router])
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">Menu ☕</h1>
+      <p>هذه اللائحة صالحة لمدة 10 دقائق فقط</p>
+    </div>
+  )
+}
 
 
 export default async function PublicMenuPage({

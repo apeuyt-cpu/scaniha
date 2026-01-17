@@ -4,6 +4,10 @@ import { getTheme } from '@/lib/themes'
 import PublicMenu from '@/components/menu/PublicMenu'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Metadata } from 'next'
+"use client"
+import { useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+
 
 type Category = Database['public']['Tables']['categories']['Row'] & {
   items: Database['public']['Tables']['items']['Row'][]

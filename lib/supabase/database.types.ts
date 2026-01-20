@@ -112,6 +112,7 @@ export interface Database {
           name: string
           position: number | null
           image_url: string | null
+          available: boolean
           created_at: string
         }
         Insert: {
@@ -120,6 +121,7 @@ export interface Database {
           name: string
           position?: number | null
           image_url?: string | null
+          available?: boolean
           created_at?: string
         }
         Update: {
@@ -128,6 +130,7 @@ export interface Database {
           name?: string
           position?: number | null
           image_url?: string | null
+          available?: boolean
           created_at?: string
         }
       }

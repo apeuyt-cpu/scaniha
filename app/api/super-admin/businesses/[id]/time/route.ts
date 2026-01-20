@@ -4,11 +4,12 @@ import { createServiceRoleClient, createServerClient } from '@/lib/supabase/serv
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireSuperAdmin()
     
+    const resolvedParams = await params
     const { minutes, days } = await request.json()
     
     // Get supabase client
@@ -54,22 +55,31 @@ export async function PATCH(
         expires_at,
         status: newStatus 
       })
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .select()
       .single()
 
     if (error) {
+      console.error('Database error:', error)
       return NextResponse.json(
-        { error: error.message },
+        { error: error.message || 'Failed to update business time' },
         { status: 500 }
       )
     }
 
     return NextResponse.json({ data })
   } catch (error: any) {
+    console.error('API error:', error)
+    // Check if it's an auth error
+    if (error.message?.includes('Unauthorized') || error.message?.includes('auth')) {
+      return NextResponse.json(
+        { error: error.message || 'Unauthorized' },
+        { status: 401 }
+      )
+    }
     return NextResponse.json(
-      { error: error.message || 'Unauthorized' },
-      { status: 401 }
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
     )
   }
 }

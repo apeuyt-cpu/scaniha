@@ -33,7 +33,7 @@ export async function createCategory(businessId: string, name: string, position:
   
   const { data, error } = await (supabase
     .from('categories') as any)
-    .insert({ business_id: businessId, name, position })
+    .insert({ business_id: businessId, name, position, available: true })
     .select()
     .single()
   

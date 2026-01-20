@@ -70,7 +70,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
     try {
       const position = categories.length
       const { data: newCat, error: catError } = await (supabase.from('categories') as any)
-        .insert({ business_id: businessId, name: name.trim(), position })
+        .insert({ business_id: businessId, name: name.trim(), position, available: true })
         .select()
         .single()
       
@@ -295,6 +295,47 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
     }
   }
 
+  const toggleCategoryAvailability = async (categoryId: string, currentAvailable: boolean) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const newAvailable = !currentAvailable
+      const { data, error } = await (supabase.from('categories') as any)
+        .update({ available: newAvailable })
+        .eq('id', categoryId)
+        .select()
+      
+      if (error) {
+        console.error('Error toggling category availability:', error)
+        // Check if error is about missing column
+        if (error.message?.includes('column') && error.message?.includes('available')) {
+          setError('خطأ: عمود "available" غير موجود في قاعدة البيانات. يرجى إضافة العمود أولاً.')
+        } else {
+          setError('فشل في تحديث حالة الفئة: ' + error.message)
+        }
+        setLoading(false)
+        return
+      }
+      
+      // Optimistically update the UI
+      setCategories(prevCategories => 
+        prevCategories.map(cat => 
+          cat.id === categoryId 
+            ? { ...cat, available: newAvailable }
+            : cat
+        )
+      )
+      
+      // Refresh to get latest data
+      await refreshCategories()
+    } catch (err: any) {
+      console.error('Error toggling category availability:', err)
+      setError('فشل في تحديث حالة الفئة: ' + (err.message || 'خطأ غير معروف'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const moveItem = async (categoryId: string, itemId: string, direction: 'up' | 'down') => {
     const category = categories.find(c => c.id === categoryId)
     if (!category) return
@@ -418,7 +459,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
         if (!categoryId) {
           // Create new category
           const { data: newCat, error: catError } = await (supabase.from('categories') as any)
-            .insert({ business_id: businessId, name: categoryName, position: categoryPosition })
+            .insert({ business_id: businessId, name: categoryName, position: categoryPosition, available: true })
             .select()
             .single()
           
@@ -652,45 +693,76 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
         </div>
       ) : (
         <div className="space-y-4">
-          {categories.map((category) => {
+          {categories
+            .filter((category) => {
+              // Show all categories in admin view (even hidden ones), but mark them as hidden
+              // This allows admins to see and manage hidden categories
+              return true
+            })
+            .map((category) => {
             const isExpanded = expandedCategory === category.id
             const itemCount = category.items?.filter(i => i.available).length || 0
+            // Check if category is available - default to true if field doesn't exist or is null
+            const categoryAvailable = category.available !== false && category.available !== null
             
             return (
               <div 
                 key={category.id} 
-                className="bg-white rounded-2xl border border-zinc-200 overflow-hidden"
+                className={`bg-white rounded-2xl border border-zinc-200 overflow-hidden ${!categoryAvailable ? 'opacity-50' : ''}`}
               >
                 {/* Category Header */}
-                <button
-                  onClick={() => setExpandedCategory(isExpanded ? null : category.id)}
-                  className="w-full p-5 lg:p-6 flex items-center justify-between hover:bg-zinc-50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    {category.image_url ? (
-                      <img 
-                        src={category.image_url} 
-                        alt="" 
-                        className="w-12 h-12 lg:w-14 lg:h-14 rounded-xl object-cover"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                      </div>
-                    )}
-                    <div className="text-right">
-                      <h3 className="font-bold text-zinc-900 text-base lg:text-lg">{category.name}</h3>
-                      <p className="text-sm lg:text-base text-zinc-500">{itemCount} عناصر</p>
-                    </div>
-                  </div>
-                  <span 
-                    className={`text-zinc-400 transition-transform text-lg ${isExpanded ? 'rotate-180' : ''}`}
+                <div className="w-full p-5 lg:p-6 flex items-center justify-between">
+                  <button
+                    onClick={() => setExpandedCategory(isExpanded ? null : category.id)}
+                    className="flex-1 flex items-center justify-between hover:bg-zinc-50 transition-colors rounded-lg p-2 -m-2"
                   >
-                    ▼
-                  </span>
-                </button>
+                    <div className="flex items-center gap-4">
+                      {category.image_url ? (
+                        <img 
+                          src={category.image_url} 
+                          alt="" 
+                          className="w-12 h-12 lg:w-14 lg:h-14 rounded-xl object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="text-right">
+                        <h3 className="font-bold text-zinc-900 text-base lg:text-lg">{category.name}</h3>
+                        <p className="text-sm lg:text-base text-zinc-500">{itemCount} عناصر</p>
+                      </div>
+                    </div>
+                    <span 
+                      className={`text-zinc-400 transition-transform text-lg ${isExpanded ? 'rotate-180' : ''}`}
+                    >
+                      ▼
+                    </span>
+                  </button>
+                  {/* Category Hide/Show Toggle */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                      if (!loading) {
+                        toggleCategoryAvailability(category.id, categoryAvailable)
+                      }
+                    }}
+                    disabled={loading}
+                    className={`ml-3 w-10 h-6 rounded-full transition-colors relative flex-shrink-0 disabled:opacity-50 ${
+                      categoryAvailable ? 'bg-green-500' : 'bg-zinc-300'
+                    }`}
+                    title={categoryAvailable ? 'إخفاء الفئة' : 'إظهار الفئة'}
+                  >
+                    <span 
+                      className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${
+                        categoryAvailable ? 'left-5' : 'left-1'
+                      }`}
+                    />
+                  </button>
+                </div>
 
                 {/* Expanded Content */}
                 {isExpanded && (

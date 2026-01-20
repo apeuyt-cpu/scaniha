@@ -27,7 +27,12 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
   const isMinimal = theme.id === 'minimal'
 
   const getVisibleCategories = () => {
-    return categories.filter(cat => cat.items.some(item => item.available))
+    return categories.filter(cat => {
+      // Filter out hidden categories
+      if (cat.available === false) return false
+      // Only show categories with at least one available item
+      return cat.items.some(item => item.available)
+    })
   }
 
   const visibleCategories = getVisibleCategories()

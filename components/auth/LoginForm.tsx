@@ -14,6 +14,8 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [lastAttemptTime, setLastAttemptTime] = useState<number>(0)
+  const [attemptCount, setAttemptCount] = useState<number>(0)
+  const [rateLimited, setRateLimited] = useState<boolean>(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -67,14 +69,39 @@ export default function LoginForm() {
       return
     }
 
-    // Rate limiting: prevent rapid successive attempts
+    // Rate limiting: prevent rapid successive attempts (allow up to 30 attempts)
     const now = Date.now()
     const timeSinceLastAttempt = now - lastAttemptTime
-    if (timeSinceLastAttempt < 2000) {
-      setError('يرجى الانتظار قليلاً قبل المحاولة مرة أخرى')
-      return
+    
+    // Reset rate limit status and attempt count if more than 30 seconds have passed
+    if (timeSinceLastAttempt > 30000) {
+      setAttemptCount(0)
+      setRateLimited(false)
     }
+    
+    // If rate limited, don't make the request at all
+    if (rateLimited) {
+      return // Silently ignore - rate limited
+    }
+    
+    // Prevent if too many attempts in short time (max 30 attempts per 30 seconds)
+    if (attemptCount >= 30 && timeSinceLastAttempt < 30000) {
+      setRateLimited(true)
+      // Auto-reset after 30 seconds
+      setTimeout(() => {
+        setRateLimited(false)
+        setAttemptCount(0)
+      }, 30000)
+      return // Silently ignore - too many attempts
+    }
+    
+    // Only prevent if less than 1 second between attempts
+    if (timeSinceLastAttempt < 1000) {
+      return // Silently ignore rapid attempts
+    }
+    
     setLastAttemptTime(now)
+    setAttemptCount(prev => prev + 1)
     
     setError(null)
     setIsSubmitting(true)
@@ -96,8 +123,6 @@ export default function LoginForm() {
       })
 
       if (authError) {
-        console.error('Login error:', authError)
-        
         // Always clear session on error to prevent stale state
         try {
           await supabase.auth.signOut()
@@ -105,16 +130,26 @@ export default function LoginForm() {
           // Ignore sign out errors
         }
         
-        // Handle specific error cases
+        // Handle specific error cases - silently handle rate limit (allow up to 30 attempts)
         if (authError.status === 429 || authError.message.includes('rate limit') || authError.message.includes('429') || authError.message.includes('Request rate limit')) {
-          setError('تم تجاوز الحد المسموح من المحاولات. يرجى الانتظار 30 ثانية ثم المحاولة مرة أخرى.')
-          // Disable form for 30 seconds
+          // Set rate limited flag to prevent further requests
+          setRateLimited(true)
+          setAttemptCount(30) // Set to max to prevent more attempts
+          // Auto-reset after 30 seconds
           setTimeout(() => {
-            setLoading(false)
-            setIsSubmitting(false)
+            setRateLimited(false)
+            setAttemptCount(0)
           }, 30000)
+          // Don't show error message or log, just silently fail
+          setLoading(false)
+          setIsSubmitting(false)
           return
-        } else if (authError.status === 400) {
+        }
+        
+        // Only log non-rate-limit errors
+        console.error('Login error:', authError)
+        
+        if (authError.status === 400) {
           // 400 errors can mean invalid credentials or malformed request
           if (authError.message.includes('Invalid login credentials') || authError.message.includes('Invalid login') || authError.message.includes('Email not confirmed')) {
             if (authError.message.includes('Email not confirmed')) {

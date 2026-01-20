@@ -161,13 +161,13 @@ export default function BusinessList({ businesses: initialBusinesses }: Business
     setSuccess(null)
 
     try {
-      // Try the direct REST API approach first
+      // Try sync-profiles-direct first (uses REST API)
       let response = await fetch('/api/super-admin/sync-profiles-direct', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
 
-      // If direct approach fails, try the regular approach
+      // If that fails, try the regular sync endpoint
       if (!response.ok) {
         response = await fetch('/api/super-admin/sync-profiles', {
           method: 'POST',
@@ -186,10 +186,8 @@ export default function BusinessList({ businesses: initialBusinesses }: Business
         setSuccess(`${result.message} (${result.errors.length} أخطاء)`)
         setError(`بعض الأخطاء: ${result.errors.slice(0, 3).join(', ')}${result.errors.length > 3 ? '...' : ''}`)
       } else {
-        setSuccess(result.message || 'تمت المزامنة بنجاح')
+        setSuccess(result.message || `تمت المزامنة بنجاح: ${result.synced || 0} محدث، ${result.created || 0} جديد`)
       }
-      
-      setSyncing(false)
       
       // Reload the page after a short delay to show updated profiles
       setTimeout(() => {
@@ -197,7 +195,9 @@ export default function BusinessList({ businesses: initialBusinesses }: Business
       }, 2000)
     } catch (err: any) {
       setError(err.message || 'حدث خطأ أثناء المزامنة')
-      setSyncing(false)
+    } finally {
+      // Note: syncing will be reset on reload, but set it here in case reload doesn't happen
+      setTimeout(() => setSyncing(false), 3000)
     }
   }
 

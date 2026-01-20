@@ -100,34 +100,49 @@ export async function POST(request: NextRequest) {
           }
           
           const email = user.email && user.email.trim() ? user.email.trim() : null
-          const phone = user.phone && user.phone.trim() ? user.phone.trim() : null
+          // Phone can be in user.phone or user.user_metadata.phone_number
+          const phone = (user.phone && user.phone.trim() ? user.phone.trim() : null) ||
+                       (user.user_metadata?.phone_number && user.user_metadata.phone_number.trim() ? user.user_metadata.phone_number.trim() : null) ||
+                       null
           
           // Check if profile exists
           const profileExists = existingProfileIds.has(ownerId)
           
           if (profileExists) {
-            // Update existing profile
-            const { error: updateError } = await (supabase
-              .from('profiles') as any)
-              .update({
-                email: email,
-                phone_number: phone
-              })
-              .eq('user_id', ownerId)
+            // Update existing profile - only update fields that are not null
+            const updateData: any = {}
+            if (email !== null && email !== undefined) {
+              updateData.email = email
+            }
+            // Only update phone_number if we have a value (to avoid NOT NULL constraint violation)
+            if (phone !== null && phone !== undefined && phone.trim() !== '') {
+              updateData.phone_number = phone
+            }
             
-            if (updateError) {
-              errors.push(`Update ${ownerId.substring(0, 8)}...: ${updateError.message}`)
+            // Only update if we have data to update
+            if (Object.keys(updateData).length > 0) {
+              const { error: updateError } = await (supabase
+                .from('profiles') as any)
+                .update(updateData)
+                .eq('user_id', ownerId)
+              
+              if (updateError) {
+                errors.push(`Update ${ownerId.substring(0, 8)}...: ${updateError.message}`)
+              } else {
+                synced++
+              }
             } else {
+              // No data to update, skip
               synced++
             }
           } else {
-            // Create new profile
+            // Create new profile - use empty string as default if phone is null (to satisfy NOT NULL constraint)
             const { error: insertError } = await (supabase
               .from('profiles') as any)
               .insert({
                 user_id: ownerId,
-                email: email,
-                phone_number: phone,
+                email: email || '',
+                phone_number: phone || '',
                 role: 'owner',
                 created_at: new Date().toISOString()
               })

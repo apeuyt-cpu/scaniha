@@ -103,14 +103,14 @@ export default function SignupForm() {
         }
       }
 
-      // Step 3: Ensure profile exists
+      // Step 3: Ensure profile exists and has email/phone
       if (!profileExists) {
         const { error: profileError } = await (supabase
           .from('profiles') as any)
           .insert({
             user_id: userId,
-            email: email,
-            phone_number: phoneNumber,
+            email: email.toLowerCase().trim(),
+            phone_number: phoneNumber.trim(),
             role: 'owner'
           })
         
@@ -120,11 +120,19 @@ export default function SignupForm() {
           return
         }
       } else {
-        // Update phone number if profile exists
-        await (supabase
+        // Update both email and phone number if profile exists (might have been created by trigger without these)
+        const { error: updateError } = await (supabase
           .from('profiles') as any)
-          .update({ phone_number: phoneNumber })
+          .update({ 
+            email: email.toLowerCase().trim(),
+            phone_number: phoneNumber.trim()
+          })
           .eq('user_id', userId)
+        
+        if (updateError) {
+          console.error('Error updating profile:', updateError)
+          // Don't fail the signup if profile update fails, but log it
+        }
       }
 
       // Step 4: Create business with 7-day free trial

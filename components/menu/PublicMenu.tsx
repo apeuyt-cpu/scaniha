@@ -431,8 +431,47 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                         className={`menu-item rounded-xl p-4 ${isDark ? 'menu-item-dark' : 'menu-item-light'}`}
                         style={{ animationDelay: `${0.2 + itemIndex * 0.05}s` }}
                       >
-                        <div className="flex items-start gap-4">
-                          {/* LEFT: Price */}
+                        <div className="flex items-start gap-4" dir="ltr">
+                          {/* End left: Product image (no border, no rounded corners) */}
+                          {item.image_url && (
+                            <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 overflow-hidden">
+                              <img 
+                                src={item.image_url} 
+                                alt={item.name}
+                                className="item-image w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Right of image: Title + details */}
+                          <div className="min-w-0 flex-1 overflow-hidden">
+                            <h3 
+                              className="font-medium text-base sm:text-lg break-words"
+                              style={{ 
+                                fontFamily: "'Cairo', " + theme.font.heading,
+                                color: theme.colors.text,
+                              }}
+                            >
+                              {item.name}
+                            </h3>
+                            
+                            {item.description && (
+                              <p 
+                                className="text-sm mt-1.5 leading-relaxed break-words"
+                                style={{ color: theme.colors.muted }}
+                              >
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
+                          
+                          {/* Middle: Line separator */}
+                          <span 
+                            className={`price-line flex-shrink-0 flex-1 min-w-[20px] ${isDark ? 'price-line-dark' : 'price-line-light'}`}
+                            style={{ color: theme.colors.muted, alignSelf: 'center' }}
+                          />
+                          
+                          {/* End right: Price */}
                           {item.price && (
                             <div className="flex-shrink-0">
                               <span
@@ -444,49 +483,6 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                               </span>
                             </div>
                           )}
-                          
-                          {/* Spacer line */}
-                          <span 
-                            className={`price-line flex-1 ${isDark ? 'price-line-dark' : 'price-line-light'}`}
-                            style={{ color: theme.colors.muted, alignSelf: 'center' }}
-                          />
-                          
-                          {/* RIGHT: Image + Title + Description */}
-                          <div className="flex gap-3 min-w-0 overflow-hidden">
-                            {item.image_url && (
-                              <div 
-                                className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden ${isDark ? 'card-glow' : ''}`}
-                                style={{ border: `1px solid ${theme.colors.border}` }}
-                              >
-                                <img 
-                                  src={item.image_url} 
-                                  alt={item.name}
-                                  className="item-image w-full h-full object-cover"
-                                />
-                              </div>
-                            )}
-                            
-                            <div className="min-w-0 text-left overflow-hidden">
-                              <h3 
-                                className="font-medium text-base sm:text-lg text-left break-words"
-                                style={{ 
-                                  fontFamily: "'Cairo', " + theme.font.heading,
-                                  color: theme.colors.text,
-                                }}
-                              >
-                                {item.name}
-                              </h3>
-                              
-                              {item.description && (
-                                <p 
-                                  className="text-sm mt-1.5 leading-relaxed text-left break-words"
-                                  style={{ color: theme.colors.muted }}
-                                >
-                                  {item.description}
-                                </p>
-                              )}
-                            </div>
-                          </div>
                         </div>
                       </article>
                     ))}
@@ -868,8 +864,64 @@ function MinimalLayout({
                       animationDelay: `${idx * 0.05}s`,
                     }}
                   >
-                    <div className="flex items-start gap-4">
-                      {/* LEFT: Price + Expand indicator */}
+                    <div className="flex items-start gap-4" dir="ltr">
+                      {/* End left: Product image (no border, no rounded corners) */}
+                      {item.image_url && (
+                        <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 overflow-hidden">
+                          <img 
+                            src={item.image_url} 
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Right of image: Title + details */}
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <h3 
+                          className="font-semibold text-base break-words"
+                          style={{ fontFamily: "'Cairo', " + theme.font.heading }}
+                        >
+                          {item.name}
+                        </h3>
+                        {item.description && !expandedItem && (
+                          <p 
+                            className="text-sm mt-0.5 line-clamp-1 break-words"
+                            style={{ color: theme.colors.muted }}
+                          >
+                            {item.description}
+                          </p>
+                        )}
+                        
+                        {/* Expanded Content */}
+                        <div 
+                          className="item-expand"
+                          style={{ 
+                            maxHeight: expandedItem === item.id ? '200px' : '0',
+                            marginTop: expandedItem === item.id ? '12px' : '0',
+                            opacity: expandedItem === item.id ? 1 : 0,
+                          }}
+                        >
+                          {item.description && (
+                            <p 
+                              className="text-sm leading-relaxed break-words"
+                              style={{ color: theme.colors.muted }}
+                            >
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Middle: Line separator */}
+                      <div className="flex-1 min-w-[20px]" style={{ alignSelf: 'center' }}>
+                        <span 
+                          className="block w-full border-b"
+                          style={{ borderColor: theme.colors.border }}
+                        />
+                      </div>
+                      
+                      {/* End right: Price + Expand indicator */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Expand indicator */}
                         <div 
@@ -893,61 +945,6 @@ function MinimalLayout({
                             {Number(item.price).toFixed(2)} TD
                           </span>
                         )}
-                      </div>
-                      
-                      {/* Spacer */}
-                      <div className="flex-1" />
-                      
-                      {/* RIGHT: Image + Name + Description */}
-                      <div className="flex gap-3 min-w-0 overflow-hidden">
-                        {item.image_url && (
-                          <div 
-                            className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden"
-                            style={{ border: `1px solid ${theme.colors.border}` }}
-                          >
-                            <img 
-                              src={item.image_url} 
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        
-                        <div className="min-w-0 text-left overflow-hidden">
-                          <h3 
-                            className="font-semibold text-base text-left break-words"
-                            style={{ fontFamily: "'Cairo', " + theme.font.heading }}
-                          >
-                            {item.name}
-                          </h3>
-                          {item.description && !expandedItem && (
-                            <p 
-                              className="text-sm mt-0.5 line-clamp-1 text-left break-words"
-                              style={{ color: theme.colors.muted }}
-                            >
-                              {item.description}
-                            </p>
-                          )}
-                          
-                          {/* Expanded Content */}
-                          <div 
-                            className="item-expand"
-                            style={{ 
-                              maxHeight: expandedItem === item.id ? '200px' : '0',
-                              marginTop: expandedItem === item.id ? '12px' : '0',
-                              opacity: expandedItem === item.id ? 1 : 0,
-                            }}
-                          >
-                            {item.description && (
-                              <p 
-                                className="text-sm leading-relaxed text-left break-words"
-                                style={{ color: theme.colors.muted }}
-                              >
-                                {item.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </article>

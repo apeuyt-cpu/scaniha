@@ -25,6 +25,7 @@ export default function AdminDashboard() {
   const [activeTheme, setActiveTheme] = useState<string>('')
   const [copied, setCopied] = useState(false)
   const [subscribeLoading, setSubscribeLoading] = useState(false)
+  const [showPlanPicker, setShowPlanPicker] = useState(false)
   const [countdown, setCountdown] = useState<{
     days: number
     hours: number
@@ -315,7 +316,7 @@ export default function AdminDashboard() {
         {/* Subscribe / Extend Button */}
         <div className="mb-6">
           <button
-            onClick={() => handleSubscribe('1year')}
+            onClick={() => setShowPlanPicker(true)}
             disabled={subscribeLoading}
             className="w-full bg-gradient-to-l from-orange-500 to-amber-500 text-white rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all"
           >
@@ -327,6 +328,62 @@ export default function AdminDashboard() {
             </div>
           </button>
         </div>
+
+        {/* Plan Picker Modal */}
+        {showPlanPicker && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setShowPlanPicker(false)} />
+            <div className="relative bg-white rounded-3xl p-6 lg:p-8 max-w-sm w-full shadow-2xl">
+              <button
+                onClick={() => setShowPlanPicker(false)}
+                className="absolute top-4 left-4 text-zinc-400 hover:text-zinc-600 text-2xl leading-none"
+              >
+                ✕
+              </button>
+              <h2 className="text-xl font-bold text-zinc-900 mb-1">اختر خطتك</h2>
+              <p className="text-zinc-500 text-sm mb-6">اشترك أو جدد لتفعيل الخدمة</p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => { setShowPlanPicker(false); handleSubscribe('6months') }}
+                  disabled={subscribeLoading}
+                  className="w-full bg-white border-2 border-zinc-200 rounded-2xl p-5 hover:border-orange-500 transition-all text-right"
+                >
+                  <h3 className="text-lg font-bold text-zinc-900">6 أشهر</h3>
+                  <p className="text-2xl font-bold text-zinc-900 mt-1">150 <span className="text-base text-zinc-600">د.ت</span></p>
+                </button>
+
+                <button
+                  onClick={() => { setShowPlanPicker(false); handleSubscribe('1year') }}
+                  disabled={subscribeLoading}
+                  className="w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl p-5 shadow-lg transition-all text-right"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full font-bold">الأكثر شعبية</span>
+                  </div>
+                  <h3 className="text-lg font-bold">سنة كاملة</h3>
+                  <p className="text-2xl font-bold mt-1">250 <span className="text-base text-white/90">د.ت</span></p>
+                </button>
+
+                <button
+                  onClick={() => { setShowPlanPicker(false); handleSubscribe('lifetime') }}
+                  disabled={subscribeLoading}
+                  className="w-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white rounded-2xl p-5 shadow-lg transition-all text-right"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs bg-amber-400 text-zinc-900 px-2 py-0.5 rounded-full font-bold">الأفضل</span>
+                  </div>
+                  <h3 className="text-lg font-bold">مدى الحياة</h3>
+                  <p className="text-2xl font-bold mt-1">600 <span className="text-base text-white/90">د.ت</span></p>
+                </button>
+              </div>
+
+              {subscribeLoading && (
+                <p className="mt-4 text-center text-zinc-500">جاري التوجيه إلى صفحة الدفع...</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div className="flex items-start justify-between mb-8">

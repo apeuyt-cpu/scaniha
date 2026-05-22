@@ -43,9 +43,19 @@ export const PLANS: Record<PlanId, PlanConfig> = {
 }
 
 export function getDodoClient() {
+  const apiKey = process.env.DODO_PAYMENTS_API_KEY
+  if (!apiKey) {
+    throw new Error('DODO_PAYMENTS_API_KEY is not configured')
+  }
+
+  const env = process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode' ? 'live_mode' : 'test_mode'
+  const baseURL = env === 'live_mode'
+    ? 'https://live.dodopayments.com'
+    : 'https://test.dodopayments.com'
+
   return new DodoPayments({
-    bearerToken: process.env.DODO_PAYMENTS_API_KEY || '',
-    environment: (process.env.DODO_PAYMENTS_ENVIRONMENT as 'test_mode' | 'live_mode') || 'test_mode',
+    bearerToken: apiKey,
+    baseURL,
   })
 }
 

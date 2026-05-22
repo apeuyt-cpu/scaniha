@@ -37,7 +37,8 @@ export const PLANS: Record<PlanId, PlanConfig> = {
 }
 
 export function getDodoBaseURL(): string {
-  return process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
+  const env = (process.env.DODO_PAYMENTS_ENVIRONMENT || '').toLowerCase()
+  return env === 'live' || env === 'live_mode'
     ? 'https://live.dodopayments.com'
     : 'https://test.dodopayments.com'
 }

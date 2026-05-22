@@ -23,8 +23,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'DODO_PAYMENTS_API_KEY is not set in environment variables' }, { status: 500 })
     }
 
-    const env = process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode' ? 'live_mode' : 'test_mode'
-    const baseURL = env === 'live_mode' ? 'https://live.dodopayments.com' : 'https://test.dodopayments.com'
+    const env = (process.env.DODO_PAYMENTS_ENVIRONMENT || '').toLowerCase()
+    const isLive = env === 'live' || env === 'live_mode'
+    const baseURL = isLive ? 'https://live.dodopayments.com' : 'https://test.dodopayments.com'
 
     const body: Record<string, any> = {
       product_cart: [{ product_id: plan.productId, quantity: 1 }],
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
       const errBody = await res.text()
       console.error('Dodo API error:', res.status, errBody)
       return NextResponse.json(
-        { error: `Dodo API error (${res.status}): ${errBody}`, details: { status: res.status, body: errBody, env, keyPrefix: apiKey.substring(0, 8) + '...' } },
+        { error: `Dodo API error (${res.status}): ${errBody}`, details: { status: res.status, body: errBody, baseURL, keyPrefix: apiKey.substring(0, 8) + '...' } },
         { status: 500 }
       )
     }

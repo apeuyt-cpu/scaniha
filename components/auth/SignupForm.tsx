@@ -2,17 +2,21 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { generateSlug } from '@/lib/utils/slug'
 
-export default function SignupForm() {
+const PLAN_LABELS: Record<string, string> = {
+  '6months': '6 أشهر - 150 د.ت',
+  '1year': 'سنة كاملة - 250 د.ت',
+  lifetime: 'مدى الحياة - 600 د.ت',
+}
+
+export default function SignupForm({ plan }: { plan?: string }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [businessName, setBusinessName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
   const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,8 +31,7 @@ export default function SignupForm() {
     }
 
     const slug = generateSlug(businessName)
-    
-    // Check if email already exists
+
     const { data: existingEmail } = await (supabase
       .from('profiles') as any)
       .select('email')
@@ -40,8 +43,7 @@ export default function SignupForm() {
       setLoading(false)
       return
     }
-    
-    // Check if business name already exists
+
     const { data: existingBusinessName } = await (supabase
       .from('businesses') as any)
       .select('id')
@@ -53,8 +55,7 @@ export default function SignupForm() {
       setLoading(false)
       return
     }
-    
-    // Check if slug already exists
+
     const { data: existingSlug } = await (supabase
       .from('businesses') as any)
       .select('id')
@@ -68,15 +69,10 @@ export default function SignupForm() {
     }
 
     try {
-      // Step 1: Sign up user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            phone_number: phoneNumber,
-          }
-        }
+        options: { data: { phone_number: phoneNumber } },
       })
 
       if (authError || !authData.user) {
@@ -87,7 +83,6 @@ export default function SignupForm() {
 
       const userId = authData.user.id
 
-      // Step 2: Wait for profile trigger
       let profileExists = false
       for (let i = 0; i < 10; i++) {
         await new Promise(resolve => setTimeout(resolve, 300))
@@ -96,14 +91,13 @@ export default function SignupForm() {
           .select('user_id')
           .eq('user_id', userId)
           .single()
-        
+
         if (profile) {
           profileExists = true
           break
         }
       }
 
-      // Step 3: Ensure profile exists and has email/phone
       if (!profileExists) {
         const { error: profileError } = await (supabase
           .from('profiles') as any)
@@ -111,42 +105,45 @@ export default function SignupForm() {
             user_id: userId,
             email: email.toLowerCase().trim(),
             phone_number: phoneNumber.trim(),
-            role: 'owner'
+            role: 'owner',
           })
-        
+
         if (profileError) {
           setError('فشل إنشاء الملف الشخصي. يرجى المحاولة مرة أخرى.')
           setLoading(false)
           return
         }
       } else {
-        // Update both email and phone number if profile exists (might have been created by trigger without these)
         const { error: updateError } = await (supabase
           .from('profiles') as any)
-          .update({ 
+          .update({
             email: email.toLowerCase().trim(),
-            phone_number: phoneNumber.trim()
+            phone_number: phoneNumber.trim(),
           })
           .eq('user_id', userId)
-        
+
         if (updateError) {
           console.error('Error updating profile:', updateError)
-          // Don't fail the signup if profile update fails, but log it
         }
       }
 
-      // Step 4: Create business with 7-day free trial
+      // If a plan was selected, give a short initial trial (1 day)
+      // The real duration will be set after payment via webhook
       const expirationDate = new Date()
-      expirationDate.setDate(expirationDate.getDate() + 7) // 7 days from now
-      
+      if (plan) {
+        expirationDate.setDate(expirationDate.getDate() + 1)
+      } else {
+        expirationDate.setDate(expirationDate.getDate() + 7)
+      }
+
       const { error: businessError } = await (supabase
         .from('businesses') as any)
         .insert({
           owner_id: userId,
           name: businessName,
           slug: slug,
-          expires_at: expirationDate.toISOString(), // 7-day free trial
-          status: 'active'
+          expires_at: expirationDate.toISOString(),
+          status: 'active',
         })
         .select()
         .single()
@@ -158,13 +155,28 @@ export default function SignupForm() {
           setError(businessError.message || 'فشل إنشاء النشاط التجاري. تم إنشاء حسابك. يرجى إضافة نشاطك من لوحة التحكم.')
         }
         setLoading(false)
-        setTimeout(() => {
-          window.location.href = '/admin'
-        }, 2000)
+        setTimeout(() => { window.location.href = '/admin' }, 2000)
         return
       }
 
-      // Success! Redirect
+      // If a plan was selected, redirect to Dodo checkout
+      if (plan) {
+        try {
+          const res = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planId: plan, email }),
+          })
+          const data = await res.json()
+          if (data.url) {
+            window.location.href = data.url
+            return
+          }
+        } catch (e) {
+          console.error('Checkout redirect failed, falling back to admin:', e)
+        }
+      }
+
       window.location.href = '/admin'
     } catch (err: any) {
       setError(err.message || 'حدث خطأ. يرجى المحاولة مرة أخرى.')
@@ -174,6 +186,18 @@ export default function SignupForm() {
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit} dir="rtl">
+      {plan && PLAN_LABELS[plan] && (
+        <div className="bg-gradient-to-l from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">📋</div>
+            <div>
+              <p className="text-sm font-semibold text-orange-900">الخطة المختارة: {PLAN_LABELS[plan]}</p>
+              <p className="text-xs text-orange-700 mt-0.5">سيتم توجيهك للدفع بعد إنشاء الحساب</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-2">
@@ -192,7 +216,7 @@ export default function SignupForm() {
             dir="ltr"
           />
         </div>
-        
+
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-zinc-700 mb-2">
             كلمة المرور
@@ -209,7 +233,7 @@ export default function SignupForm() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
-        
+
         <div>
           <label htmlFor="phone" className="block text-sm font-medium text-zinc-700 mb-2">
             رقم الهاتف
@@ -226,7 +250,7 @@ export default function SignupForm() {
             dir="ltr"
           />
         </div>
-        
+
         <div>
           <label htmlFor="business" className="block text-sm font-medium text-zinc-700 mb-2">
             اسم النشاط التجاري
@@ -244,16 +268,17 @@ export default function SignupForm() {
         </div>
       </div>
 
-      {/* Free Trial Banner */}
-      <div className="bg-gradient-to-l from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
-        <div className="flex items-start gap-3">
-          <div className="text-2xl">🎁</div>
-          <div>
-            <p className="text-sm font-semibold text-blue-900">تجربة مجانية لمدة 7 أيام</p>
-            <p className="text-xs text-blue-700 mt-0.5">ابدأ الآن واستمتع بكل الميزات</p>
+      {!plan && (
+        <div className="bg-gradient-to-l from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">🎁</div>
+            <div>
+              <p className="text-sm font-semibold text-blue-900">تجربة مجانية لمدة 7 أيام</p>
+              <p className="text-xs text-blue-700 mt-0.5">ابدأ الآن واستمتع بكل الميزات</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm text-center">
@@ -267,7 +292,7 @@ export default function SignupForm() {
           disabled={loading}
           className="w-full py-3 px-4 bg-zinc-900 text-white rounded-xl text-base font-medium hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 transition-colors"
         >
-          {loading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب'}
+          {loading ? 'جاري إنشاء الحساب...' : plan ? 'إنشاء حساب والدفع' : 'إنشاء حساب'}
         </button>
       </div>
     </form>

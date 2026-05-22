@@ -3,27 +3,9 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 export default function LandingPage() {
-  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-
-  const handleCheckout = async (planId: string) => {
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId }),
-      })
-      const data = await res.json()
-      if (data.url) {
-        router.push(data.url)
-      }
-    } catch (error) {
-      console.error('Checkout error:', error)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-white" dir="rtl">
@@ -411,12 +393,12 @@ export default function LandingPage() {
                   <span className="text-zinc-700">دعم فني</span>
                 </li>
               </ul>
-              <button
-                onClick={() => handleCheckout('6months')}
+              <Link
+                href="/signup?plan=6months"
                 className="block w-full text-center px-6 py-4 bg-zinc-900 text-white rounded-xl font-semibold hover:bg-zinc-800 transition-colors"
               >
                 ابدأ الآن →
-              </button>
+              </Link>
             </div>
 
             {/* Plan 2 - Popular */}
@@ -449,12 +431,12 @@ export default function LandingPage() {
                   <span>تحديثات مجانية</span>
                 </li>
               </ul>
-              <button
-                onClick={() => handleCheckout('1year')}
+              <Link
+                href="/signup?plan=1year"
                 className="block w-full text-center px-6 py-4 bg-white text-orange-600 rounded-xl font-semibold hover:bg-zinc-50 transition-colors"
               >
                 ابدأ الآن →
-              </button>
+              </Link>
             </div>
 
             {/* Plan 3 - Lifetime */}
@@ -491,12 +473,12 @@ export default function LandingPage() {
                   <span>تحديثات مدى الحياة</span>
                 </li>
               </ul>
-              <button
-                onClick={() => handleCheckout('lifetime')}
+              <Link
+                href="/signup?plan=lifetime"
                 className="block w-full text-center px-6 py-4 bg-amber-400 text-zinc-900 rounded-xl font-semibold hover:bg-amber-300 transition-colors"
               >
                 ابدأ الآن →
-              </button>
+              </Link>
             </div>
           </div>
 

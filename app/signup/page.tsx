@@ -1,20 +1,21 @@
 'use client'
 
+import { Suspense } from 'react'
 import SignupForm from '@/components/auth/SignupForm'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-export default function SignupPage() {
-  // Removed client-side auth check - middleware handles redirecting authenticated users
-  // This prevents infinite redirect loops
+function SignupContent() {
+  const searchParams = useSearchParams()
+  const plan = searchParams.get('plan') || undefined
 
   return (
     <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-lg border border-zinc-200 p-8">
-          {/* Back Button */}
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-900 mb-6 transition-colors"
@@ -25,7 +26,6 @@ export default function SignupPage() {
             <span className="text-sm font-medium">العودة للصفحة الرئيسية</span>
           </Link>
 
-          {/* Logo/Header */}
           <div className="text-center mb-8">
             <div className="mx-auto mb-6 flex items-center justify-center">
               <Image
@@ -45,7 +45,7 @@ export default function SignupPage() {
             </p>
           </div>
 
-          <SignupForm />
+          <SignupForm plan={plan} />
         </div>
 
         <div className="text-center mt-6">
@@ -58,5 +58,17 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-4" dir="rtl">
+        <div className="text-zinc-500">جاري التحميل...</div>
+      </div>
+    }>
+      <SignupContent />
+    </Suspense>
   )
 }

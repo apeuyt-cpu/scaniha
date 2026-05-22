@@ -42,7 +42,7 @@ export interface Database {
           name: string
           slug: string
           theme_id: string
-          status: 'active' | 'paused'
+          status: 'active' | 'paused' | 'pending'
           logo_url: string | null
           expires_at: string | null
           facebook_url: string | null

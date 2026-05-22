@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+const PLAN_DURATIONS: Record<string, number> = {
+  '6months': 180,
+  '1year': 365,
+  lifetime: 36500,
+}
+
+function identifyPlan(productId: string): { label: string; days: number } | null {
+  if (productId === process.env.DODO_PRODUCT_ID_6MONTHS) return { label: '6months', days: 180 }
+  if (productId === process.env.DODO_PRODUCT_ID_1YEAR) return { label: '1year', days: 365 }
+  if (productId === process.env.DODO_PRODUCT_ID_LIFETIME) return { label: 'lifetime', days: 36500 }
+  return null
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -8,9 +21,23 @@ export async function POST(req: NextRequest) {
 
     if (event === 'payment.succeeded' || event === 'subscription.created') {
       const customerEmail = body.data?.customer?.email || body.customer?.email
-      const planId = body.data?.plan_id || body.plan_id
 
-      if (customerEmail && planId) {
+      // Get product/cart info from the payment
+      let productId = body.data?.plan_id || body.plan_id
+      if (!productId && body.data?.product_cart?.[0]) {
+        productId = body.data.product_cart[0].product_id
+      }
+      if (!productId && body.product_cart?.[0]) {
+        productId = body.product_cart[0].product_id
+      }
+
+      if (customerEmail && productId) {
+        const plan = identifyPlan(productId)
+        if (!plan) {
+          console.error('Unknown product ID:', productId)
+          return NextResponse.json({ received: true })
+        }
+
         const supabase = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -28,28 +55,33 @@ export async function POST(req: NextRequest) {
         if (profile) {
           const { data: businesses } = await supabase
             .from('businesses')
-            .select('id')
+            .select('id, status')
             .eq('owner_id', profile.user_id)
             .limit(1)
 
-          const business = (businesses as unknown as { id: string }[] | null)?.[0]
+          const business = (businesses as unknown as { id: string; status: string }[] | null)?.[0]
 
           if (business) {
-            let durationDays = 180
+            let expiresAt: string
 
-            if (planId === process.env.DODO_PRODUCT_ID_1YEAR) {
-              durationDays = 365
-            } else if (planId === process.env.DODO_PRODUCT_ID_LIFETIME) {
-              durationDays = 36500
+            if (plan.label === 'lifetime') {
+              const farFuture = new Date()
+              farFuture.setFullYear(farFuture.getFullYear() + 100)
+              expiresAt = farFuture.toISOString()
+            } else {
+              const endDate = new Date()
+              endDate.setDate(endDate.getDate() + plan.days)
+              expiresAt = endDate.toISOString()
             }
-
-            const endsAt = new Date()
-            endsAt.setDate(endsAt.getDate() + durationDays)
 
             await supabase
               .from('businesses')
-              .update({ expires_at: endsAt.toISOString(), status: 'active' })
+              .update({ expires_at: expiresAt, status: 'active' })
               .eq('id', business.id)
+
+            console.log(`Business ${business.id} activated: ${plan.label} until ${expiresAt}`)
+          } else {
+            console.error('No business found for user:', profile.user_id)
           }
         }
       }

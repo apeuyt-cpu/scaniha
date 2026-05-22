@@ -12,7 +12,7 @@ interface Business {
   name: string
   slug: string
   theme_id: string
-  status: 'active' | 'paused'
+  status: 'active' | 'paused' | 'pending'
   logo_url: string | null
   expires_at: string | null
   primary_color: string | null
@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [activeTheme, setActiveTheme] = useState<string>('')
   const [copied, setCopied] = useState(false)
+  const [subscribeLoading, setSubscribeLoading] = useState(false)
   const [countdown, setCountdown] = useState<{
     days: number
     hours: number
@@ -43,7 +44,6 @@ export default function AdminDashboard() {
     }
   }, [business?.slug])
 
-  // Countdown timer
   useEffect(() => {
     if (!business?.expires_at) {
       setCountdown(null)
@@ -76,30 +76,22 @@ export default function AdminDashboard() {
   const fetchBusiness = async () => {
     try {
       const res = await fetch('/api/admin/business')
-      
-      // Check if response is OK and is JSON
       if (res.ok) {
         const contentType = res.headers.get('content-type')
         if (contentType && contentType.includes('application/json')) {
           const data = await res.json()
           setBusiness(data)
         } else {
-          // Response is not JSON (likely HTML redirect or error page)
-          console.error('Error fetching business: Response is not JSON')
-          // Try to reload the page to handle redirects
           if (res.status === 401 || res.status === 403) {
             window.location.href = '/login'
           }
         }
       } else {
-        // Handle non-OK responses
         const contentType = res.headers.get('content-type')
         if (contentType && contentType.includes('application/json')) {
           const errorData = await res.json()
           console.error('Error fetching business:', errorData.error || 'Unknown error')
         } else {
-          console.error('Error fetching business: HTTP', res.status)
-          // If unauthorized, redirect to login
           if (res.status === 401 || res.status === 403) {
             window.location.href = '/login'
           }
@@ -107,14 +99,33 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.error('Error fetching business:', err)
-      // If it's a JSON parse error, it means we got HTML instead of JSON
       if (err instanceof SyntaxError && err.message.includes('JSON')) {
-        console.error('Received HTML instead of JSON - possible redirect or error page')
-        // Try to reload to handle redirects
         window.location.reload()
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSubscribe = async (planId: string) => {
+    setSubscribeLoading(true)
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert(data.error || 'فشل إنشاء رابط الدفع')
+      }
+    } catch (err) {
+      console.error('Subscribe error:', err)
+      alert('حدث خطأ. يرجى المحاولة مرة أخرى.')
+    } finally {
+      setSubscribeLoading(false)
     }
   }
 
@@ -178,6 +189,60 @@ export default function AdminDashboard() {
     )
   }
 
+  // ─── Pending Payment Page ─────────────────────────────────────
+  if (business.status === 'pending') {
+    return (
+      <div className="admin-page p-4 lg:p-8 max-w-6xl mx-auto" dir="rtl">
+        <div className="max-w-lg mx-auto text-center">
+          <div className="text-6xl mb-6">💳</div>
+          <h1 className="text-2xl font-bold text-zinc-900 mb-2">أكمل عملية الدفع</h1>
+          <p className="text-zinc-600 mb-2">حسابك {business.name} قيد الانتظار.</p>
+          <p className="text-zinc-500 text-sm mb-8">اختر خطة للاشتراك وتمتع بكل المميزات</p>
+
+          <div className="space-y-4 text-right">
+            <button
+              onClick={() => handleSubscribe('6months')}
+              disabled={subscribeLoading}
+              className="w-full bg-white border-2 border-zinc-200 rounded-2xl p-6 hover:border-orange-500 transition-all text-right"
+            >
+              <h3 className="text-xl font-bold text-zinc-900">6 أشهر</h3>
+              <p className="text-3xl font-bold text-zinc-900 mt-1">150 <span className="text-lg text-zinc-600">د.ت</span></p>
+            </button>
+
+            <button
+              onClick={() => handleSubscribe('1year')}
+              disabled={subscribeLoading}
+              className="w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl p-6 shadow-lg transition-all text-right"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full font-bold">الأكثر شعبية</span>
+              </div>
+              <h3 className="text-xl font-bold">سنة كاملة</h3>
+              <p className="text-3xl font-bold mt-1">250 <span className="text-lg text-white/90">د.ت</span></p>
+            </button>
+
+            <button
+              onClick={() => handleSubscribe('lifetime')}
+              disabled={subscribeLoading}
+              className="w-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white rounded-2xl p-6 shadow-lg transition-all text-right"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs bg-amber-400 text-zinc-900 px-2 py-0.5 rounded-full font-bold">الأفضل</span>
+              </div>
+              <h3 className="text-xl font-bold">مدى الحياة</h3>
+              <p className="text-3xl font-bold mt-1">600 <span className="text-lg text-white/90">د.ت</span></p>
+            </button>
+          </div>
+
+          {subscribeLoading && (
+            <p className="mt-6 text-zinc-500">جاري التوجيه إلى صفحة الدفع...</p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Active Dashboard ─────────────────────────────────────────
   const menuUrl = `${window.location.origin}/${business.slug}`
   const themes = [
     { id: 'classic', name: 'كلاسيكي', color: '#8B2635', bg: '#FFFDF9' },
@@ -195,35 +260,34 @@ export default function AdminDashboard() {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.7; }
         }
-        
         .pulse-urgent {
           animation: pulse-urgent 1s infinite;
         }
       `}</style>
-      
+
       <div className="admin-page p-4 lg:p-8 max-w-6xl mx-auto" dir="rtl">
-        {/* Countdown Banner */}
+        {/* Subscription Banner */}
         {countdown && (
           <div className={`mb-6 rounded-2xl p-4 lg:p-6 ${
-            isExpired 
-              ? 'bg-red-500 text-white' 
-              : isUrgent 
-                ? 'bg-amber-500 text-white pulse-urgent' 
+            isExpired
+              ? 'bg-red-500 text-white'
+              : isUrgent
+                ? 'bg-amber-500 text-white pulse-urgent'
                 : 'bg-gradient-to-l from-blue-500 to-blue-600 text-white'
           }`}>
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div>
+              <div className="flex-1">
                 <h3 className="font-bold text-lg">
                   {isExpired ? '⚠️ انتهى الاشتراك' : isUrgent ? '⚠️ الاشتراك على وشك الانتهاء' : '⏰ الوقت المتبقي'}
                 </h3>
                 <p className="text-sm opacity-90">
-                  {isExpired 
-                    ? 'القائمة الخاصة بك متوقفة. تواصل مع المشرف لتجديد الاشتراك.'
-                    : 'تواصل مع المشرف قبل انتهاء الوقت'
+                  {isExpired
+                    ? 'جدد اشتراكك الآن لتفعيل القائمة.'
+                    : 'اشترك الآن لتجديد الوقت قبل انتهاء الاشتراك'
                   }
                 </p>
               </div>
-              
+
               {!isExpired && (
                 <div className="flex gap-3 text-center">
                   <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 min-w-[60px]">
@@ -247,6 +311,22 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* Subscribe / Extend Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => handleSubscribe('1year')}
+            disabled={subscribeLoading}
+            className="w-full bg-gradient-to-l from-orange-500 to-amber-500 text-white rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-lg">
+                {isExpired ? '🔴 جدد اشتراكك الآن' : '🟢 اشترك أو جدد'}
+              </span>
+              <span className="text-sm opacity-90">اختر خطتك ←</span>
+            </div>
+          </button>
+        </div>
 
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
@@ -272,7 +352,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-          
+
           <a
             href={menuUrl}
             target="_blank"
@@ -373,52 +453,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Settings Manager - Full Component */}
+        {/* Settings Manager */}
         <SettingsManager business={business} onUpdate={fetchBusiness} />
       </div>
     </>
-  )
-}
-
-function StatusToggle({ 
-  businessId, 
-  status, 
-  onUpdate 
-}: { 
-  businessId: string
-  status: 'active' | 'paused'
-  onUpdate: () => void 
-}) {
-  const [loading, setLoading] = useState(false)
-  const supabase = createClient()
-
-  const toggle = async () => {
-    setLoading(true)
-    try {
-      await (supabase.from('businesses') as any)
-        .update({ status: status === 'active' ? 'paused' : 'active' })
-        .eq('id', businessId)
-      onUpdate()
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <button
-      onClick={toggle}
-      disabled={loading}
-      className={`relative w-12 h-6 rounded-full transition-colors ${
-        status === 'active' ? 'bg-green-500' : 'bg-zinc-300'
-      } ${loading ? 'opacity-50' : ''}`}
-    >
-      <span
-        className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-          status === 'active' ? 'right-1' : 'right-7'
-        }`}
-      />
-    </button>
   )
 }

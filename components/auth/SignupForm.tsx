@@ -127,40 +127,28 @@ export default function SignupForm({ plan }: { plan?: string }) {
         }
       }
 
-      // If a plan was selected, give a short initial trial (1 day)
-      // The real duration will be set after payment via webhook
-      const expirationDate = new Date()
+      // If plan selected → create as pending (no expires_at), payment required first
+      // If no plan → create as active with 7-day free trial
       if (plan) {
-        expirationDate.setDate(expirationDate.getDate() + 1)
-      } else {
-        expirationDate.setDate(expirationDate.getDate() + 7)
-      }
+        const { error: businessError } = await (supabase
+          .from('businesses') as any)
+          .insert({
+            owner_id: userId,
+            name: businessName,
+            slug: slug,
+            expires_at: null,
+            status: 'pending',
+          })
+          .select()
+          .single()
 
-      const { error: businessError } = await (supabase
-        .from('businesses') as any)
-        .insert({
-          owner_id: userId,
-          name: businessName,
-          slug: slug,
-          expires_at: expirationDate.toISOString(),
-          status: 'active',
-        })
-        .select()
-        .single()
-
-      if (businessError) {
-        if (businessError.code === '23505') {
-          setError('اسم النشاط التجاري مستخدم بالفعل. تم إنشاء الحساب ولكن فشل إعداد النشاط. يرجى المحاولة لاحقاً.')
-        } else {
-          setError(businessError.message || 'فشل إنشاء النشاط التجاري. تم إنشاء حسابك. يرجى إضافة نشاطك من لوحة التحكم.')
+        if (businessError) {
+          setError(businessError.message || 'فشل إنشاء النشاط التجاري')
+          setLoading(false)
+          return
         }
-        setLoading(false)
-        setTimeout(() => { window.location.href = '/admin' }, 2000)
-        return
-      }
 
-      // If a plan was selected, redirect to Dodo checkout
-      if (plan) {
+        // Redirect to Dodo checkout
         try {
           const res = await fetch('/api/checkout', {
             method: 'POST',
@@ -173,11 +161,35 @@ export default function SignupForm({ plan }: { plan?: string }) {
             return
           }
         } catch (e) {
-          console.error('Checkout redirect failed, falling back to admin:', e)
+          console.error('Checkout redirect failed:', e)
         }
-      }
 
-      window.location.href = '/admin'
+        window.location.href = '/admin'
+      } else {
+        // No plan: create with 7-day free trial
+        const expirationDate = new Date()
+        expirationDate.setDate(expirationDate.getDate() + 7)
+
+        const { error: businessError } = await (supabase
+          .from('businesses') as any)
+          .insert({
+            owner_id: userId,
+            name: businessName,
+            slug: slug,
+            expires_at: expirationDate.toISOString(),
+            status: 'active',
+          })
+          .select()
+          .single()
+
+        if (businessError) {
+          setError(businessError.message || 'فشل إنشاء النشاط التجاري')
+          setLoading(false)
+          return
+        }
+
+        window.location.href = '/admin'
+      }
     } catch (err: any) {
       setError(err.message || 'حدث خطأ. يرجى المحاولة مرة أخرى.')
       setLoading(false)

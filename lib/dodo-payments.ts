@@ -1,5 +1,3 @@
-import DodoPayments from 'dodopayments'
-
 export type PlanId = '6months' | '1year' | 'lifetime'
 
 export interface PlanConfig {
@@ -9,7 +7,6 @@ export interface PlanConfig {
   currency: string
   duration: string
   productId: string
-  isSubscription: boolean
 }
 
 export const PLANS: Record<PlanId, PlanConfig> = {
@@ -20,7 +17,6 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     currency: 'TND',
     duration: '6months',
     productId: process.env.DODO_PRODUCT_ID_6MONTHS || '',
-    isSubscription: true,
   },
   '1year': {
     id: '1year',
@@ -29,7 +25,6 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     currency: 'TND',
     duration: '1year',
     productId: process.env.DODO_PRODUCT_ID_1YEAR || '',
-    isSubscription: true,
   },
   lifetime: {
     id: 'lifetime',
@@ -38,28 +33,46 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     currency: 'TND',
     duration: 'lifetime',
     productId: process.env.DODO_PRODUCT_ID_LIFETIME || '',
-    isSubscription: false,
   },
 }
 
-export function getDodoClient() {
+export function getDodoBaseURL(): string {
+  return process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
+    ? 'https://live.dodopayments.com'
+    : 'https://test.dodopayments.com'
+}
+
+export async function createDodoCheckoutSession(productId: string, email?: string) {
   const apiKey = process.env.DODO_PAYMENTS_API_KEY
   if (!apiKey) {
     throw new Error('DODO_PAYMENTS_API_KEY is not configured')
   }
 
-  const env = process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode' ? 'live_mode' : 'test_mode'
-  const baseURL = env === 'live_mode'
-    ? 'https://live.dodopayments.com'
-    : 'https://test.dodopayments.com'
+  const baseURL = getDodoBaseURL()
 
-  return new DodoPayments({
-    bearerToken: apiKey,
-    baseURL,
+  const body: Record<string, any> = {
+    product_cart: [{ product_id: productId, quantity: 1 }],
+    return_url: `${process.env.DODO_PAYMENTS_RETURN_URL || 'http://localhost:3000'}/admin`,
+  }
+
+  if (email) {
+    body.customer = { email }
+  }
+
+  const res = await fetch(`${baseURL}/checkouts`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
   })
-}
 
-export function getReturnUrl(path?: string): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-  return path ? `${base}${path}` : base
+  if (!res.ok) {
+    const errBody = await res.text()
+    throw new Error(`Dodo API error (${res.status}): ${errBody}`)
+  }
+
+  const data = await res.json()
+  return data
 }

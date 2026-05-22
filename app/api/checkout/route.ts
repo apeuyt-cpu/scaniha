@@ -29,9 +29,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: session.checkout_url })
   } catch (error: any) {
     console.error('Checkout error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to create checkout session' },
-      { status: 500 }
-    )
+
+    const status = error.status || error.statusCode || 500
+    let message = error.message || 'Failed to create checkout session'
+
+    if (status === 401) {
+      message = 'فشل التحقق من مفتاح API الخاص ب Dodo Payments. تأكد من صحة المفتاح في الإعدادات.'
+    }
+
+    return NextResponse.json({ error: message }, { status })
   }
 }

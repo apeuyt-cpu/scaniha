@@ -10,6 +10,8 @@ type Category = Database['public']['Tables']['categories']['Row'] & {
   items: Database['public']['Tables']['items']['Row'][]
 }
 
+type CategoryImageChange = File | null | undefined
+
 interface ModernMenuBuilderProps {
   businessId: string
   initialCategories: Category[]
@@ -64,7 +66,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
     }
   }
 
-  const handleAddCategory = async (name: string, imageFile?: File) => {
+  const handleAddCategory = async (name: string, imageFile?: CategoryImageChange) => {
     if (!name?.trim()) return
     setLoading(true)
     try {
@@ -186,7 +188,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
     }
   }
 
-  const handleUpdateCategory = async (categoryId: string, name: string, imageFile?: File) => {
+  const handleUpdateCategory = async (categoryId: string, name: string, imageFile?: CategoryImageChange) => {
     if (!name?.trim()) return
     setLoading(true)
     try {
@@ -1022,7 +1024,7 @@ function CategoryForm({
   initialImageUrl = null,
   isEdit = false
 }: {
-  onSave: (name: string, image?: File) => void
+  onSave: (name: string, image?: CategoryImageChange) => void
   onCancel: () => void
   loading: boolean
   initialName?: string
@@ -1037,7 +1039,7 @@ function CategoryForm({
     e.preventDefault()
     if (!name.trim()) return
     if (isEdit && removeImage && !image) {
-      onSave(name.trim(), undefined) // Pass undefined to remove image
+      onSave(name.trim(), null)
     } else {
       onSave(name.trim(), image || undefined)
     }

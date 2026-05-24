@@ -1,6 +1,6 @@
 export const minimal = {
-  id: 'classic',
-  name: 'Classic Elegance',
+  id: 'minimal',
+  name: 'Minimal',
   colors: {
     background: '#FFFDF9',       // Warm off-white
     text: '#2C2C2C',             // Soft black

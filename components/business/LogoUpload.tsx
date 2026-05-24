@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { uploadBusinessLogo } from '@/lib/storage'
+import { deleteImage, uploadBusinessLogo } from '@/lib/storage'
 
 interface LogoUploadProps {
   businessId: string
@@ -34,8 +34,11 @@ export default function LogoUpload({ businessId, currentLogoUrl, onLogoUpdated, 
     setError(null)
     setUploading(true)
 
+    let uploadedLogoUrl: string | null = null
+
     try {
       const logoUrl = await uploadBusinessLogo(businessId, file)
+      uploadedLogoUrl = logoUrl
 
       const { error: updateError } = await (supabase
         .from('businesses') as any)
@@ -44,9 +47,16 @@ export default function LogoUpload({ businessId, currentLogoUrl, onLogoUpdated, 
 
       if (updateError) throw updateError
 
+      if (preview && preview !== logoUrl) {
+        try { await deleteImage(preview) } catch {}
+      }
+
       setPreview(logoUrl)
       onLogoUpdated?.(logoUrl)
     } catch (err: any) {
+      if (uploadedLogoUrl) {
+        try { await deleteImage(uploadedLogoUrl) } catch {}
+      }
       setError(err.message || 'Failed to upload logo')
     } finally {
       setUploading(false)
@@ -93,10 +103,14 @@ export default function LogoUpload({ businessId, currentLogoUrl, onLogoUpdated, 
                 if (!confirm('Remove logo?')) return
                 setUploading(true)
                 try {
+                  const oldLogoUrl = preview
                   const { error } = await (supabase.from('businesses') as any)
                     .update({ logo_url: null })
                     .eq('id', businessId)
                   if (error) throw error
+                  if (oldLogoUrl) {
+                    try { await deleteImage(oldLogoUrl) } catch {}
+                  }
                   setPreview(null)
                   onLogoUpdated?.('')
                 } catch (err: any) {

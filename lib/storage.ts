@@ -89,7 +89,22 @@ async function uploadToCloudinaryViaApi(file: File, folder?: string): Promise<st
     throw new Error(result.error || 'Upload to Cloudinary failed')
   }
 
+  if (!isCloudinaryUrl(result.secure_url)) {
+    throw new Error('Upload did not return a valid Cloudinary URL')
+  }
+
   return result.secure_url
+}
+
+function isCloudinaryUrl(url: unknown): url is string {
+  if (typeof url !== 'string') return false
+
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'https:' && parsed.hostname === 'res.cloudinary.com'
+  } catch {
+    return false
+  }
 }
 
 /**

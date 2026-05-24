@@ -36,6 +36,14 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
   }
 
   const visibleCategories = getVisibleCategories()
+  const totalVisibleItems = visibleCategories.reduce(
+    (acc, category) => acc + category.items.filter((item) => item.available).length,
+    0
+  )
+  const heroImageUrl =
+    visibleCategories.find((category) => category.image_url)?.image_url ||
+    visibleCategories.flatMap((category) => category.items).find((item) => item.available && item.image_url)?.image_url ||
+    null
 
   // Track scroll to update active category
   useEffect(() => {
@@ -85,24 +93,46 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
           scroll-behavior: smooth;
         }
         
+        .menu-surface {
+          background:
+            linear-gradient(180deg, ${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.72)'} 0%, transparent 34rem),
+            ${theme.colors.background};
+        }
+
+        .hero-shell {
+          isolation: isolate;
+        }
+
+        .hero-media {
+          box-shadow: ${isDark ? `0 24px 70px -32px ${theme.colors.primary}80` : '0 24px 70px -42px rgba(44,44,44,0.38)'};
+        }
+
         .menu-item {
-          transition: all 0.25s ease;
+          position: relative;
+          transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background-color 0.22s ease;
+          box-shadow: ${isDark ? '0 18px 50px -34px rgba(0,0,0,0.95)' : '0 14px 34px -28px rgba(28,28,28,0.36)'};
         }
         
         .menu-item:hover {
-          transform: translateX(-4px);
+          transform: translateY(-2px);
         }
         
         .menu-item-dark:hover {
-          background: linear-gradient(270deg, rgba(212,175,55,0.08) 0%, transparent 100%);
+          border-color: ${theme.colors.primary}80;
+          background: linear-gradient(135deg, rgba(212,175,55,0.10) 0%, rgba(255,255,255,0.03) 100%);
         }
         
         .menu-item-light:hover {
-          background-color: rgba(0,0,0,0.02);
+          border-color: ${theme.colors.primary}55;
+          box-shadow: 0 20px 45px -32px rgba(28,28,28,0.46);
         }
         
         .category-pill {
-          transition: all 0.2s ease;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .category-pill:hover {
+          transform: translateY(-1px);
         }
         
         .fade-in {
@@ -116,7 +146,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
         }
         
         .item-image {
-          transition: transform 0.4s ease;
+          transition: transform 0.45s ease;
         }
         
         .menu-item:hover .item-image {
@@ -126,9 +156,9 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
         .price-line {
           flex: 1;
           height: 1px;
-          margin: 0 12px 6px;
+          margin: 0 14px 6px;
           min-width: 20px;
-          opacity: 0.2;
+          opacity: 0.28;
         }
         
         .price-line-dark {
@@ -159,7 +189,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
         }
         
         .nav-glow {
-          box-shadow: 0 4px 30px -10px rgba(0,0,0,0.8);
+          box-shadow: 0 18px 45px -32px rgba(0,0,0,0.85);
         }
 
         @keyframes shimmer {
@@ -185,10 +215,22 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
           -webkit-mask-composite: xor;
           mask-composite: exclude;
         }
+
+        .section-kicker {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        @media (max-width: 640px) {
+          .price-line {
+            display: none;
+          }
+        }
       `}</style>
 
       <div
-        className="menu-container min-h-screen"
+        className="menu-container menu-surface min-h-screen"
         dir="rtl"
         style={{
           backgroundColor: theme.colors.background,
@@ -230,56 +272,57 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
           </div>
         ) : (
           <>
-            <header className={`relative pt-10 pb-8 sm:pt-16 sm:pb-12 ${isDark ? 'overflow-hidden' : ''}`}>
-          {isDark && (
-            <>
-              <div 
-                className="absolute top-0 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-20"
-                style={{ background: `radial-gradient(circle, ${theme.colors.primary}, transparent 70%)` }}
-              />
-              <div 
-                className="absolute bottom-0 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-10"
-                style={{ background: `radial-gradient(circle, ${theme.colors.accent}, transparent 70%)` }}
-              />
-            </>
-          )}
+            <header className="hero-shell relative overflow-hidden px-4 pt-6 pb-8 sm:px-6 sm:pt-10 sm:pb-12">
+          <div 
+            className="absolute inset-0 opacity-[0.055]"
+            style={{
+              backgroundImage: `linear-gradient(${theme.colors.border} 1px, transparent 1px), linear-gradient(90deg, ${theme.colors.border} 1px, transparent 1px)`,
+              backgroundSize: '36px 36px',
+            }}
+          />
           
-          {!isDark && (
-            <div 
-              className="absolute inset-0 opacity-[0.03]"
-              style={{
-                backgroundImage: `radial-gradient(circle at 1px 1px, ${theme.colors.primary} 1px, transparent 0)`,
-                backgroundSize: '24px 24px',
-              }}
-            />
-          )}
-          
-          <div className="relative max-w-2xl mx-auto px-6 text-center">
-            {business.logo_url && (
-              <div className="mb-6 fade-in" style={{ animationDelay: '0.1s' }}>
-                <img 
-                  src={business.logo_url} 
-                  alt={business.name}
-                  className="h-20 w-auto sm:h-24 sm:w-auto object-contain mx-auto"
-                />
-              </div>
-            )}
+          <div className="relative mx-auto grid max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="text-center lg:text-right">
+            <div className="mb-6 flex items-center justify-center gap-3 lg:justify-start">
+              {business.logo_url && (
+                <span
+                  className="flex h-16 w-16 items-center justify-center rounded-lg border p-2 sm:h-20 sm:w-20"
+                  style={{
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.86)',
+                    borderColor: theme.colors.border,
+                  }}
+                >
+                  <img 
+                    src={business.logo_url} 
+                    alt={business.name}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </span>
+              )}
+              <span
+                className="rounded-full border px-4 py-2 text-xs font-semibold"
+                style={{
+                  borderColor: theme.colors.border,
+                  color: theme.colors.muted,
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.74)',
+                }}
+              >
+                {totalVisibleItems} Ø¹Ù†Ø§ØµØ±
+              </span>
+            </div>
             
             <h1
-              className={`text-3xl sm:text-4xl md:text-5xl font-semibold mb-3 fade-in ${isDark ? 'gold-glow' : ''}`}
+              className={`mx-auto max-w-3xl text-4xl font-semibold leading-tight sm:text-5xl lg:mx-0 lg:text-6xl ${isDark ? 'gold-glow' : ''}`}
               style={{ 
                 fontFamily: "'Cairo', " + theme.font.heading,
                 color: isDark ? theme.colors.primary : theme.colors.text,
-                letterSpacing: isDark ? '0.02em' : '0',
-                animationDelay: '0.2s',
               }}
             >
               {business.name}
             </h1>
             
             <div 
-              className="flex items-center justify-center gap-4 mt-6 fade-in"
-              style={{ animationDelay: '0.3s' }}
+              className="mt-6 flex items-center justify-center gap-4 lg:justify-start"
             >
               <span 
                 className="h-px w-16 sm:w-24"
@@ -308,19 +351,38 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                 }}
               />
             </div>
+            </div>
+
+            {heroImageUrl && (
+              <div className="hero-media fade-in relative h-56 overflow-hidden rounded-lg border sm:h-72 lg:h-96" style={{ borderColor: theme.colors.border, animationDelay: '0.2s' }}>
+                <img 
+                  src={heroImageUrl} 
+                  alt={business.name}
+                  className="h-full w-full object-cover"
+                />
+                <div 
+                  className="absolute inset-0"
+                  style={{
+                    background: isDark
+                      ? 'linear-gradient(90deg, rgba(5,5,5,0.72), rgba(5,5,5,0.08) 58%, rgba(5,5,5,0.4))'
+                      : 'linear-gradient(90deg, rgba(0,0,0,0.46), transparent 58%, rgba(0,0,0,0.18))',
+                  }}
+                />
+              </div>
+            )}
           </div>
         </header>
 
         {visibleCategories.length > 1 && (
           <nav 
-            className={`sticky top-0 z-10 border-y backdrop-blur-md ${isDark ? 'nav-glow' : ''}`}
+            className={`sticky top-0 z-20 border-y backdrop-blur-xl ${isDark ? 'nav-glow' : ''}`}
             style={{ 
               backgroundColor: isDark ? `${theme.colors.background}ee` : `${theme.colors.background}f5`,
               borderColor: theme.colors.border,
             }}
           >
-            <div className="max-w-2xl mx-auto px-4">
-              <div className="flex overflow-x-auto py-4 gap-3 scrollbar-hide justify-start sm:justify-center">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6">
+              <div className="flex overflow-x-auto py-3 gap-3 scrollbar-hide justify-start lg:justify-center">
                 {visibleCategories.map((category) => {
                   const isActive = activeCategory === category.id
                   return (
@@ -333,7 +395,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                           block: 'start',
                         })
                       }}
-                      className="category-pill whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium"
+                      className="category-pill whitespace-nowrap rounded-lg px-5 py-2.5 text-sm font-semibold"
                       style={{
                         backgroundColor: isActive 
                           ? theme.colors.primary 
@@ -358,19 +420,19 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
           </nav>
         )}
 
-        <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-          <div className="space-y-12">
+        <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+          <div className="space-y-14">
             {visibleCategories.map((category, catIndex) => (
               <section 
                 key={category.id} 
                 id={`cat-${category.id}`}
-                className="scroll-mt-20 fade-in"
+                className="scroll-mt-24 fade-in"
                 style={{ animationDelay: `${0.1 + catIndex * 0.1}s` }}
               >
-                <div className="mb-8">
+                <div className="mb-6">
                   {category.image_url ? (
                     <div 
-                      className={`relative h-36 sm:h-44 rounded-2xl overflow-hidden ${isDark ? 'card-glow' : ''}`}
+                      className={`relative h-44 overflow-hidden rounded-lg sm:h-56 ${isDark ? 'card-glow' : ''}`}
                       style={{ border: `1px solid ${theme.colors.border}` }}
                     >
                       <img 
@@ -400,9 +462,9 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                       </div>
                     </div>
                   ) : (
-                    <div className={`text-center ${isDark ? 'py-4' : ''}`}>
+                    <div className={`flex items-end justify-between gap-4 border-b pb-4 ${isDark ? 'py-4' : ''}`} style={{ borderColor: theme.colors.border }}>
                       <h2
-                        className={`text-2xl sm:text-3xl font-semibold ${isDark ? 'gold-glow' : ''}`}
+                        className={`text-2xl font-semibold sm:text-3xl ${isDark ? 'gold-glow' : ''}`}
                         style={{ 
                           fontFamily: "'Cairo', " + theme.font.heading,
                           color: theme.colors.primary,
@@ -411,7 +473,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                         {category.name}
                       </h2>
                       <div 
-                        className="w-20 h-0.5 mx-auto mt-4 rounded-full"
+                        className="h-0.5 w-20 flex-shrink-0 rounded-full"
                         style={{ 
                           background: isDark 
                             ? `linear-gradient(90deg, transparent, ${theme.colors.primary}, transparent)` 
@@ -422,19 +484,23 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                   )}
                 </div>
 
-                <div className="space-y-2">
+                <div className="grid gap-3 lg:grid-cols-2">
                   {category.items
                     .filter((item) => item.available)
                     .map((item, itemIndex) => (
                       <article
                         key={item.id}
-                        className={`menu-item rounded-xl p-4 ${isDark ? 'menu-item-dark' : 'menu-item-light'}`}
-                        style={{ animationDelay: `${0.2 + itemIndex * 0.05}s` }}
+                        className={`menu-item rounded-lg border p-4 ${isDark ? 'menu-item-dark' : 'menu-item-light'}`}
+                        style={{
+                          animationDelay: `${0.2 + itemIndex * 0.05}s`,
+                          backgroundColor: isDark ? 'rgba(255,255,255,0.035)' : 'rgba(255,255,255,0.88)',
+                          borderColor: theme.colors.border,
+                        }}
                       >
-                        <div className="flex items-start gap-4" dir="ltr">
+                        <div className="flex min-h-[88px] items-start gap-4" dir="ltr">
                           {/* End left: Product image (no border, no rounded corners) */}
                           {item.image_url && (
-                            <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 overflow-hidden">
+                            <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg sm:h-24 sm:w-24">
                               <img 
                                 src={item.image_url} 
                                 alt={item.name}
@@ -446,7 +512,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                           {/* Right of image: Title + details */}
                           <div className="min-w-0 flex-1 overflow-hidden">
                             <h3 
-                              className="font-medium text-base sm:text-lg break-words"
+                              className="break-words text-base font-semibold sm:text-lg"
                               style={{ 
                                 fontFamily: "'Cairo', " + theme.font.heading,
                                 color: theme.colors.text,
@@ -457,7 +523,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                             
                             {item.description && (
                               <p 
-                                className="text-sm mt-1.5 leading-relaxed break-words"
+                                className="mt-1.5 line-clamp-2 text-sm leading-relaxed"
                                 style={{ color: theme.colors.muted }}
                               >
                                 {item.description}
@@ -475,8 +541,11 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                           {item.price && (
                             <div className="flex-shrink-0">
                               <span
-                                className={`font-semibold text-base sm:text-lg whitespace-nowrap ${isDark ? 'gold-glow' : ''}`}
-                                style={{ color: theme.colors.primary }}
+                                className={`rounded-full px-3 py-1 text-sm font-bold sm:text-base whitespace-nowrap ${isDark ? 'gold-glow' : ''}`}
+                                style={{
+                                  color: isDark ? theme.colors.primary : theme.colors.text,
+                                  backgroundColor: isDark ? `${theme.colors.primary}18` : `${theme.colors.accent}24`,
+                                }}
                                 dir="ltr"
                               >
                                 {Number(item.price).toFixed(2)} TD

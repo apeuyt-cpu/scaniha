@@ -162,7 +162,7 @@ export default function SpinWheelModal({ businessId, onClose, onSpinRecorded }: 
 
           <div className="mt-5 flex justify-center">
             {loading ? (
-              <div className="flex h-[300px] w-[300px] items-center justify-center">
+              <div className="flex h-[314px] w-[286px] items-center justify-center">
                 <div className="h-10 w-10 rounded-full border-2 border-white/20 border-t-amber-300 animate-spin" />
               </div>
             ) : (
@@ -172,7 +172,7 @@ export default function SpinWheelModal({ businessId, onClose, onSpinRecorded }: 
                 targetIndex={targetIndex}
                 onSpin={handleSpin}
                 onSpinComplete={handleSpinComplete}
-                size={300}
+                size={286}
               />
             )}
           </div>

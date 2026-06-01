@@ -44,7 +44,7 @@ function normalizeDegrees(degrees: number) {
 
 function shortenLabel(label: string, maxLength: number) {
   if (label.length <= maxLength) return label
-  return `${label.slice(0, Math.max(1, maxLength - 1))}…`
+  return `${label.slice(0, Math.max(1, maxLength - 3))}...`
 }
 
 export default function LuckyWheel({
@@ -59,6 +59,7 @@ export default function LuckyWheel({
   const rotationRef = useRef(0)
   const animationRef = useRef<number | null>(null)
   const [currentRotation, setCurrentRotation] = useState(0)
+  const canvasSize = Math.max(180, size - 22)
 
   const segments = useMemo<Segment[]>(() => {
     const playablePrizes = prizes
@@ -88,16 +89,16 @@ export default function LuckyWheel({
     if (!ctx) return
 
     const dpr = window.devicePixelRatio || 1
-    canvas.width = size * dpr
-    canvas.height = size * dpr
-    canvas.style.width = `${size}px`
-    canvas.style.height = `${size}px`
+    canvas.width = canvasSize * dpr
+    canvas.height = canvasSize * dpr
+    canvas.style.width = `${canvasSize}px`
+    canvas.style.height = `${canvasSize}px`
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.clearRect(0, 0, size, size)
+    ctx.clearRect(0, 0, canvasSize, canvasSize)
 
-    const cx = size / 2
-    const cy = size / 2
-    const radius = size / 2 - 13
+    const cx = canvasSize / 2
+    const cy = canvasSize / 2
+    const radius = canvasSize / 2 - 10
     const innerRadius = radius * 0.18
 
     ctx.save()
@@ -132,19 +133,21 @@ export default function LuckyWheel({
       ctx.stroke()
 
       if (segment.sweepDeg >= 12) {
+        const textRadius = radius * 0.62
+        const textX = cx + Math.cos(middleAngle) * textRadius
+        const textY = cy + Math.sin(middleAngle) * textRadius
+
         ctx.save()
-        ctx.translate(cx, cy)
-        ctx.rotate(middleAngle)
-        ctx.textAlign = 'right'
+        ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillStyle = '#fff'
         ctx.shadowColor = 'rgba(15,23,42,0.45)'
         ctx.shadowBlur = 3
 
-        const fontSize = Math.max(10, Math.min(15, Math.floor((segment.sweepDeg / 360) * size * 0.55)))
-        const label = shortenLabel(segment.label, segment.sweepDeg < 24 ? 7 : 13)
+        const fontSize = Math.max(10, Math.min(14, Math.floor((segment.sweepDeg / 360) * canvasSize * 0.48)))
+        const label = shortenLabel(segment.label, segment.sweepDeg < 24 ? 6 : 12)
         ctx.font = `800 ${fontSize}px Arial, sans-serif`
-        ctx.fillText(label, radius - 18, 0, radius * 0.62)
+        ctx.fillText(label, textX, textY, radius * 0.48)
         ctx.restore()
       }
     })
@@ -176,7 +179,7 @@ export default function LuckyWheel({
     ctx.arc(cx, cy, 12, 0, Math.PI * 2)
     ctx.fillStyle = '#111827'
     ctx.fill()
-  }, [segments, size])
+  }, [canvasSize, segments])
 
   useEffect(() => {
     drawWheel(currentRotation)
@@ -223,15 +226,21 @@ export default function LuckyWheel({
   }, [spinning, targetIndex, segments, onSpinComplete])
 
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <div className="absolute -top-2 left-1/2 z-20 h-12 w-11 -translate-x-1/2">
-        <div className="mx-auto h-0 w-0 border-l-[18px] border-r-[18px] border-t-[34px] border-l-transparent border-r-transparent border-t-white drop-shadow-[0_7px_12px_rgba(0,0,0,0.35)]" />
-        <div className="absolute left-1/2 top-1 h-0 w-0 -translate-x-1/2 border-l-[10px] border-r-[10px] border-t-[20px] border-l-transparent border-r-transparent border-t-rose-600" />
+    <div
+      className="relative mx-auto flex items-start justify-center"
+      style={{ width: size, height: size + 28 }}
+    >
+      <div className="absolute left-1/2 top-0 z-20 h-11 w-10 -translate-x-1/2">
+        <div className="mx-auto h-0 w-0 border-l-[17px] border-r-[17px] border-t-[32px] border-l-transparent border-r-transparent border-t-white drop-shadow-[0_7px_12px_rgba(0,0,0,0.35)]" />
+        <div className="absolute left-1/2 top-1 h-0 w-0 -translate-x-1/2 border-l-[9px] border-r-[9px] border-t-[19px] border-l-transparent border-r-transparent border-t-rose-600" />
       </div>
 
-      <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#fbbf24,#fb7185,#22d3ee,#a78bfa,#34d399,#fbbf24)] opacity-70 blur-md" />
       <div
-        className="relative rounded-full border-[7px] border-white bg-zinc-950 p-1 shadow-[0_22px_70px_rgba(0,0,0,0.45)]"
+        className="absolute left-1/2 rounded-full bg-[conic-gradient(from_0deg,#fbbf24,#fb7185,#22d3ee,#a78bfa,#34d399,#fbbf24)] opacity-55 blur-md"
+        style={{ top: 26, width: size, height: size, transform: 'translateX(-50%)' }}
+      />
+      <div
+        className="relative mt-[26px] flex items-center justify-center overflow-hidden rounded-full border-[7px] border-white bg-zinc-950 shadow-[0_22px_70px_rgba(0,0,0,0.45)]"
         style={{ width: size, height: size }}
       >
         <canvas ref={canvasRef} className="rounded-full" />
@@ -240,7 +249,8 @@ export default function LuckyWheel({
       {!spinning && (
         <button
           onClick={onSpin}
-          className="absolute left-1/2 top-1/2 z-30 flex h-[70px] w-[70px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-zinc-950 text-sm font-black text-white shadow-[0_12px_28px_rgba(0,0,0,0.38)] transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-amber-200/60"
+          className="absolute left-1/2 z-30 flex h-[64px] w-[64px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-zinc-950 text-sm font-black text-white shadow-[0_12px_28px_rgba(0,0,0,0.38)] transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-amber-200/60"
+          style={{ top: 26 + size / 2 }}
           aria-label="تدوير العجلة"
         >
           دور

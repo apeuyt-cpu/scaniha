@@ -58,12 +58,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Total weight must equal 100' }, { status: 400 })
   }
 
-  const { data: existingIds } = await (supabase
+  const { data: rawExisting } = await (supabase
     .from('wheel_prizes') as any)
     .select('id, stock, stock_remaining')
     .eq('business_id', business.id)
 
-  const existingMap = new Map((existingIds || []).map((r: any) => [r.id, r]))
+  const existingList: any[] = rawExisting || []
+  const existingMap = new Map(existingList.map((r: any) => [r.id, r]))
   const incomingIds = prizes.filter((p: any) => p.id).map((p: any) => p.id)
 
   const idsToDelete = Array.from(existingMap.keys()).filter((id: any) => !incomingIds.includes(id))
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
   }
 
   for (const prize of prizes) {
-    const existing = prize.id ? existingMap.get(prize.id) : null
+    const existing: any = prize.id ? existingMap.get(prize.id) : null
     const stock = prize.stock != null && prize.stock !== '' ? parseInt(prize.stock) || 0 : null
 
     if (existing) {

@@ -1,25 +1,50 @@
 'use client'
 
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const SEGMENT_COLORS = [
-  ['#FF6B6B', '#c0392b'],
-  ['#4ECDC4', '#16a085'],
-  ['#FFE66D', '#f39c12'],
-  ['#A8E6CF', '#27ae60'],
-  ['#FF8B94', '#e74c3c'],
-  ['#95E1D3', '#1abc9c'],
-  ['#F38181', '#d35400'],
-  ['#AA96DA', '#8e44ad'],
+  ['#f59e0b', '#ef4444'],
+  ['#14b8a6', '#0f766e'],
+  ['#8b5cf6', '#6d28d9'],
+  ['#22c55e', '#15803d'],
+  ['#ec4899', '#be185d'],
+  ['#06b6d4', '#0e7490'],
+  ['#f97316', '#c2410c'],
+  ['#6366f1', '#4338ca'],
 ]
 
+interface WheelPrize {
+  label: string
+  weight: number
+  is_winning: boolean
+}
+
 interface LuckyWheelProps {
-  prizes: { label: string; weight: number; is_winning: boolean }[]
+  prizes: WheelPrize[]
   onSpin: () => void
   spinning: boolean
   targetIndex: number | null
   onSpinComplete: () => void
   size?: number
+}
+
+type Segment = WheelPrize & {
+  originalIndex: number
+  startDeg: number
+  sweepDeg: number
+}
+
+function degreesToRadians(degrees: number) {
+  return (degrees * Math.PI) / 180
+}
+
+function normalizeDegrees(degrees: number) {
+  return ((degrees % 360) + 360) % 360
+}
+
+function shortenLabel(label: string, maxLength: number) {
+  if (label.length <= maxLength) return label
+  return `${label.slice(0, Math.max(1, maxLength - 1))}…`
 }
 
 export default function LuckyWheel({
@@ -28,110 +53,162 @@ export default function LuckyWheel({
   spinning,
   targetIndex,
   onSpinComplete,
-  size = 280,
+  size = 300,
 }: LuckyWheelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rotationRef = useRef(0)
   const animationRef = useRef<number | null>(null)
   const [currentRotation, setCurrentRotation] = useState(0)
-  const isDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
 
-  const drawWheel = useCallback((rotation: number) => {
+  const segments = useMemo<Segment[]>(() => {
+    const playablePrizes = prizes
+      .map((prize, originalIndex) => ({ ...prize, originalIndex }))
+      .filter(prize => Number(prize.weight) > 0)
+
+    const totalWeight = playablePrizes.reduce((sum, prize) => sum + Number(prize.weight || 0), 0)
+    let cursor = 0
+
+    return playablePrizes.map(prize => {
+      const sweepDeg = (Number(prize.weight || 0) / totalWeight) * 360
+      const segment = {
+        ...prize,
+        startDeg: cursor,
+        sweepDeg,
+      }
+      cursor += sweepDeg
+      return segment
+    })
+  }, [prizes])
+
+  const drawWheel = useCallback((rotationDeg: number) => {
     const canvas = canvasRef.current
-    if (!canvas || prizes.length === 0) return
+    if (!canvas || segments.length === 0) return
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
     const dpr = window.devicePixelRatio || 1
-    const displaySize = size
-    canvas.width = displaySize * dpr
-    canvas.height = displaySize * dpr
-    canvas.style.width = `${displaySize}px`
-    canvas.style.height = `${displaySize}px`
-    ctx.scale(dpr, dpr)
+    canvas.width = size * dpr
+    canvas.height = size * dpr
+    canvas.style.width = `${size}px`
+    canvas.style.height = `${size}px`
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, size, size)
 
-    const cx = displaySize / 2
-    const cy = displaySize / 2
-    const radius = displaySize / 2 - 10
-    const arc = (2 * Math.PI) / prizes.length
+    const cx = size / 2
+    const cy = size / 2
+    const radius = size / 2 - 13
+    const innerRadius = radius * 0.18
 
-    ctx.clearRect(0, 0, displaySize, displaySize)
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(cx, cy, radius + 6, 0, Math.PI * 2)
+    ctx.fillStyle = '#0f172a'
+    ctx.shadowColor = 'rgba(0,0,0,0.38)'
+    ctx.shadowBlur = 24
+    ctx.shadowOffsetY = 10
+    ctx.fill()
+    ctx.restore()
 
-    prizes.forEach((prize, i) => {
-      const startAngle = rotation + i * arc - Math.PI / 2
-      const endAngle = startAngle + arc
+    segments.forEach((segment, index) => {
+      const startAngle = degreesToRadians(rotationDeg + segment.startDeg - 90)
+      const endAngle = degreesToRadians(rotationDeg + segment.startDeg + segment.sweepDeg - 90)
+      const middleAngle = degreesToRadians(rotationDeg + segment.startDeg + segment.sweepDeg / 2 - 90)
+      const [fromColor, toColor] = SEGMENT_COLORS[index % SEGMENT_COLORS.length]
+
+      const gradient = ctx.createRadialGradient(cx, cy, innerRadius, cx, cy, radius)
+      gradient.addColorStop(0, fromColor)
+      gradient.addColorStop(1, toColor)
 
       ctx.beginPath()
       ctx.moveTo(cx, cy)
       ctx.arc(cx, cy, radius, startAngle, endAngle)
       ctx.closePath()
-
-      const [fillColor, strokeColor] = SEGMENT_COLORS[i % SEGMENT_COLORS.length]
-      ctx.fillStyle = fillColor
+      ctx.fillStyle = gradient
       ctx.fill()
 
-      ctx.strokeStyle = '#fff'
+      ctx.strokeStyle = 'rgba(255,255,255,0.72)'
       ctx.lineWidth = 2
       ctx.stroke()
 
-      ctx.save()
-      ctx.translate(cx, cy)
-      ctx.rotate(startAngle + arc / 2)
-      ctx.textAlign = 'right'
-      ctx.fillStyle = '#fff'
-      ctx.font = `bold ${Math.max(11, Math.floor(radius / prizes.length / 2))}px 'Cairo', sans-serif`
-      ctx.shadowColor = 'rgba(0,0,0,0.3)'
-      ctx.shadowBlur = 2
-      const label = prize.label.length > 10 ? prize.label.slice(0, 9) + '…' : prize.label
-      ctx.fillText(label, radius - 16, 5)
-      ctx.restore()
+      if (segment.sweepDeg >= 12) {
+        ctx.save()
+        ctx.translate(cx, cy)
+        ctx.rotate(middleAngle)
+        ctx.textAlign = 'right'
+        ctx.textBaseline = 'middle'
+        ctx.fillStyle = '#fff'
+        ctx.shadowColor = 'rgba(15,23,42,0.45)'
+        ctx.shadowBlur = 3
+
+        const fontSize = Math.max(10, Math.min(15, Math.floor((segment.sweepDeg / 360) * size * 0.55)))
+        const label = shortenLabel(segment.label, segment.sweepDeg < 24 ? 7 : 13)
+        ctx.font = `800 ${fontSize}px Arial, sans-serif`
+        ctx.fillText(label, radius - 18, 0, radius * 0.62)
+        ctx.restore()
+      }
     })
 
+    for (let tick = 0; tick < 48; tick++) {
+      const angle = degreesToRadians(tick * 7.5)
+      const x = cx + Math.cos(angle) * (radius + 2)
+      const y = cy + Math.sin(angle) * (radius + 2)
+      ctx.beginPath()
+      ctx.arc(x, y, tick % 4 === 0 ? 2.3 : 1.4, 0, Math.PI * 2)
+      ctx.fillStyle = tick % 4 === 0 ? '#fde68a' : 'rgba(255,255,255,0.72)'
+      ctx.fill()
+    }
+
+    const centerGradient = ctx.createRadialGradient(cx - 8, cy - 9, 4, cx, cy, 36)
+    centerGradient.addColorStop(0, '#fff7ed')
+    centerGradient.addColorStop(0.42, '#fbbf24')
+    centerGradient.addColorStop(1, '#c2410c')
+
     ctx.beginPath()
-    ctx.arc(cx, cy, 22, 0, 2 * Math.PI)
-    ctx.fillStyle = isDark ? '#1a1a2e' : '#fff'
+    ctx.arc(cx, cy, 35, 0, Math.PI * 2)
+    ctx.fillStyle = centerGradient
     ctx.fill()
-    ctx.strokeStyle = isDark ? '#333' : '#ddd'
-    ctx.lineWidth = 2
+    ctx.lineWidth = 5
+    ctx.strokeStyle = '#fff'
     ctx.stroke()
 
-    ctx.fillStyle = isDark ? '#fff' : '#333'
-    ctx.font = 'bold 14px sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText('🎯', cx, cy)
-  }, [prizes, size, isDark])
+    ctx.beginPath()
+    ctx.arc(cx, cy, 12, 0, Math.PI * 2)
+    ctx.fillStyle = '#111827'
+    ctx.fill()
+  }, [segments, size])
 
   useEffect(() => {
     drawWheel(currentRotation)
   }, [drawWheel, currentRotation])
 
   useEffect(() => {
-    if (!spinning || targetIndex === null) return
+    if (!spinning || targetIndex === null || segments.length === 0) return
 
-    const segmentAngle = 360 / prizes.length
-    const targetAngle = 360 - (targetIndex * segmentAngle + segmentAngle / 2)
-    const totalRotation = 1440 + targetAngle
+    const targetSegment = segments.find(segment => segment.originalIndex === targetIndex)
+    if (!targetSegment) return
+
+    const targetAngle = normalizeDegrees(-(targetSegment.startDeg + targetSegment.sweepDeg / 2))
     const startRotation = rotationRef.current
-    const duration = 4000
+    const forwardDelta = normalizeDegrees(targetAngle - startRotation)
+    const finalRotation = startRotation + 1800 + forwardDelta
+    const duration = 4600
     const startTime = performance.now()
 
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime
       const progress = Math.min(elapsed / duration, 1)
+      const easedProgress = 1 - Math.pow(1 - progress, 4)
+      const nextRotation = startRotation + (finalRotation - startRotation) * easedProgress
 
-      const easeOut = 1 - Math.pow(1 - progress, 3)
-      const currentAngle = startRotation + (totalRotation - startRotation) * easeOut
-
-      rotationRef.current = currentAngle % 360
-      setCurrentRotation((currentAngle * Math.PI) / 180)
+      rotationRef.current = normalizeDegrees(nextRotation)
+      setCurrentRotation(rotationRef.current)
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate)
       } else {
-        rotationRef.current = totalRotation % 360
-        setCurrentRotation((totalRotation * Math.PI) / 180)
+        rotationRef.current = normalizeDegrees(finalRotation)
+        setCurrentRotation(rotationRef.current)
         onSpinComplete()
       }
     }
@@ -143,54 +220,30 @@ export default function LuckyWheel({
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [spinning, targetIndex, prizes.length, onSpinComplete])
+  }, [spinning, targetIndex, segments, onSpinComplete])
 
   return (
-    <div className="relative inline-block" style={{ width: size, height: size }}>
-      <div
-        className="absolute z-10"
-        style={{
-          top: -8,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 0,
-          height: 0,
-          borderLeft: '12px solid transparent',
-          borderRight: '12px solid transparent',
-          borderTop: '20px solid #e74c3c',
-          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-        }}
-      />
-      <div
-        className="rounded-full"
-        style={{
-          border: '4px solid #e74c3c',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-          overflow: 'hidden',
-          width: size,
-          height: size,
-        }}
-      >
-        <canvas ref={canvasRef} />
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <div className="absolute -top-2 left-1/2 z-20 h-12 w-11 -translate-x-1/2">
+        <div className="mx-auto h-0 w-0 border-l-[18px] border-r-[18px] border-t-[34px] border-l-transparent border-r-transparent border-t-white drop-shadow-[0_7px_12px_rgba(0,0,0,0.35)]" />
+        <div className="absolute left-1/2 top-1 h-0 w-0 -translate-x-1/2 border-l-[10px] border-r-[10px] border-t-[20px] border-l-transparent border-r-transparent border-t-rose-600" />
       </div>
+
+      <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#fbbf24,#fb7185,#22d3ee,#a78bfa,#34d399,#fbbf24)] opacity-70 blur-md" />
+      <div
+        className="relative rounded-full border-[7px] border-white bg-zinc-950 p-1 shadow-[0_22px_70px_rgba(0,0,0,0.45)]"
+        style={{ width: size, height: size }}
+      >
+        <canvas ref={canvasRef} className="rounded-full" />
+      </div>
+
       {!spinning && (
         <button
           onClick={onSpin}
-          className="absolute rounded-full flex items-center justify-center text-lg font-bold cursor-pointer hover:scale-105 transition-transform"
-          style={{
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 44,
-            height: 44,
-            backgroundColor: '#e74c3c',
-            color: '#fff',
-            border: '3px solid #fff',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-            zIndex: 20,
-          }}
+          className="absolute left-1/2 top-1/2 z-30 flex h-[70px] w-[70px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-zinc-950 text-sm font-black text-white shadow-[0_12px_28px_rgba(0,0,0,0.38)] transition hover:scale-105 focus:outline-none focus:ring-4 focus:ring-amber-200/60"
+          aria-label="تدوير العجلة"
         >
-          ⟳
+          دور
         </button>
       )}
     </div>

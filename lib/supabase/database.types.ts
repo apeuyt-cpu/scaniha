@@ -221,6 +221,26 @@ export interface Database {
           created_at?: string
         }
       }
+      menu_views: {
+        Row: {
+          id: string
+          business_id: string
+          viewed_at: string
+          device_type: 'mobile' | 'desktop' | 'unknown'
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          viewed_at?: string
+          device_type?: 'mobile' | 'desktop' | 'unknown'
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          viewed_at?: string
+          device_type?: 'mobile' | 'desktop' | 'unknown'
+        }
+      }
       wheel_tickets: {
         Row: {
           id: string

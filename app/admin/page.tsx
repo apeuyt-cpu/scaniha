@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import LogoUpload from '@/components/business/LogoUpload'
 import SettingsManager from '@/components/admin/SettingsManager'
 import WheelManager from '@/components/wheel/WheelManager'
+import MenuAnalytics from '@/components/admin/MenuAnalytics'
 
 interface Business {
   id: string
@@ -511,6 +512,11 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Menu Analytics */}
+        <div className="mb-5">
+          <MenuAnalytics />
         </div>
 
         {/* Lucky Wheel */}

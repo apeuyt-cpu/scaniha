@@ -1,7 +1,7 @@
 import { requireSuperAdmin } from '@/lib/auth'
 import { getAllBusinesses } from '@/lib/db/business'
 import BusinessList from '@/components/super-admin/BusinessList'
-import { redirect } from 'next/navigation'
+import SuperAdminAnalytics from '@/components/admin/SuperAdminAnalytics'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,6 +31,10 @@ export default async function SuperAdminDashboard() {
       </div>
 
       <BusinessList businesses={businesses} />
+
+      <div className="mt-8">
+        <SuperAdminAnalytics />
+      </div>
     </div>
   )
 }

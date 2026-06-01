@@ -3,6 +3,7 @@ import { getBusinessBySlug, getBusinessWithCategoriesAndItems } from '@/lib/db/b
 import { getTheme } from '@/lib/themes'
 import PublicMenu from '@/components/menu/PublicMenu'
 import WheelButton from '@/components/wheel/WheelButton'
+import LogView from '@/components/LogView'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Metadata } from 'next'
 
@@ -112,6 +113,7 @@ export default async function PublicMenuPage({
       {business.wheel_enabled && business.wheel_visible && !isPaused && (
         <WheelButton businessId={business.id} />
       )}
+      <LogView businessId={business.id} slug={business.slug} />
     </>
   )
 }

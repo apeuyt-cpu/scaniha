@@ -202,6 +202,8 @@ export interface Database {
           label: string
           weight: number
           is_winning: boolean
+          stock: number | null
+          stock_remaining: number | null
           created_at: string
         }
         Insert: {
@@ -210,6 +212,8 @@ export interface Database {
           label: string
           weight: number
           is_winning?: boolean
+          stock?: number | null
+          stock_remaining?: number | null
           created_at?: string
         }
         Update: {
@@ -218,6 +222,8 @@ export interface Database {
           label?: string
           weight?: number
           is_winning?: boolean
+          stock?: number | null
+          stock_remaining?: number | null
           created_at?: string
         }
       }

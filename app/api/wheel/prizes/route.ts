@@ -60,27 +60,50 @@ export async function POST(req: NextRequest) {
 
   const { data: existingIds } = await (supabase
     .from('wheel_prizes') as any)
-    .select('id')
+    .select('id, stock, stock_remaining')
     .eq('business_id', business.id)
 
-  const existingIdSet = new Set((existingIds || []).map((r: any) => r.id))
+  const existingMap = new Map((existingIds || []).map((r: any) => [r.id, r]))
   const incomingIds = prizes.filter((p: any) => p.id).map((p: any) => p.id)
 
-  const idsToDelete = Array.from(existingIdSet).filter((id: any) => !incomingIds.includes(id))
+  const idsToDelete = Array.from(existingMap.keys()).filter((id: any) => !incomingIds.includes(id))
   if (idsToDelete.length > 0) {
     await (supabase.from('wheel_prizes') as any).delete().in('id', idsToDelete)
   }
 
   for (const prize of prizes) {
-    if (prize.id && existingIdSet.has(prize.id)) {
+    const existing = prize.id ? existingMap.get(prize.id) : null
+    const stock = prize.stock != null && prize.stock !== '' ? parseInt(prize.stock) || 0 : null
+
+    if (existing) {
+      const oldStock = existing.stock != null ? parseInt(existing.stock) : null
+      let stock_remaining = existing.stock_remaining != null ? parseInt(existing.stock_remaining) : null
+
+      if (stock !== oldStock) {
+        stock_remaining = stock
+      }
+
       await (supabase
         .from('wheel_prizes') as any)
-        .update({ label: prize.label, weight: prize.weight, is_winning: prize.is_winning })
+        .update({
+          label: prize.label,
+          weight: prize.weight,
+          is_winning: prize.is_winning,
+          stock: stock,
+          stock_remaining: stock_remaining,
+        })
         .eq('id', prize.id)
     } else {
       await (supabase
         .from('wheel_prizes') as any)
-        .insert({ business_id: business.id, label: prize.label, weight: prize.weight, is_winning: prize.is_winning })
+        .insert({
+          business_id: business.id,
+          label: prize.label,
+          weight: prize.weight,
+          is_winning: prize.is_winning,
+          stock: stock,
+          stock_remaining: stock,
+        })
     }
   }
 

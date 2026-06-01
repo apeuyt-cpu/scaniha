@@ -8,6 +8,8 @@ interface Prize {
   label: string
   weight: number
   is_winning: boolean
+  stock?: number | null
+  stock_remaining?: number | null
 }
 
 interface Ticket {
@@ -177,6 +179,34 @@ export default function SpinWheelModal({ businessId, onClose, onSpinRecorded }: 
             )}
           </div>
 
+          {/* Stock remaining legend */}
+          {!loading && prizes.some(p => p.stock != null && p.stock > 0) && (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+              <p className="text-xs font-bold text-zinc-400 mb-2">الجوائز المتاحة:</p>
+              <div className="flex flex-wrap gap-2">
+                {prizes.filter(p => p.stock != null && p.stock > 0).map((prize, i) => {
+                  const remaining = prize.stock_remaining ?? prize.stock ?? 0
+                  const outOfStock = remaining <= 0
+                  return (
+                    <span
+                      key={i}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+                        outOfStock
+                          ? 'bg-red-500/15 text-red-300 line-through'
+                          : 'bg-emerald-500/15 text-emerald-200'
+                      }`}
+                    >
+                      {prize.label}
+                      <span className={outOfStock ? 'text-red-300' : 'text-emerald-300'}>
+                        {outOfStock ? 'نفد' : `تبقى ${remaining}`}
+                      </span>
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {!spinning && !result && !loading && (
             <button
               onClick={handleSpin}
@@ -232,6 +262,12 @@ export default function SpinWheelModal({ businessId, onClose, onSpinRecorded }: 
                       <strong>{new Date(result.ticket!.expires_at).toLocaleDateString('ar-TN')}</strong>
                     </div>
                   </div>
+
+                  {result.prize.stock != null && result.prize.stock > 0 && (
+                    <p className="mt-3 text-xs text-emerald-50/75">
+                      تبقى من هذه الجائزة: {result.prize.stock_remaining ?? 0}
+                    </p>
+                  )}
 
                   <p className="mt-3 text-xs leading-5 text-emerald-50/75">
                     احتفظ بهذا الرمز وقدمه للفريق عند الطلب. كل تذكرة تستعمل مرة واحدة فقط.

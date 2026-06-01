@@ -61,7 +61,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to load prizes' }, { status: 500 })
   }
 
-  const playablePrizes = (prizes || []).filter((prize: any) => Number(prize.weight) > 0)
+  const playablePrizes = (prizes || []).filter((prize: any) => {
+    if (Number(prize.weight) <= 0) return false
+    if (prize.stock != null && prize.stock_remaining != null && Number(prize.stock_remaining) <= 0) return false
+    return true
+  })
 
   if (playablePrizes.length === 0) {
     return NextResponse.json({ error: 'No prizes configured' }, { status: 404 })
@@ -127,6 +131,15 @@ export async function POST(req: NextRequest) {
         { error: 'Prize selected, but ticket creation failed. Please try again.' },
         { status: 500 }
       )
+    }
+
+    if (selectedPrize.stock != null && selectedPrize.stock_remaining != null) {
+      const newRemaining = Math.max(0, Number(selectedPrize.stock_remaining) - 1)
+      await (supabase
+        .from('wheel_prizes') as any)
+        .update({ stock_remaining: newRemaining })
+        .eq('id', selectedPrize.id)
+      selectedPrize.stock_remaining = newRemaining
     }
   }
 

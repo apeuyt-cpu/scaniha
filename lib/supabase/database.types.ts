@@ -51,6 +51,8 @@ export interface Database {
           whatsapp_number: string | null
           website_url: string | null
           primary_color: string | null
+          wheel_enabled: boolean
+          wheel_visible: boolean
           created_at: string
         }
         Insert: {
@@ -68,6 +70,8 @@ export interface Database {
           whatsapp_number?: string | null
           website_url?: string | null
           primary_color?: string | null
+          wheel_enabled?: boolean
+          wheel_visible?: boolean
           created_at?: string
         }
         Update: {
@@ -85,6 +89,8 @@ export interface Database {
           whatsapp_number?: string | null
           website_url?: string | null
           primary_color?: string | null
+          wheel_enabled?: boolean
+          wheel_visible?: boolean
           created_at?: string
         }
       }
@@ -187,6 +193,64 @@ export interface Database {
           status?: 'active' | 'expired' | 'paused'
           created_at?: string
           updated_at?: string
+        }
+      }
+      wheel_prizes: {
+        Row: {
+          id: string
+          business_id: string
+          label: string
+          weight: number
+          is_winning: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          label: string
+          weight: number
+          is_winning?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          label?: string
+          weight?: number
+          is_winning?: boolean
+          created_at?: string
+        }
+      }
+      wheel_tickets: {
+        Row: {
+          id: string
+          business_id: string
+          prize_label: string
+          ticket_code: string
+          issued_at: string
+          expires_at: string | null
+          redeemed: boolean
+          redeemed_at: string | null
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          prize_label: string
+          ticket_code: string
+          issued_at?: string
+          expires_at?: string | null
+          redeemed?: boolean
+          redeemed_at?: string | null
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          prize_label?: string
+          ticket_code?: string
+          issued_at?: string
+          expires_at?: string | null
+          redeemed?: boolean
+          redeemed_at?: string | null
         }
       }
       images: {

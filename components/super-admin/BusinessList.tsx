@@ -460,6 +460,33 @@ export default function BusinessList({ businesses: initialBusinesses }: Business
                   {/* Action Buttons */}
                   <div className="flex gap-2">
                     <button
+                      onClick={async () => {
+                        setLoading(`wheel-${business.id}`)
+                        try {
+                          const res = await fetch(`/api/super-admin/businesses/${business.id}/wheel`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ wheel_enabled: !(business as any).wheel_enabled }),
+                          })
+                          if (res.ok) {
+                            setBusinesses(businesses.map(b =>
+                              b.id === business.id ? { ...b, wheel_enabled: !(b as any).wheel_enabled } : b
+                            ))
+                          }
+                        } finally {
+                          setLoading(null)
+                        }
+                      }}
+                      disabled={loading === `wheel-${business.id}`}
+                      className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                        (business as any).wheel_enabled
+                          ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                          : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+                      }`}
+                    >
+                      {(business as any).wheel_enabled ? '🎡 عجلة الحظ' : '🎡'}
+                    </button>
+                    <button
                       onClick={() => setShowTimeModal(business.id)}
                       disabled={loading === business.id || loading === `delete-${business.id}` || loading === `profile-${business.id}` || editingProfile === business.id}
                       className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm font-medium hover:bg-zinc-800 disabled:opacity-50"

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getBusinessBySlug, getBusinessWithCategoriesAndItems } from '@/lib/db/business'
 import { getTheme } from '@/lib/themes'
 import PublicMenu from '@/components/menu/PublicMenu'
+import WheelButton from '@/components/wheel/WheelButton'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Metadata } from 'next'
 
@@ -108,6 +109,9 @@ export default async function PublicMenuPage({
         categories={categories}
         theme={theme}
       />
+      {business.wheel_enabled && business.wheel_visible && !isPaused && (
+        <WheelButton businessId={business.id} />
+      )}
     </>
   )
 }

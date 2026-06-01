@@ -39,6 +39,54 @@ export async function GET() {
   }
 }
 
+export async function PATCH(request: Request) {
+  try {
+    const { user } = await requireOwner()
+    const supabase = await createServerClient()
+    const body = await request.json()
+
+    const { data: business } = await (supabase
+      .from('businesses') as any)
+      .select('id')
+      .eq('owner_id', user.id)
+      .single()
+
+    if (!business) {
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+    }
+
+    const allowedFields = ['wheel_visible', 'name', 'primary_color']
+    const updates: Record<string, any> = {}
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updates[field] = body[field]
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
+
+    const { error } = await (supabase.from('businesses') as any)
+      .update(updates)
+      .eq('id', business.id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, updates })
+  } catch (error: any) {
+    if (error?.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error
+    }
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(request: Request) {
   try {
     // requireOwner already ensures user is owner and redirects super_admin

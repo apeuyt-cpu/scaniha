@@ -6,6 +6,7 @@ import QRCode from 'qrcode'
 import { createClient } from '@/lib/supabase/client'
 import LogoUpload from '@/components/business/LogoUpload'
 import SettingsManager from '@/components/admin/SettingsManager'
+import WheelManager from '@/components/wheel/WheelManager'
 
 interface Business {
   id: string
@@ -16,6 +17,8 @@ interface Business {
   logo_url: string | null
   expires_at: string | null
   primary_color: string | null
+  wheel_enabled: boolean
+  wheel_visible: boolean
 }
 
 export default function AdminDashboard() {
@@ -509,6 +512,13 @@ export default function AdminDashboard() {
             ))}
           </div>
         </div>
+
+        {/* Lucky Wheel */}
+        {business.wheel_enabled && (
+          <div className="mb-5">
+            <WheelManager businessId={business.id} initialVisible={business.wheel_visible} />
+          </div>
+        )}
 
         {/* Settings Manager */}
         <SettingsManager business={business} onUpdate={fetchBusiness} />

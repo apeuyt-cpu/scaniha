@@ -452,45 +452,48 @@ export default function LandingPage() {
             </div>
 
             {/* Plan 3 - Lifetime */}
-            <div className="reveal lp-card md:scale-95 md:opacity-95 bg-gradient-to-br from-zinc-800 to-zinc-900 text-white p-8 border border-amber-400/40" style={{ ['--reveal-delay' as string]: '160ms' }}>
-              <div className="text-center mb-2">
-                <span className="inline-block bg-amber-400 text-zinc-900 px-4 py-1 rounded-full text-sm font-extrabold mb-4">
-                  الأفضل
-                </span>
-              </div>
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-extrabold mb-2">مدى الحياة</h3>
-                <div className="flex items-baseline justify-center gap-2 mb-2">
-                  <span className="text-5xl font-extrabold">600</span>
-                  <span className="text-xl text-white/90">د.ت</span>
+            <div className="reveal relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a0a2e] via-zinc-900 to-[#2a1a00] text-white p-8 border border-amber-500/40 shadow-[0_0_40px_rgba(251,191,36,0.10)] md:scale-95 md:opacity-95" style={{ ['--reveal-delay' as string]: '160ms' }}>
+              <div className="pointer-events-none absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-amber-400/20 via-transparent to-amber-400/5 opacity-60" />
+              <div className="relative">
+                <div className="text-center mb-2">
+                  <span className="inline-block bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 px-5 py-1.5 rounded-full text-sm font-extrabold mb-4 shadow-lg shadow-amber-500/30">
+                    ✦ الأفضل ✦
+                  </span>
                 </div>
-                <p className="text-sm text-white/90">دفعة واحدة</p>
-                <p className="text-sm mt-2 text-amber-300 font-semibold">وفر أكثر من 300 د.ت!</p>
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-extrabold mb-2">مدى الحياة</h3>
+                  <div className="flex items-baseline justify-center gap-2 mb-2">
+                    <span className="text-5xl font-extrabold text-amber-300">600</span>
+                    <span className="text-xl text-amber-200/80">د.ت</span>
+                  </div>
+                  <p className="text-sm text-zinc-400">دفعة واحدة فقط</p>
+                  <p className="text-sm mt-2 text-amber-400 font-bold bg-amber-400/10 px-3 py-1 rounded-full inline-block border border-amber-500/20">💰 وفر أكثر من 300 د.ت!</p>
+                </div>
+                <ul className="space-y-3 mb-8">
+                  <li className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
+                    <span>كل ما في خطة سنة كاملة</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
+                    <span>مميزات حصرية للمشتركين مدى الحياة</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
+                    <span>دعم مميز على مدار الساعة</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
+                    <span>تحديثات مجانية مدى الحياة</span>
+                  </li>
+                </ul>
+                <Link
+                  href="/signup?plan=lifetime"
+                  className="btn-shine relative block w-full text-center px-6 py-4 bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 rounded-xl font-extrabold text-lg hover:from-amber-300 hover:to-yellow-200 shadow-lg shadow-amber-500/25 transition-all hover:-translate-y-0.5"
+                >
+                  ابدأ الآن ←
+                </Link>
               </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center gap-2">
-                  <span className="text-amber-400 text-xl">✓</span>
-                  <span>كل ما في خطة سنة كاملة</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-amber-400 text-xl">✓</span>
-                  <span>مميزات حصرية</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-amber-400 text-xl">✓</span>
-                  <span>دعم مميز على مدار الساعة</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-amber-400 text-xl">✓</span>
-                  <span>تحديثات مدى الحياة</span>
-                </li>
-              </ul>
-              <Link
-                href="/signup?plan=lifetime"
-                className="btn-shine block w-full text-center px-6 py-4 bg-amber-400 text-zinc-900 rounded-xl font-extrabold hover:bg-amber-300"
-              >
-                ابدأ الآن →
-              </Link>
             </div>
           </div>
 

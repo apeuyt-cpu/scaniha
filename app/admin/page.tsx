@@ -229,13 +229,13 @@ export default function AdminDashboard() {
             <button
               onClick={() => handleSubscribe('lifetime')}
               disabled={subscribeLoading}
-              className="w-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white rounded-2xl p-6 shadow-lg transition-all text-right"
+              className="w-full bg-gradient-to-br from-[#1a0a2e] via-zinc-900 to-[#2a1a00] text-white rounded-2xl p-6 shadow-lg transition-all text-right border border-amber-500/30"
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs bg-amber-400 text-zinc-900 px-2 py-0.5 rounded-full font-bold">الأفضل</span>
+                <span className="text-xs bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 px-2 py-0.5 rounded-full font-bold">✦ الأفضل ✦</span>
               </div>
               <h3 className="text-xl font-bold">مدى الحياة</h3>
-              <p className="text-3xl font-bold mt-1">600 <span className="text-lg text-white/90">د.ت</span></p>
+              <p className="text-3xl font-bold mt-1 text-amber-300">600 <span className="text-lg text-amber-200/80">د.ت</span></p>
             </button>
           </div>
 
@@ -372,13 +372,13 @@ export default function AdminDashboard() {
                 <button
                   onClick={() => { setShowPlanPicker(false); handleSubscribe('lifetime') }}
                   disabled={subscribeLoading}
-                  className="w-full bg-gradient-to-br from-zinc-800 to-zinc-900 text-white rounded-2xl p-5 shadow-lg transition-all text-right"
+                  className="w-full bg-gradient-to-br from-[#1a0a2e] via-zinc-900 to-[#2a1a00] text-white rounded-2xl p-5 shadow-lg transition-all text-right border border-amber-500/30"
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs bg-amber-400 text-zinc-900 px-2 py-0.5 rounded-full font-bold">الأفضل</span>
+                    <span className="text-xs bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 px-2 py-0.5 rounded-full font-bold">✦ الأفضل ✦</span>
                   </div>
                   <h3 className="text-lg font-bold">مدى الحياة</h3>
-                  <p className="text-2xl font-bold mt-1">600 <span className="text-base text-white/90">د.ت</span></p>
+                  <p className="text-2xl font-bold mt-1 text-amber-300">600 <span className="text-base text-amber-200/80">د.ت</span></p>
                 </button>
               </div>
 

@@ -280,14 +280,33 @@ body {
   100% { transform: scale(1); }
 }
 
-/* ---- Step icon micro-bounce on hover ---- */
-.landing .lp-card:hover .step-icon {
-  animation: microBounce 0.6s ease;
+/* ---- Icon container micro-bounce on hover ---- */
+.landing .lp-card:hover .icon-container {
+  animation: iconBounce 0.6s ease;
 }
-@keyframes microBounce {
-  0%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-10px) scale(1.06); }
-  60% { transform: translateY(0) scale(1); }
+@keyframes iconBounce {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.12); }
+  60% { transform: scale(0.97); }
+}
+
+/* Glow effect on icon container hover */
+.landing .lp-card:hover .icon-container::after {
+  opacity: 1;
+}
+.landing .icon-container {
+  position: relative;
+}
+.landing .icon-container::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 18px;
+  background: inherit;
+  filter: blur(14px);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
 }
 
 /* ---- Trust badge checkmark draw ---- */
@@ -337,7 +356,7 @@ body {
   .landing .pulse-glow,
   .landing .marquee-track,
   .landing .badge-pop,
-  .landing .step-icon,
+  .landing .icon-container,
   .landing .check-draw,
   .landing .hero-up {
     animation: none !important;

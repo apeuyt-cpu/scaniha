@@ -313,16 +313,33 @@ export default function LandingPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 lg:gap-10">
-            {/* Step 1 - Fast */}
+            {/* Step 1 - QR Menu Builder */}
             <div className="reveal lp-card group relative overflow-hidden" style={{ ['--reveal-delay' as string]: '0ms' }}>
               <div className="badge-pop absolute top-6 right-6 w-12 h-12 bg-gradient-to-br from-[#F47B20] to-[#F5B82E] rounded-full flex items-center justify-center text-white font-extrabold text-xl shadow-lg z-10">
                 1
               </div>
-              <div className="relative h-64 bg-gradient-to-br from-orange-50 to-amber-50 overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="step-icon text-8xl opacity-25">⚡</div>
+              <div className="relative h-64 bg-gradient-to-br from-orange-50 to-amber-50 overflow-hidden flex items-center justify-center">
+                <div className="icon-container w-24 h-24 rounded-2xl bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:shadow-lg transition-all duration-500 ease-out">
+                  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="url(#qrGradient)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="QR code icon for menu builder" role="img" className="drop-shadow-sm">
+                    <defs>
+                      <linearGradient id="qrGradient" x1="0" y1="0" x2="24" y2="24">
+                        <stop offset="0%" stopColor="#F47B20" />
+                        <stop offset="100%" stopColor="#F5B82E" />
+                      </linearGradient>
+                    </defs>
+                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                    <path d="M14 14h2v2h-2z" />
+                    <path d="M18 14h2v2h-2z" />
+                    <path d="M14 18h4v2h-4z" />
+                    <path d="M18 16h2v4h-2z" />
+                    <path d="M7 7h1v1H7z" />
+                    <path d="M16 7h1v1h-1z" />
+                    <path d="M7 16h1v1H7z" />
+                  </svg>
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent pointer-events-none" />
               </div>
               <div className="p-8" style={{ textAlign: dir === 'rtl' ? 'right' : 'left' }}>
                 <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">{t('features.qrBuilder.title')}</h3>
@@ -330,16 +347,27 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Step 2 - No App */}
+            {/* Step 2 - No App Required */}
             <div className="reveal lp-card group relative overflow-hidden" style={{ ['--reveal-delay' as string]: '80ms' }}>
               <div className="badge-pop absolute top-6 right-6 w-12 h-12 bg-gradient-to-br from-[#F47B20] to-[#F5B82E] rounded-full flex items-center justify-center text-white font-extrabold text-xl shadow-lg z-10">
                 2
               </div>
-              <div className="relative h-64 bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="step-icon text-8xl opacity-25">💰</div>
+              <div className="relative h-64 bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden flex items-center justify-center">
+                <div className="icon-container w-24 h-24 rounded-2xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:shadow-lg transition-all duration-500 ease-out">
+                  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="url(#phoneGradient)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="smartphone with browser icon — no app download needed" role="img" className="drop-shadow-sm">
+                    <defs>
+                      <linearGradient id="phoneGradient" x1="0" y1="0" x2="24" y2="24">
+                        <stop offset="0%" stopColor="#10B981" />
+                        <stop offset="100%" stopColor="#34D399" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" />
+                    <path d="M2 12h20" />
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent pointer-events-none" />
               </div>
               <div className="p-8" style={{ textAlign: dir === 'rtl' ? 'right' : 'left' }}>
                 <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">{t('features.noApp.title')}</h3>
@@ -347,16 +375,27 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Step 3 - Easy Updates */}
+            {/* Step 3 - Instant Updates */}
             <div className="reveal lp-card group relative overflow-hidden" style={{ ['--reveal-delay' as string]: '160ms' }}>
               <div className="badge-pop absolute top-6 right-6 w-12 h-12 bg-gradient-to-br from-[#F47B20] to-[#F5B82E] rounded-full flex items-center justify-center text-white font-extrabold text-xl shadow-lg z-10">
                 3
               </div>
-              <div className="relative h-64 bg-gradient-to-br from-purple-50 to-pink-50 overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="step-icon text-8xl opacity-25">✨</div>
+              <div className="relative h-64 bg-gradient-to-br from-purple-50 to-pink-50 overflow-hidden flex items-center justify-center">
+                <div className="icon-container w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:shadow-lg transition-all duration-500 ease-out">
+                  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="url(#syncGradient)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="sync or refresh icon for real-time menu updates" role="img" className="drop-shadow-sm">
+                    <defs>
+                      <linearGradient id="syncGradient" x1="0" y1="0" x2="24" y2="24">
+                        <stop offset="0%" stopColor="#8B5CF6" />
+                        <stop offset="100%" stopColor="#EC4899" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                    <path d="M21 21v-5h-5" />
+                  </svg>
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent pointer-events-none" />
               </div>
               <div className="p-8" style={{ textAlign: dir === 'rtl' ? 'right' : 'left' }}>
                 <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">{t('features.instantUpdate.title')}</h3>

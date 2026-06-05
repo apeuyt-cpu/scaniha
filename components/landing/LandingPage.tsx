@@ -75,14 +75,23 @@ export default function LandingPage() {
             <Link href="/" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
               {t('nav.home')}
             </Link>
-            <Link href="/signup" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
-              {t('nav.signup')}
+            <Link href="/features" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
+              {t('nav.features')}
+            </Link>
+            <Link href="/pricing" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
+              {t('nav.pricing')}
+            </Link>
+            <Link href="/blog" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
+              Blog
+            </Link>
+            <Link href="/about" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
+              {t('nav.about') || 'About'}
             </Link>
             <Link
-              href="/login"
-              className="px-6 py-2 bg-zinc-900 text-white rounded-lg font-semibold hover:bg-zinc-800 transition-colors"
+              href="/signup"
+              className="px-6 py-2 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors"
             >
-              {t('nav.login')}
+              {t('nav.signup')}
             </Link>
           </nav>
 
@@ -120,18 +129,39 @@ export default function LandingPage() {
                 {t('nav.home')}
               </Link>
               <Link
-                href="/signup"
+                href="/features"
                 className="text-zinc-700 hover:text-orange-600 font-medium transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {t('nav.signup')}
+                {t('nav.features')}
               </Link>
               <Link
-                href="/login"
-                className="px-6 py-2 bg-zinc-900 text-white rounded-lg font-semibold hover:bg-zinc-800 transition-colors text-center"
+                href="/pricing"
+                className="text-zinc-700 hover:text-orange-600 font-medium transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {t('nav.login')}
+                {t('nav.pricing')}
+              </Link>
+              <Link
+                href="/blog"
+                className="text-zinc-700 hover:text-orange-600 font-medium transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Blog
+              </Link>
+              <Link
+                href="/about"
+                className="text-zinc-700 hover:text-orange-600 font-medium transition-colors py-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t('nav.about') || 'About'}
+              </Link>
+              <Link
+                href="/signup"
+                className="px-6 py-2 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors text-center"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t('nav.signup')}
               </Link>
             </nav>
           </div>
@@ -253,6 +283,20 @@ export default function LandingPage() {
           <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
           </svg>
+        </div>
+      </section>
+
+      {/* Brand Story Section */}
+      <section className="py-24 bg-gradient-to-b from-[#FAFAF8] to-white">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto text-center reveal">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 mb-4">{t('hero.brandStoryTitle')}</h2>
+            <p className="text-lg text-zinc-600 leading-relaxed">{t('hero.brandStory')}</p>
+            <div className="flex gap-4 justify-center mt-8">
+              <Link href="/about" className="text-orange-600 font-semibold hover:text-orange-700">Learn more about Scaniha →</Link>
+              <Link href="/features" className="text-orange-600 font-semibold hover:text-orange-700">Explore features →</Link>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -546,17 +590,28 @@ export default function LandingPage() {
       {/* Simple Footer */}
       <footer className="bg-zinc-900 text-zinc-400 py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
               <h3 className="text-white font-bold mb-3">{t('app.name')}</h3>
               <p className="text-sm">{t('app.tagline')}</p>
             </div>
             <div>
-              <h3 className="text-white font-bold mb-3">{t('nav.links') || 'Links'}</h3>
+              <h3 className="text-white font-bold mb-3">{t('nav.features')}</h3>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/" className="hover:text-white transition-colors">{t('nav.home')}</Link></li>
-                <li><Link href="/signup" className="hover:text-white transition-colors">{t('nav.signup')}</Link></li>
-                <li><Link href="/login" className="hover:text-white transition-colors">{t('nav.login')}</Link></li>
+                <li><Link href="/features" className="hover:text-white transition-colors">All Features</Link></li>
+                <li><Link href="/qr-menu-for-restaurants" className="hover:text-white transition-colors">QR Menu for Restaurants</Link></li>
+                <li><Link href="/digital-menu-builder" className="hover:text-white transition-colors">Digital Menu Builder</Link></li>
+                <li><Link href="/free-qr-menu" className="hover:text-white transition-colors">Free QR Menu</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-white font-bold mb-3">Company</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/about" className="hover:text-white transition-colors">About Scaniha</Link></li>
+                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
+                <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
+                <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+                <li><Link href="/security" className="hover:text-white transition-colors">Security</Link></li>
               </ul>
             </div>
             <div>
@@ -568,7 +623,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-zinc-800 pt-6 text-center text-sm">
-            <p className="mb-2">© 2024 Scaniha. {t('app.name')}</p>
+            <p className="mb-2">© 2024 {t('app.name')}. All rights reserved.</p>
           </div>
         </div>
       </footer>

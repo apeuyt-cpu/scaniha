@@ -18,10 +18,12 @@
     "currency": "Devise"
   },
   "hero": {
-    "title": "Créez votre menu numérique en quelques minutes",
-    "subtitle": "Transformez le menu de votre restaurant en une expérience QR moderne. Aucune application à télécharger — scannez et commandez.",
-    "cta": "Créez votre menu",
-    "learnMore": "En savoir plus"
+    "title": "Créez des menus numériques professionnels en 5 minutes",
+    "subtitle": "Générez un menu QR pour votre restaurant ou café rapidement et facilement. Aucune compétence technique requise. Commencez gratuitement.",
+    "cta": "Créez votre menu gratuit",
+    "learnMore": "En savoir plus",
+    "brandStory": "Scaniha a été fondée pour aider les restaurants et cafés à adopter la transformation numérique. Nous croyons que chaque restaurant mérite un menu beau et accessible que les clients peuvent consulter instantanément avec un simple scan QR. Pas d'applications, pas de tracas — juste de superbes menus numériques.",
+    "brandStoryTitle": "L'histoire de Scaniha"
   },
   "features": {
     "title": "Pourquoi Scaniha",

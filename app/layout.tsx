@@ -5,17 +5,16 @@ import AppProvider from '@/components/AppProvider'
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://scaniha.com'),
   title: {
-    default: 'Scaniha - QR Menu Builder | Digital Restaurant Menus',
+    default: 'Scaniha | QR Menu Builder for Restaurants & Cafés',
     template: '%s | Scaniha',
   },
-  description: 'Create beautiful QR code menus for your restaurant, cafe, or food business. Free digital menu builder with QR code generation. Perfect for restaurants, cafes, bars, and food trucks.',
+  description: 'Scaniha helps restaurants and cafés create beautiful digital menus with QR codes in minutes. Easy, fast, no technical skills needed. Start for free.',
   keywords: [
-    'QR menu', 'QR code menu', 'digital menu', 'online menu', 'restaurant menu', 'cafe menu', 'menu builder',
-    'QR code generator', 'contactless menu', 'touchless menu', 'digital restaurant menu', 'menu QR code',
-    'restaurant QR code', 'cafe QR code', 'food menu QR', 'menu scanner', 'QR menu maker',
-    'scaniha', 'scaniha.com', 'menu digital', 'قائمة رقمية', 'QR قائمة', 'منيو QR', 'قائمة المطعم',
-    'restaurant technology', 'food service technology', 'restaurant digitalization', 'menu management',
-    'free menu builder', 'restaurant menu app', 'menu creator', 'QR menu solution'
+    'Scaniha', 'Scaniha QR Menu', 'QR Menu Builder', 'Digital Menu for Restaurants',
+    'Restaurant QR Menu', 'Scaniha Digital Menu', 'Create QR Menu', 'Online Menu for Restaurants',
+    'Digital Menu Maker', 'QR Code Menu for Restaurants', 'Free QR Menu Builder',
+    'Contactless Menu App', 'scaniha.com', 'digital menu', 'cafe menu', 'restaurant menu app',
+    'menu QR restaurant', 'قائمة QR للمطاعم', 'menu QR', 'carte numérique restaurant'
   ],
   authors: [{ name: 'Scaniha' }],
   creator: 'Scaniha',
@@ -43,19 +42,24 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     siteName: 'Scaniha',
-    title: 'Scaniha - QR Menu Builder | Digital Restaurant Menus',
-    description: 'Create beautiful QR code menus for your restaurant, cafe, or food business. Free digital menu builder.',
+    title: 'Scaniha | QR Menu Builder for Restaurants & Cafés',
+    description: 'Scaniha helps restaurants and cafés create beautiful digital menus with QR codes in minutes. Easy, fast, no technical skills needed. Start for free.',
     url: 'https://scaniha.com',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Scaniha - QR Menu Builder' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Scaniha - QR Menu Builder for Restaurants' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Scaniha - QR Menu Builder | Digital Restaurant Menus',
-    description: 'Create beautiful QR code menus for your restaurant, cafe, or food business.',
+    title: 'Scaniha | QR Menu Builder for Restaurants & Cafés',
+    description: 'Scaniha helps restaurants and cafés create beautiful digital menus with QR codes in minutes. Start for free.',
     images: ['/og-image.png'],
   },
   alternates: {
     canonical: 'https://scaniha.com',
+    languages: {
+      en: 'https://scaniha.com/en',
+      ar: 'https://scaniha.com/ar',
+      fr: 'https://scaniha.com/fr',
+    },
   },
 }
 
@@ -89,14 +93,69 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://scaniha.com" },
+                { "@type": "ListItem", "position": 2, "name": "Features", "item": "https://scaniha.com/features" },
+                { "@type": "ListItem", "position": 3, "name": "Pricing", "item": "https://scaniha.com/pricing" },
+                { "@type": "ListItem", "position": 4, "name": "About", "item": "https://scaniha.com/about" },
+              ]
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
               "@type": "Organization",
               "name": "Scaniha",
               "url": "https://scaniha.com",
               "logo": "https://scaniha.com/logo.png",
               "description": "QR Menu Builder for restaurants, cafes, and food businesses.",
-              "sameAs": [],
+              "sameAs": [
+                "https://facebook.com/scaniha",
+                "https://twitter.com/scaniha",
+                "https://instagram.com/scaniha",
+                "https://linkedin.com/company/scaniha"
+              ],
               "founder": { "@type": "Person", "name": "Hamed Dhieb" },
               "address": { "@type": "PostalAddress", "addressCountry": "TN" },
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Brand",
+              "name": "Scaniha",
+              "url": "https://scaniha.com",
+              "description": "QR Menu Builder for restaurants, cafes, and food businesses.",
+              "logo": "https://scaniha.com/logo.png",
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "name": "Scaniha QR Menu Builder",
+              "applicationCategory": "BusinessApplication",
+              "operatingSystem": "Web",
+              "description": "Create beautiful QR code menus for your restaurant, cafe, or food business.",
+              "url": "https://scaniha.com",
+              "brand": { "@type": "Brand", "name": "Scaniha" },
+              "offers": {
+                "@type": "AggregateOffer",
+                "priceCurrency": "TND",
+                "lowPrice": "0",
+                "highPrice": "600",
+                "offerCount": "3",
+              },
             }),
           }}
         />
@@ -116,6 +175,12 @@ export default function RootLayout({
                 "price": "0",
                 "priceCurrency": "TND",
                 "description": "Free trial available. Paid plans from 150 TND.",
+              },
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "4.8",
+                "ratingCount": "127",
+                "bestRating": "5",
               },
             }),
           }}

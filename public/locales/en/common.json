@@ -18,10 +18,12 @@
     "currency": "Currency"
   },
   "hero": {
-    "title": "Create Your Digital Menu in Minutes",
-    "subtitle": "Transform your restaurant menu into a modern QR code experience. No app download required — just scan and order.",
-    "cta": "Create Your Menu",
-    "learnMore": "Learn More"
+    "title": "Create Professional Digital Menus in 5 Minutes",
+    "subtitle": "Build a QR menu for your restaurant or café quickly and easily. No technical skills required. Start now for free — no credit card needed.",
+    "cta": "Create Your Free Menu",
+    "learnMore": "Learn More",
+    "brandStory": "Scaniha was founded to help restaurants and cafés embrace digital transformation. We believe every restaurant deserves a beautiful, accessible menu that customers can view instantly with a simple QR scan. No apps, no hassle — just great digital menus.",
+    "brandStoryTitle": "The Scaniha Story"
   },
   "features": {
     "title": "Why Choose Scaniha",

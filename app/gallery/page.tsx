@@ -1,10 +1,23 @@
 import { createClient } from "@supabase/supabase-js";
 import ImageGrid from "@/components/gallery/ImageGrid";
 import SyncButton from "@/components/gallery/SyncButton";
+import type { Metadata } from "next";
 
-export const metadata = {
-  title: "Image Gallery | Scaniha",
-  description: "Browse synced images from Cloudinary — powered by Supabase metadata.",
+export const metadata: Metadata = {
+  title: "Image Gallery | Scaniha - QR Menu Builder",
+  description: "Browse image uploads for your digital restaurant menu. View and manage menu item images, restaurant photos, and more.",
+  openGraph: {
+    title: "Image Gallery | Scaniha",
+    description: "Browse image uploads for your digital restaurant menu.",
+    url: "https://scaniha.com/gallery",
+    siteName: "Scaniha",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Image Gallery | Scaniha",
+    description: "Browse image uploads for your digital restaurant menu.",
+  },
 };
 
 const PAGE_SIZE = 20;

@@ -1,10 +1,27 @@
-'use client'
-
+import type { Metadata } from 'next'
 import LoginForm from '@/components/auth/LoginForm'
 import Image from 'next/image'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Login | Scaniha - QR Menu Builder',
+  description: 'Sign in to your Scaniha account to manage your digital menus, track analytics, and update your restaurant or cafe menu.',
+  robots: { index: false, follow: false },
+  openGraph: {
+    title: 'Login | Scaniha - QR Menu Builder',
+    description: 'Sign in to manage your digital restaurant menus.',
+    url: 'https://scaniha.com/login',
+    siteName: 'Scaniha',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Login | Scaniha - QR Menu Builder',
+    description: 'Sign in to manage your digital restaurant menus.',
+  },
+}
 
 export default function LoginPage() {
   // Removed client-side auth check - middleware handles redirecting authenticated users

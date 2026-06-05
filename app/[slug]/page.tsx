@@ -91,7 +91,7 @@ export default async function PublicMenuPage({
             offers: item.price ? {
               '@type': 'Offer',
               price: item.price,
-              priceCurrency: 'TND',
+              priceCurrency: (business as any).currency || 'TND',
             } : undefined,
           })),
         })),

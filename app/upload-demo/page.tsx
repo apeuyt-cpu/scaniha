@@ -1,16 +1,16 @@
-"use client";
-
+import type { Metadata } from "next";
 import ImageUploader from "@/components/ImageUploader";
 
-export default function UploadDemoPage() {
-  const handleUploadComplete = (result: any) => {
-    console.log("✅ Upload complete:", result);
-  };
+export const metadata: Metadata = {
+  title: "Image Upload Demo | Scaniha",
+  description: "Test image upload functionality for Scaniha digital menus.",
+  robots: { index: false, follow: false },
+};
 
+export default function UploadDemoPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 flex items-center justify-center p-6">
       <div className="w-full max-w-xl">
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 mb-4 shadow-lg shadow-indigo-200">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -21,18 +21,14 @@ export default function UploadDemoPage() {
             Image Upload
           </h1>
           <p className="text-sm text-gray-500 mt-1.5">
-            Upload images to Cloudinary — drag & drop or click to browse
+            Upload images to Cloudinary
           </p>
         </div>
-
-        {/* Uploader Card */}
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 p-6">
-          <ImageUploader onUploadComplete={handleUploadComplete} />
+          <ImageUploader />
         </div>
-
-        {/* Footer */}
         <p className="text-center text-xs text-gray-400 mt-6">
-          Powered by Cloudinary · Max 10MB per file
+          Powered by Cloudinary
         </p>
       </div>
     </div>

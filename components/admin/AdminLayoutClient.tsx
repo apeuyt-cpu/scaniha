@@ -4,6 +4,7 @@ import { useState } from 'react'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import DynamicFavicon from '@/components/admin/DynamicFavicon'
 import type { Database } from '@/lib/supabase/database.types'
+import { useLocale } from '@/lib/i18n/LocaleContext'
 
 type Business = Database['public']['Tables']['businesses']['Row']
 
@@ -13,6 +14,7 @@ interface AdminLayoutClientProps {
 }
 
 export default function AdminLayoutClient({ business: initialBusiness, children }: AdminLayoutClientProps) {
+  const { t, dir } = useLocale()
   const [business, setBusiness] = useState<Business | null>(initialBusiness)
   const [showCreateForm, setShowCreateForm] = useState(!initialBusiness)
   const [businessName, setBusinessName] = useState('')
@@ -25,7 +27,7 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
     setLoading(true)
 
     if (!businessName.trim()) {
-      setError('يرجى إدخال اسم النشاط التجاري')
+      setError(t('auth.required'))
       setLoading(false)
       return
     }
@@ -40,7 +42,7 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'فشل إنشاء النشاط التجاري')
+        throw new Error(data.error || t('common.error'))
       }
 
       setBusiness(data)
@@ -49,7 +51,7 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
       // Refresh the page to load the new business
       window.location.reload()
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ. يرجى المحاولة مرة أخرى.')
+      setError(err.message || t('auth.errorGeneric'))
     } finally {
       setLoading(false)
     }
@@ -57,16 +59,16 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
 
   if (!business) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-zinc-100" dir="rtl">
+      <div className="flex items-center justify-center min-h-screen bg-zinc-100" dir={dir}>
         <div className="bg-white rounded-xl shadow-sm p-8 max-w-md mx-auto border border-zinc-200">
-          <h1 className="text-2xl font-bold text-zinc-900 mb-2 text-center">لم يتم العثور على عمل</h1>
-          <p className="text-zinc-600 text-center mb-6">يرجى إنشاء عمل للمتابعة.</p>
+          <h1 className="text-2xl font-bold text-zinc-900 mb-2 text-center">{t('dashboard.noMenu')}</h1>
+          <p className="text-zinc-600 text-center mb-6">{t('dashboard.createBusiness')}</p>
           
           {showCreateForm ? (
             <form onSubmit={handleCreateBusiness} className="space-y-4">
               <div>
                 <label htmlFor="businessName" className="block text-sm font-medium text-zinc-700 mb-2">
-                  اسم النشاط التجاري
+                  {t('dashboard.businessNameLabel')}
                 </label>
                 <input
                   id="businessName"
@@ -75,7 +77,7 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent bg-white"
-                  placeholder="اسم المطعم أو المقهى"
+                  placeholder={t('dashboard.businessNamePlaceholder')}
                   disabled={loading}
                   autoFocus
                 />
@@ -91,8 +93,8 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
                 <div className="flex items-start gap-3">
                   <div className="text-2xl">🎁</div>
                   <div>
-                    <p className="text-sm font-semibold text-blue-900">تجربة مجانية لمدة 7 أيام</p>
-                    <p className="text-xs text-blue-700 mt-0.5">ابدأ الآن واستمتع بكل الميزات</p>
+                    <p className="text-sm font-semibold text-blue-900">{t('pricing.freeTrial')}</p>
+                    <p className="text-xs text-blue-700 mt-0.5">{t('pricing.freeTrialDesc')}</p>
                   </div>
                 </div>
               </div>
@@ -102,7 +104,7 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
                 disabled={loading}
                 className="w-full py-3 px-4 bg-zinc-900 text-white rounded-xl text-base font-medium hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 transition-colors"
               >
-                {loading ? 'جاري الإنشاء...' : 'إنشاء عمل'}
+                {loading ? t('dashboard.creating') : t('dashboard.createBusinessBtn')}
               </button>
             </form>
           ) : (
@@ -110,7 +112,7 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
               onClick={() => setShowCreateForm(true)}
               className="w-full py-3 px-4 bg-zinc-900 text-white rounded-xl text-base font-medium hover:bg-zinc-800 transition-colors"
             >
-              إنشاء عمل جديد
+              {t('dashboard.createBusinessBtn')}
             </button>
           )}
         </div>
@@ -119,7 +121,7 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
   }
 
   return (
-    <div className="flex min-h-screen bg-zinc-100" dir="rtl">
+    <div className="flex min-h-screen bg-zinc-100" dir={dir}>
       <DynamicFavicon logoUrl={business.logo_url} businessName={business.name} />
       <AdminSidebar />
       <main className="flex-1 overflow-auto">

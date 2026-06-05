@@ -8,6 +8,10 @@ import LogoUpload from '@/components/business/LogoUpload'
 import SettingsManager from '@/components/admin/SettingsManager'
 import WheelManager from '@/components/wheel/WheelManager'
 import MenuAnalytics from '@/components/admin/MenuAnalytics'
+import { useLocale } from '@/lib/i18n/LocaleContext'
+import { useCurrency } from '@/lib/i18n/CurrencyContext'
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
+import CurrencySelector from '@/components/ui/CurrencySelector'
 
 interface Business {
   id: string
@@ -23,6 +27,8 @@ interface Business {
 }
 
 export default function AdminDashboard() {
+  const { t, dir } = useLocale()
+  const { formatPrice, currencyCode, setCurrency, convertFromTnd } = useCurrency()
   const [business, setBusiness] = useState<Business | null>(null)
   const [loading, setLoading] = useState(true)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
@@ -197,50 +203,50 @@ export default function AdminDashboard() {
   // ─── Pending Payment Page ─────────────────────────────────────
   if (business.status === 'pending') {
     return (
-      <div className="admin-page p-4 lg:p-8 max-w-6xl mx-auto" dir="rtl">
+      <div className="admin-page p-4 lg:p-8 max-w-6xl mx-auto" dir={dir}>
         <div className="max-w-lg mx-auto text-center">
           <div className="text-6xl mb-6">💳</div>
-          <h1 className="text-2xl font-bold text-zinc-900 mb-2">أكمل عملية الدفع</h1>
-          <p className="text-zinc-600 mb-2">حسابك {business.name} قيد الانتظار.</p>
-          <p className="text-zinc-500 text-sm mb-8">اختر خطة للاشتراك وتمتع بكل المميزات</p>
+          <h1 className="text-2xl font-bold text-zinc-900 mb-2">{t('dashboard.subscribeToAccess')}</h1>
+          <p className="text-zinc-600 mb-2">{t('dashboard.businessName')} {business.name} {t('dashboard.pendingPayment')}.</p>
+          <p className="text-zinc-500 text-sm mb-8">{t('pricing.selectPlan')}</p>
 
-          <div className="space-y-4 text-right">
+          <div className={`space-y-4 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
             <button
               onClick={() => handleSubscribe('6months')}
               disabled={subscribeLoading}
-              className="w-full bg-white border-2 border-zinc-200 rounded-2xl p-6 hover:border-orange-500 transition-all text-right"
+              className={`w-full bg-white border-2 border-zinc-200 rounded-2xl p-6 hover:border-orange-500 transition-all ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
             >
-              <h3 className="text-xl font-bold text-zinc-900">6 أشهر</h3>
-              <p className="text-3xl font-bold text-zinc-900 mt-1">150 <span className="text-lg text-zinc-600">د.ت</span></p>
+              <h3 className="text-xl font-bold text-zinc-900">{t('pricing.plan6months')}</h3>
+              <p className="text-3xl font-bold text-zinc-900 mt-1">{formatPrice(convertFromTnd(150))}</p>
             </button>
 
             <button
               onClick={() => handleSubscribe('1year')}
               disabled={subscribeLoading}
-              className="w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl p-6 shadow-lg transition-all text-right"
+              className={`w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl p-6 shadow-lg transition-all ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full font-bold">الأكثر شعبية</span>
+                <span className="text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full font-bold">{t('pricing.mostPopular')}</span>
               </div>
-              <h3 className="text-xl font-bold">سنة كاملة</h3>
-              <p className="text-3xl font-bold mt-1">250 <span className="text-lg text-white/90">د.ت</span></p>
+              <h3 className="text-xl font-bold">{t('pricing.plan1year')}</h3>
+              <p className="text-3xl font-bold mt-1">{formatPrice(convertFromTnd(250))}</p>
             </button>
 
             <button
               onClick={() => handleSubscribe('lifetime')}
               disabled={subscribeLoading}
-              className="w-full bg-gradient-to-br from-[#1a0a2e] via-zinc-900 to-[#2a1a00] text-white rounded-2xl p-6 shadow-lg transition-all text-right border border-amber-500/30"
+              className={`w-full bg-gradient-to-br from-[#1a0a2e] via-zinc-900 to-[#2a1a00] text-white rounded-2xl p-6 shadow-lg transition-all text-right border border-amber-500/30 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 px-2 py-0.5 rounded-full font-bold">✦ الأفضل ✦</span>
+                <span className="text-xs bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 px-2 py-0.5 rounded-full font-bold">✦ {t('pricing.bestValue')} ✦</span>
               </div>
-              <h3 className="text-xl font-bold">مدى الحياة</h3>
-              <p className="text-3xl font-bold mt-1 text-amber-300">600 <span className="text-lg text-amber-200/80">د.ت</span></p>
+              <h3 className="text-xl font-bold">{t('pricing.planLifetime')}</h3>
+              <p className="text-3xl font-bold mt-1 text-amber-300">{formatPrice(convertFromTnd(600))}</p>
             </button>
           </div>
 
           {subscribeLoading && (
-            <p className="mt-6 text-zinc-500">جاري التوجيه إلى صفحة الدفع...</p>
+            <p className="mt-6 text-zinc-500">{t('checkout.redirecting')}</p>
           )}
         </div>
       </div>
@@ -250,9 +256,9 @@ export default function AdminDashboard() {
   // ─── Active Dashboard ─────────────────────────────────────────
   const menuUrl = `${window.location.origin}/${business.slug}`
   const themes = [
-    { id: 'classic', name: 'كلاسيكي', color: '#8B2635', bg: '#FFFDF9' },
-    { id: 'dark', name: 'داكن', color: '#D4AF37', bg: '#0A0A0A' },
-    { id: 'minimal', name: 'بسيط', color: '#E85D04', bg: '#F7F7F5' },
+    { id: 'classic', name: 'Classic', color: '#8B2635', bg: '#FFFDF9' },
+    { id: 'dark', name: 'Dark', color: '#D4AF37', bg: '#0A0A0A' },
+    { id: 'minimal', name: 'Minimal', color: '#E85D04', bg: '#F7F7F5' },
   ]
 
   const isExpired = countdown && countdown.days === 0 && countdown.hours === 0 && countdown.minutes === 0 && countdown.seconds === 0
@@ -270,7 +276,7 @@ export default function AdminDashboard() {
         }
       `}</style>
 
-      <div className="admin-page p-4 lg:p-8 max-w-6xl mx-auto" dir="rtl">
+      <div className="admin-page p-4 lg:p-8 max-w-6xl mx-auto" dir={dir}>
         {/* Subscription Banner */}
         {countdown && (
           <div className={`mb-6 rounded-2xl p-4 lg:p-6 ${
@@ -283,13 +289,10 @@ export default function AdminDashboard() {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex-1">
                 <h3 className="font-bold text-lg">
-                  {isExpired ? '⚠️ انتهى الاشتراك' : isUrgent ? '⚠️ الاشتراك على وشك الانتهاء' : '⏰ الوقت المتبقي'}
+                  {isExpired ? t('pricing.expired') : isUrgent ? t('pricing.expiresSoon', { days: countdown.days }) : t('pricing.active')}
                 </h3>
                 <p className="text-sm opacity-90">
-                  {isExpired
-                    ? 'جدد اشتراكك الآن لتفعيل القائمة.'
-                    : 'اشترك الآن لتجديد الوقت قبل انتهاء الاشتراك'
-                  }
+                  {isExpired ? t('dashboard.subscribeToAccess') : t('pricing.orRenew')}
                 </p>
               </div>
 
@@ -297,19 +300,19 @@ export default function AdminDashboard() {
                 <div className="flex gap-3 text-center">
                   <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 min-w-[60px]">
                     <div className="text-2xl lg:text-3xl font-bold">{countdown.days}</div>
-                    <div className="text-xs opacity-80">يوم</div>
+                    <div className="text-xs opacity-80">{t('common.all') === 'All' ? 'days' : 'يوم'}</div>
                   </div>
                   <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 min-w-[60px]">
                     <div className="text-2xl lg:text-3xl font-bold">{countdown.hours}</div>
-                    <div className="text-xs opacity-80">ساعة</div>
+                    <div className="text-xs opacity-80">{t('common.all') === 'All' ? 'hrs' : 'ساعة'}</div>
                   </div>
                   <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 min-w-[60px]">
                     <div className="text-2xl lg:text-3xl font-bold">{countdown.minutes}</div>
-                    <div className="text-xs opacity-80">دقيقة</div>
+                    <div className="text-xs opacity-80">{t('common.all') === 'All' ? 'min' : 'دقيقة'}</div>
                   </div>
                   <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 min-w-[60px]">
                     <div className="text-2xl lg:text-3xl font-bold">{countdown.seconds}</div>
-                    <div className="text-xs opacity-80">ثانية</div>
+                    <div className="text-xs opacity-80">{t('common.all') === 'All' ? 'sec' : 'ثانية'}</div>
                   </div>
                 </div>
               )}
@@ -326,16 +329,16 @@ export default function AdminDashboard() {
           >
             <div className="flex items-center justify-between">
               <span className="font-bold text-lg">
-                {isExpired ? '🔴 جدد اشتراكك الآن' : '🟢 اشترك أو جدد'}
+                {isExpired ? '🔴 ' + t('pricing.renew') : '🟢 ' + t('pricing.orRenew')}
               </span>
-              <span className="text-sm opacity-90">اختر خطتك ←</span>
+              <span className="text-sm opacity-90">{t('pricing.selectPlan')} ←</span>
             </div>
           </button>
         </div>
 
         {/* Plan Picker Modal */}
         {showPlanPicker && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir={dir}>
             <div className="absolute inset-0 bg-black/50" onClick={() => setShowPlanPicker(false)} />
             <div className="relative bg-white rounded-3xl p-6 lg:p-8 max-w-sm w-full shadow-2xl">
               <button
@@ -344,50 +347,56 @@ export default function AdminDashboard() {
               >
                 ✕
               </button>
-              <h2 className="text-xl font-bold text-zinc-900 mb-1">اختر خطتك</h2>
-              <p className="text-zinc-500 text-sm mb-6">اشترك أو جدد لتفعيل الخدمة</p>
+              <h2 className="text-xl font-bold text-zinc-900 mb-1">{t('pricing.selectPlan')}</h2>
+              <p className="text-zinc-500 text-sm mb-6">{t('pricing.orRenew')}</p>
 
-              <div className="space-y-3">
+              <div className={`space-y-3 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
                 <button
                   onClick={() => { setShowPlanPicker(false); handleSubscribe('6months') }}
                   disabled={subscribeLoading}
-                  className="w-full bg-white border-2 border-zinc-200 rounded-2xl p-5 hover:border-orange-500 transition-all text-right"
+                  className={`w-full bg-white border-2 border-zinc-200 rounded-2xl p-5 hover:border-orange-500 transition-all ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
                 >
-                  <h3 className="text-lg font-bold text-zinc-900">6 أشهر</h3>
-                  <p className="text-2xl font-bold text-zinc-900 mt-1">150 <span className="text-base text-zinc-600">د.ت</span></p>
+                  <h3 className="text-lg font-bold text-zinc-900">{t('pricing.plan6months')}</h3>
+                  <p className="text-2xl font-bold text-zinc-900 mt-1">{formatPrice(convertFromTnd(150))}</p>
                 </button>
 
                 <button
                   onClick={() => { setShowPlanPicker(false); handleSubscribe('1year') }}
                   disabled={subscribeLoading}
-                  className="w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl p-5 shadow-lg transition-all text-right"
+                  className={`w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl p-5 shadow-lg transition-all ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full font-bold">الأكثر شعبية</span>
+                    <span className="text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full font-bold">{t('pricing.mostPopular')}</span>
                   </div>
-                  <h3 className="text-lg font-bold">سنة كاملة</h3>
-                  <p className="text-2xl font-bold mt-1">250 <span className="text-base text-white/90">د.ت</span></p>
+                  <h3 className="text-lg font-bold">{t('pricing.plan1year')}</h3>
+                  <p className="text-2xl font-bold mt-1">{formatPrice(convertFromTnd(250))}</p>
                 </button>
 
                 <button
                   onClick={() => { setShowPlanPicker(false); handleSubscribe('lifetime') }}
                   disabled={subscribeLoading}
-                  className="w-full bg-gradient-to-br from-[#1a0a2e] via-zinc-900 to-[#2a1a00] text-white rounded-2xl p-5 shadow-lg transition-all text-right border border-amber-500/30"
+                  className={`w-full bg-gradient-to-br from-[#1a0a2e] via-zinc-900 to-[#2a1a00] text-white rounded-2xl p-5 shadow-lg transition-all border border-amber-500/30 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 px-2 py-0.5 rounded-full font-bold">✦ الأفضل ✦</span>
+                    <span className="text-xs bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 px-2 py-0.5 rounded-full font-bold">✦ {t('pricing.bestValue')} ✦</span>
                   </div>
-                  <h3 className="text-lg font-bold">مدى الحياة</h3>
-                  <p className="text-2xl font-bold mt-1 text-amber-300">600 <span className="text-base text-amber-200/80">د.ت</span></p>
+                  <h3 className="text-lg font-bold">{t('pricing.planLifetime')}</h3>
+                  <p className="text-2xl font-bold mt-1 text-amber-300">{formatPrice(convertFromTnd(600))}</p>
                 </button>
               </div>
 
               {subscribeLoading && (
-                <p className="mt-4 text-center text-zinc-500">جاري التوجيه إلى صفحة الدفع...</p>
+                <p className="mt-4 text-center text-zinc-500">{t('checkout.redirecting')}</p>
               )}
             </div>
           </div>
         )}
+
+        {/* Language & Currency Selector */}
+        <div className="flex items-center gap-2 mb-6">
+          <LanguageSwitcher />
+          <CurrencySelector />
+        </div>
 
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
@@ -408,7 +417,7 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-2 mt-1">
                 <span className={`w-2 h-2 rounded-full ${business.status === 'active' ? 'bg-green-500' : 'bg-amber-500'}`} />
                 <span className="text-sm lg:text-base text-zinc-500">
-                  {business.status === 'active' ? 'نشط' : 'متوقف'}
+                  {business.status === 'active' ? t('pricing.active') : t('dashboard.menuPaused')}
                 </span>
               </div>
             </div>
@@ -420,7 +429,7 @@ export default function AdminDashboard() {
             rel="noopener noreferrer"
             className="px-4 py-2 bg-zinc-900 text-white text-sm lg:text-base font-medium rounded-xl hover:bg-zinc-800 transition-colors"
           >
-            عرض القائمة ←
+            {t('dashboard.viewMenu')} ←
           </a>
         </div>
 
@@ -439,22 +448,22 @@ export default function AdminDashboard() {
               </div>
               <span className="text-zinc-400 group-hover:text-zinc-600 transition-colors text-xl">←</span>
             </div>
-            <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-1">منشئ القائمة</h3>
-            <p className="text-zinc-500 text-sm lg:text-base">إضافة الفئات والعناصر</p>
+            <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-1">{t('dashboard.manageMenu')}</h3>
+            <p className="text-zinc-500 text-sm lg:text-base">{t('dashboard.addItems')}</p>
           </Link>
 
           {/* QR Code Card */}
           <div className="bg-white rounded-2xl p-5 lg:p-6 border border-zinc-200">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-1">رمز QR</h3>
-                <p className="text-zinc-500 text-sm lg:text-base mb-4">امسح لفتح القائمة</p>
+                <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-1">QR Code</h3>
+                <p className="text-zinc-500 text-sm lg:text-base mb-4">{t('dashboard.viewMenu')}</p>
                 <button
                   onClick={downloadQR}
                   disabled={!qrDataUrl}
                   className="px-4 py-2 bg-zinc-100 text-zinc-700 text-sm lg:text-base font-medium rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-50"
                 >
-                  تحميل
+                  {t('common.save')}
                 </button>
               </div>
               {qrDataUrl && (
@@ -465,8 +474,8 @@ export default function AdminDashboard() {
 
           {/* Menu URL Card */}
           <div className="bg-white rounded-2xl p-5 lg:p-6 border border-zinc-200">
-            <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-1">رابط القائمة</h3>
-            <p className="text-zinc-500 text-sm lg:text-base mb-4">شارك مع العملاء</p>
+            <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-1">{t('dashboard.menuUrl')}</h3>
+            <p className="text-zinc-500 text-sm lg:text-base mb-4">{t('settings.copy')}</p>
             <div className="flex items-center gap-3">
               <code className="flex-1 text-sm lg:text-base bg-zinc-100 px-3 py-2 rounded-xl text-zinc-600 truncate" dir="ltr">
                 /{business.slug}
@@ -479,7 +488,7 @@ export default function AdminDashboard() {
                     : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
                 }`}
               >
-                {copied ? '✓' : 'نسخ'}
+                {copied ? '✓' : t('settings.copy')}
               </button>
             </div>
           </div>
@@ -487,7 +496,7 @@ export default function AdminDashboard() {
 
         {/* Theme Selector */}
         <div className="bg-white rounded-2xl p-5 lg:p-6 border border-zinc-200 mb-5">
-          <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-4">المظهر</h3>
+          <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-4">{t('settings.appearance')}</h3>
           <div className="flex gap-3">
             {themes.map((theme) => (
               <button

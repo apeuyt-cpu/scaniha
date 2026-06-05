@@ -1,16 +1,29 @@
-'use client'
-
-import { Suspense } from 'react'
+import type { Metadata } from 'next'
 import SignupForm from '@/components/auth/SignupForm'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-function SignupContent() {
-  const searchParams = useSearchParams()
-  const plan = searchParams.get('plan') || undefined
+export const metadata: Metadata = {
+  title: 'Sign Up | Scaniha - QR Menu Builder',
+  description: 'Create your free Scaniha account and start building beautiful digital QR menus for your restaurant, cafe, or food business in minutes.',
+  openGraph: {
+    title: 'Sign Up | Scaniha - QR Menu Builder',
+    description: 'Create your free digital QR menu for your restaurant or cafe.',
+    url: 'https://scaniha.com/signup',
+    siteName: 'Scaniha',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Sign Up | Scaniha - QR Menu Builder',
+    description: 'Create your free digital QR menu for your restaurant or cafe.',
+  },
+}
+
+export default function SignupPage({ searchParams }: { searchParams?: { plan?: string } }) {
+  const plan = searchParams?.plan
 
   return (
     <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-4" dir="rtl">
@@ -35,6 +48,7 @@ function SignupContent() {
                 height={60}
                 className="object-contain"
                 priority
+                fetchPriority="high"
               />
             </div>
             <h1 className="text-2xl lg:text-3xl font-bold text-zinc-900 mb-2">
@@ -58,17 +72,5 @@ function SignupContent() {
         </div>
       </div>
     </div>
-  )
-}
-
-export default function SignupPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-4" dir="rtl">
-        <div className="text-zinc-500">جاري التحميل...</div>
-      </div>
-    }>
-      <SignupContent />
-    </Suspense>
   )
 }

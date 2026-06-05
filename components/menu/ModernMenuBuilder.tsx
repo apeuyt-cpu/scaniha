@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { uploadItemImage, uploadCategoryImage, deleteImage } from '@/lib/storage'
 import * as XLSX from 'xlsx'
 import type { Database } from '@/lib/supabase/database.types'
+import { useLocale } from '@/lib/i18n/LocaleContext'
+import { useCurrency } from '@/lib/i18n/CurrencyContext'
 
 type Category = Database['public']['Tables']['categories']['Row'] & {
   items: Database['public']['Tables']['items']['Row'][]
@@ -18,6 +20,8 @@ interface ModernMenuBuilderProps {
 }
 
 export default function ModernMenuBuilder({ businessId, initialCategories }: ModernMenuBuilderProps) {
+  const { t, dir } = useLocale()
+  const { formatPrice, currencyCode } = useCurrency()
   const [categories, setCategories] = useState<Category[]>(initialCategories)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -226,7 +230,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
   }
 
   const handleDeleteItem = async (itemId: string, imageUrl: string | null) => {
-    if (!confirm('هل تريد حذف هذا العنصر؟')) return
+    if (!confirm(t('menu.builder.deleteConfirm'))) return
     setLoading(true)
     try {
       if (imageUrl) {
@@ -242,7 +246,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
   }
 
   const handleDeleteCategory = async (categoryId: string, imageUrl: string | null) => {
-    if (!confirm('هل تريد حذف هذه الفئة وجميع العناصر؟')) return
+    if (!confirm(t('menu.builder.deleteConfirm'))) return
     setLoading(true)
     try {
       if (imageUrl) {
@@ -512,7 +516,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
       setShowExcelImport(false)
       setError(null)
     } catch (err: any) {
-      setError(err.message || 'فشل في استيراد البيانات من ملف Excel')
+      setError(err.message || t('common.error'))
     } finally {
       setLoading(false)
       if (fileInputRef.current) {
@@ -523,26 +527,25 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
 
   const downloadExcelTemplate = () => {
     const templateData = [
-      ['الفئة', 'اسم العنصر', 'الوصف', 'السعر'],
-      ['المشروبات الساخنة', 'قهوة إسبريسو', 'قهوة إيطالية قوية', '3.50'],
-      ['المشروبات الساخنة', 'كابتشينو', 'إسبريسو مع حليب مبخر ورغوة', '4.75'],
-      ['المشروبات الباردة', 'قهوة مثلجة', 'قهوة باردة', '4.25'],
-      ['الحلويات', 'كرواسان', 'كرواسان بالزبدة', '3.25'],
+      [t('menu.builder.categoryName'), t('menu.builder.itemName'), t('menu.builder.description'), t('menu.builder.price')],
+      ['Coffee', 'Espresso', 'Strong Italian coffee', '3.50'],
+      ['Coffee', 'Cappuccino', 'Espresso with steamed milk', '4.75'],
+      ['Cold Drinks', 'Iced Coffee', 'Cold brewed coffee', '4.25'],
+      ['Desserts', 'Croissant', 'Butter croissant', '3.25'],
     ]
 
     const ws = XLSX.utils.aoa_to_sheet(templateData)
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'القائمة')
+    XLSX.utils.book_append_sheet(wb, ws, t('menu.public.menu'))
     
-    // Set column widths
     ws['!cols'] = [
-      { wch: 20 }, // الفئة
-      { wch: 25 }, // اسم العنصر
-      { wch: 40 }, // الوصف
-      { wch: 10 }, // السعر
+      { wch: 20 },
+      { wch: 25 },
+      { wch: 40 },
+      { wch: 10 },
     ]
 
-    XLSX.writeFile(wb, 'نموذج_القائمة.xlsx')
+    XLSX.writeFile(wb, `${t('menu.public.menu')}_template.xlsx`)
   }
 
   return (
@@ -558,7 +561,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
       {showExcelImport && (
         <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-blue-900">استيراد من ملف Excel</h3>
+            <h3 className="text-lg font-bold text-blue-900">{t('menu.builder.importExcel')}</h3>
             <button
               onClick={() => {
                 setShowExcelImport(false)
@@ -578,9 +581,9 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
                   <thead>
                     <tr className="bg-blue-100">
                       <th className="border border-blue-300 px-3 py-2 text-right">الفئة</th>
-                      <th className="border border-blue-300 px-3 py-2 text-right">اسم العنصر</th>
+                      <th className="border border-blue-300 px-3 py-2 text-right">{t('menu.builder.itemName')}</th>
                       <th className="border border-blue-300 px-3 py-2 text-right">الوصف</th>
-                      <th className="border border-blue-300 px-3 py-2 text-right">السعر</th>
+                      <th className="border border-blue-300 px-3 py-2 text-right">{t('menu.builder.price')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -667,7 +670,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
             disabled={loading}
             className="flex-1 py-4 border-2 border-dashed border-zinc-300 rounded-2xl text-base lg:text-lg font-medium text-zinc-500 hover:text-zinc-700 hover:border-zinc-400 transition-colors disabled:opacity-50"
           >
-            + إضافة فئة
+            {t('menu.builder.addCategory')}
           </button>
           <button
             onClick={() => setShowExcelImport(true)}
@@ -677,7 +680,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
-            استيراد Excel
+            {t('menu.builder.importExcel')}
           </button>
         </div>
       ) : addingCategory ? (
@@ -842,12 +845,12 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
                           </svg>
                         </button>
                       </div>
-                      <button
-                        onClick={() => setEditingItem('new-' + category.id)}
-                        disabled={loading}
-                        className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm lg:text-base font-medium hover:bg-zinc-800 disabled:opacity-50"
-                      >
-                        + إضافة عنصر
+          <button
+            onClick={() => setEditingItem('new-' + category.id)}
+            disabled={loading}
+            className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm lg:text-base font-medium hover:bg-zinc-800 disabled:opacity-50"
+          >
+            {t('menu.builder.addItem')}
                       </button>
                       <button
                         onClick={() => setEditingCategory(category.id)}
@@ -861,7 +864,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
                         disabled={loading}
                         className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-sm lg:text-base font-medium hover:bg-red-100 disabled:opacity-50 ml-auto"
                       >
-                        حذف الفئة
+                          {t('menu.builder.deleteCategory')}
                       </button>
                     </div>
 
@@ -932,7 +935,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
                                   <h4 className="font-semibold text-zinc-900 text-sm lg:text-lg break-words">{item.name}</h4>
                                   {item.price && (
                                     <span className="text-xs lg:text-base font-bold text-zinc-600 whitespace-nowrap" dir="ltr">
-                                      {Number(item.price).toFixed(2)} TD
+                                      {formatPrice(item.price)}
                                     </span>
                                   )}
                                 </div>
@@ -1031,6 +1034,7 @@ function CategoryForm({
   initialImageUrl?: string | null
   isEdit?: boolean
 }) {
+  const { t } = useLocale()
   const [name, setName] = useState(initialName)
   const [image, setImage] = useState<File | null>(null)
   const [removeImage, setRemoveImage] = useState(false)
@@ -1096,14 +1100,14 @@ function CategoryForm({
           disabled={loading || !name.trim()}
           className="px-5 py-3 bg-zinc-900 text-white rounded-xl text-base lg:text-lg font-medium hover:bg-zinc-800 disabled:opacity-50"
         >
-          {loading ? (isEdit ? 'جاري التحديث...' : 'جاري الإنشاء...') : (isEdit ? 'حفظ التغييرات' : 'إنشاء')}
+          {loading ? t('common.loading') : (isEdit ? t('menu.builder.save') : t('menu.builder.addCategory'))}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="px-5 py-3 bg-zinc-100 text-zinc-700 rounded-xl text-base lg:text-lg font-medium hover:bg-zinc-200"
         >
-          إلغاء
+          {t('menu.builder.cancel')}
         </button>
       </div>
     </form>
@@ -1126,6 +1130,9 @@ function ItemForm({
   initialImageUrl?: string | null
   isEdit?: boolean
 }) {
+  const { t } = useLocale()
+  const { currency } = useCurrency()
+  const currencyCode = currency.code
   const [name, setName] = useState(initialData?.name || '')
   const [description, setDescription] = useState(initialData?.description || '')
   const [price, setPrice] = useState(initialData?.price || '')
@@ -1151,7 +1158,7 @@ function ItemForm({
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="اسم العنصر"
+          placeholder={t('menu.builder.itemNamePlaceholder')}
           autoFocus
           className="col-span-2 sm:col-span-1 px-4 py-3 border border-zinc-200 rounded-xl text-base lg:text-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
         />
@@ -1161,7 +1168,7 @@ function ItemForm({
           min="0"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          placeholder="السعر (TD)"
+          placeholder={t('menu.builder.pricePlaceholder', { currency: currencyCode })}
           dir="ltr"
           className="col-span-2 sm:col-span-1 px-4 py-3 border border-zinc-200 rounded-xl text-base lg:text-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
         />
@@ -1169,7 +1176,7 @@ function ItemForm({
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="الوصف (اختياري)"
+          placeholder={t('menu.builder.descriptionPlaceholder')}
           className="col-span-2 px-4 py-3 border border-zinc-200 rounded-xl text-base lg:text-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
         />
       </div>
@@ -1196,7 +1203,7 @@ function ItemForm({
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          {image ? image.name.slice(0, 15) + '...' : (isEdit && removeImage ? 'تم تحديد الحذف' : 'إضافة صورة')}
+          {image ? image.name.slice(0, 15) + '...' : (isEdit && removeImage ? t('menu.builder.deleteImage') : t('menu.builder.addImage'))}
           <input
             type="file"
             accept="image/*"
@@ -1215,14 +1222,14 @@ function ItemForm({
           onClick={onCancel}
           className="px-4 py-2 text-zinc-500 text-base lg:text-lg font-medium hover:text-zinc-700"
         >
-          إلغاء
+          {t('menu.builder.cancel')}
         </button>
         <button
           type="submit"
           disabled={loading || !name.trim()}
           className="px-5 py-2 bg-zinc-900 text-white rounded-xl text-base lg:text-lg font-medium hover:bg-zinc-800 disabled:opacity-50"
         >
-          {loading ? (isEdit ? 'جاري التحديث...' : 'جاري الإضافة...') : (isEdit ? 'حفظ التغييرات' : 'إضافة عنصر')}
+          {loading ? t('common.loading') : (isEdit ? t('menu.builder.save') : t('menu.builder.addItem'))}
         </button>
       </div>
     </form>

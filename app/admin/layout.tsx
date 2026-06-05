@@ -9,8 +9,10 @@ export async function generateMetadata(): Promise<Metadata> {
     const business = await getBusinessByOwner(user.id)
     
     if (business?.logo_url) {
+// robots: { index: false, follow: false },
       return {
         title: `${business.name} - لوحة التحكم`,
+        robots: { index: false, follow: false },
         icons: {
           icon: business.logo_url,
           apple: business.logo_url,
@@ -20,6 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
     
     return {
       title: 'لوحة التحكم',
+      robots: { index: false, follow: false },
       icons: {
         icon: '/logo-icon.png',
         apple: '/logo-icon.png',
@@ -32,6 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
     }
     return {
       title: 'لوحة التحكم',
+      robots: { index: false, follow: false },
       icons: {
         icon: '/logo-icon.png',
         apple: '/logo-icon.png',

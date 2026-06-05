@@ -3,8 +3,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect, useRef } from 'react'
+import { useLocale, useTranslation } from '@/lib/i18n/LocaleContext'
+import { useCurrency } from '@/lib/i18n/CurrencyContext'
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
+import CurrencySelector from '@/components/ui/CurrencySelector'
 
-// Scroll-reveal: adds .is-visible to .reveal elements as they enter the viewport
 function useScrollReveal() {
   useEffect(() => {
     const els = Array.from(document.querySelectorAll<HTMLElement>('.reveal'))
@@ -28,33 +31,9 @@ function useScrollReveal() {
   }, [])
 }
 
-const trustItems = ['لا حاجة لبطاقة ائتمانية', 'إلغاء في أي وقت', 'قابل للتخصيص بالكامل']
-
-function TrustBadges() {
-  return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-4 text-zinc-700 text-sm reveal">
-      {trustItems.map((label, i) => (
-        <div key={label} className="flex items-center gap-2">
-          <svg className="w-5 h-5 text-green-600 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" fill="rgba(22,163,74,0.12)" />
-            <path
-              className="check-draw"
-              style={{ ['--check-delay' as string]: `${200 + i * 120}ms` }}
-              d="M7 12.5l3 3 7-7"
-              stroke="#16a34a"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span>{label}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export default function LandingPage() {
+  const { t, locale, dir } = useLocale()
+  const { formatPrice, currencyCode, convertFromTnd } = useCurrency()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showStickyCta, setShowStickyCta] = useState(false)
   const heroRef = useRef<HTMLElement | null>(null)
@@ -72,7 +51,7 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="landing min-h-screen" dir="rtl">
+    <div className="landing min-h-screen" dir={dir}>
       {/* Header with Logo and Navigation */}
       <header className="w-full py-4 px-4 sm:px-6 lg:px-8 border-b border-zinc-200/70 bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
         <div className="max-w-[1200px] mx-auto flex items-center justify-between">
@@ -90,18 +69,20 @@ export default function LandingPage() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8">
+          <nav className="hidden lg:flex items-center gap-4">
+            <LanguageSwitcher />
+            <CurrencySelector />
             <Link href="/" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
-              الرئيسية
+              {t('nav.home')}
             </Link>
             <Link href="/signup" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
-              إنشاء حساب
+              {t('nav.signup')}
             </Link>
             <Link
               href="/login"
               className="px-6 py-2 bg-zinc-900 text-white rounded-lg font-semibold hover:bg-zinc-800 transition-colors"
             >
-              تسجيل الدخول
+              {t('nav.login')}
             </Link>
           </nav>
 
@@ -127,26 +108,30 @@ export default function LandingPage() {
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-zinc-200 mt-4 pt-4 pb-4">
             <nav className="flex flex-col gap-4 px-4">
+              <div className="flex items-center gap-2 mb-2">
+                <LanguageSwitcher />
+                <CurrencySelector />
+              </div>
               <Link
                 href="/"
                 className="text-zinc-700 hover:text-orange-600 font-medium transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                الرئيسية
+                {t('nav.home')}
               </Link>
               <Link
                 href="/signup"
                 className="text-zinc-700 hover:text-orange-600 font-medium transition-colors py-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                إنشاء حساب
+                {t('nav.signup')}
               </Link>
               <Link
                 href="/login"
                 className="px-6 py-2 bg-zinc-900 text-white rounded-lg font-semibold hover:bg-zinc-800 transition-colors text-center"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                تسجيل الدخول
+                {t('nav.login')}
               </Link>
             </nav>
           </div>
@@ -166,104 +151,84 @@ export default function LandingPage() {
           {/* Mobile Layout - Vertical Stack */}
           <div className="flex flex-col lg:hidden gap-6 w-full">
             {/* Badge */}
-            <div className="hero-up glass-pill inline-flex items-center gap-2 px-4 py-2 rounded-full w-fit" style={{ ['--hero-delay' as string]: '0ms' }}>
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              <span className="text-orange-700 text-sm font-bold">تجربة مجانية 7 أيام</span>
-            </div>
-
-            {/* Main Headline */}
-            <h1 className="hero-up headline text-4xl sm:text-5xl font-extrabold text-zinc-900 text-right" style={{ ['--hero-delay' as string]: '120ms' }}>
-              قائمة رقمية<br />
-              <span className="grad-text">احترافية</span>
-              <br />
-              في 5 دقائق
-            </h1>
-
-            {/* Image - Between headline and subheadline on mobile */}
-            <div className="hero-up relative w-full" style={{ ['--hero-delay' as string]: '240ms' }}>
-              <div className="float-img relative w-full aspect-[16/9] rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5">
-                <Image
-                  src="/hero img.jpeg"
-                  alt="Scaniha"
-                  fill
-                  sizes="100vw"
-                  className="object-cover rounded-3xl"
-                  priority
-                  quality={90}
-                />
-              </div>
-            </div>
-
-            {/* Subheadline */}
-            <p className="hero-up text-lg sm:text-xl text-zinc-600 leading-relaxed text-right" style={{ ['--hero-delay' as string]: '320ms' }}>
-              أنشئ قائمة QR لمطعمك أو مقهىك بسرعة وسهولة
-              <br />
-              <span className="text-zinc-500">بدون معرفة تقنية</span>
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="hero-up flex flex-col sm:flex-row gap-4 pt-4" style={{ ['--hero-delay' as string]: '400ms' }}>
-              <Link
-                href="/signup"
-                className="btn-shine px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-lg shadow-lg shadow-orange-500/30 text-center"
-              >
-                ابدأ الآن مجاناً
-              </Link>
-              <Link
-                href="/login"
-                className="btn-shine px-8 py-4 bg-white text-zinc-900 rounded-xl font-semibold text-lg border-2 border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50 text-center"
-              >
-                تسجيل الدخول
-              </Link>
-            </div>
-
-            {/* Trust Indicators */}
-            <TrustBadges />
-          </div>
-
-          {/* Desktop Layout - Side by Side */}
-          <div className="hidden lg:grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            {/* Text Content - Right Side (RTL) */}
-            <div className="text-right space-y-6 w-full">
-              {/* Badge */}
-              <div className="hero-up glass-pill inline-flex items-center gap-2 px-4 py-2 rounded-full" style={{ ['--hero-delay' as string]: '0ms' }}>
+              <div className="hero-up glass-pill inline-flex items-center gap-2 px-4 py-2 rounded-full w-fit" style={{ ['--hero-delay' as string]: '0ms' }}>
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span className="text-orange-700 text-sm font-bold">تجربة مجانية 7 أيام</span>
+                <span className="text-orange-700 text-sm font-bold">{t('pricing.freeTrial')}</span>
               </div>
 
               {/* Main Headline */}
-              <h1 className="hero-up headline text-4xl sm:text-5xl lg:text-6xl font-extrabold text-zinc-900" style={{ ['--hero-delay' as string]: '120ms' }}>
-                قائمة رقمية<br />
-                <span className="grad-text">احترافية</span>
-                <br />
-                في 5 دقائق
+              <h1 className="hero-up headline text-4xl sm:text-5xl font-extrabold text-zinc-900" style={{ ['--hero-delay' as string]: '120ms', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                {t('hero.title')}
               </h1>
 
+              {/* Image - Between headline and subheadline on mobile */}
+              <div className="hero-up relative w-full" style={{ ['--hero-delay' as string]: '240ms' }}>
+                <div className="float-img relative w-full aspect-[16/9] rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5">
+                  <Image
+                    src="/hero img.jpeg"
+                    alt="Scaniha"
+                    fill
+                    sizes="100vw"
+                    className="object-cover rounded-3xl"
+                    priority
+                    quality={90}
+                  />
+                </div>
+              </div>
+
               {/* Subheadline */}
-              <p className="hero-up text-lg sm:text-xl lg:text-2xl text-zinc-600 leading-relaxed" style={{ ['--hero-delay' as string]: '240ms' }}>
-                أنشئ قائمة QR لمطعمك أو مقهىك بسرعة وسهولة
-                <br />
-                <span className="text-zinc-500">بدون معرفة تقنية</span>
+              <p className="hero-up text-lg sm:text-xl text-zinc-600 leading-relaxed" style={{ ['--hero-delay' as string]: '320ms', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                {t('hero.subtitle')}
               </p>
 
               {/* CTA Buttons */}
-              <div className="hero-up flex flex-col sm:flex-row gap-4 pt-4" style={{ ['--hero-delay' as string]: '340ms' }}>
+              <div className="hero-up flex flex-col sm:flex-row gap-4 pt-4" style={{ ['--hero-delay' as string]: '400ms' }}>
                 <Link
                   href="/signup"
                   className="btn-shine px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-lg shadow-lg shadow-orange-500/30 text-center"
                 >
-                  ابدأ الآن مجاناً
+                  {t('hero.cta')}
                 </Link>
                 <Link
                   href="/login"
                   className="btn-shine px-8 py-4 bg-white text-zinc-900 rounded-xl font-semibold text-lg border-2 border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50 text-center"
                 >
-                  تسجيل الدخول
+                  {t('nav.login')}
                 </Link>
               </div>
+            </div>
 
-              {/* Trust Indicators */}
-              <TrustBadges />
+          {/* Desktop Layout - Side by Side */}
+          <div className="hidden lg:grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Text Content */}
+            <div className={`space-y-6 w-full ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
+              <div className="hero-up glass-pill inline-flex items-center gap-2 px-4 py-2 rounded-full" style={{ ['--hero-delay' as string]: '0ms' }}>
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span className="text-orange-700 text-sm font-bold">{t('pricing.freeTrial')}</span>
+              </div>
+
+              <h1 className="hero-up headline text-4xl sm:text-5xl lg:text-6xl font-extrabold text-zinc-900" style={{ ['--hero-delay' as string]: '120ms' }}>
+                {t('hero.title')}
+              </h1>
+
+              <p className="hero-up text-lg sm:text-xl lg:text-2xl text-zinc-600 leading-relaxed" style={{ ['--hero-delay' as string]: '240ms' }}>
+                {t('hero.subtitle')}
+              </p>
+
+              <div className="hero-up flex flex-col sm:flex-row gap-4 pt-4" style={{ ['--hero-delay' as string]: '340ms' }}>
+                <Link
+                  href="/signup"
+                  className="btn-shine px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-lg shadow-lg shadow-orange-500/30 text-center"
+                >
+                  {t('hero.cta')}
+                </Link>
+                <Link
+                  href="/login"
+                  className="btn-shine px-8 py-4 bg-white text-zinc-900 rounded-xl font-semibold text-lg border-2 border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50 text-center"
+                >
+                  {t('nav.login')}
+                </Link>
+              </div>
             </div>
 
             {/* Image Content - Left Side (RTL) */}
@@ -296,10 +261,10 @@ export default function LandingPage() {
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14 reveal">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 mb-4">
-              ابدأ في 3 خطوات بسيطة
+              {t('features.title')}
             </h2>
             <p className="text-lg text-zinc-600">
-              سريع، سهل، وبأسعار منخفضة
+              {t('features.subtitle')}
             </p>
           </div>
 
@@ -315,15 +280,13 @@ export default function LandingPage() {
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent"></div>
               </div>
-              <div className="p-8 text-right">
-                <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">سريع جداً</h3>
-                <p className="text-zinc-600 leading-relaxed text-base">
-                  أنشئ قائمتك في أقل من 5 دقائق. لا حاجة للمعرفة التقنية.
-                </p>
+              <div className="p-8" style={{ textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">{t('features.qrBuilder.title')}</h3>
+                <p className="text-zinc-600 leading-relaxed text-base">{t('features.qrBuilder.desc')}</p>
               </div>
             </div>
 
-            {/* Step 2 - Low Prices */}
+            {/* Step 2 - No App */}
             <div className="reveal lp-card group relative overflow-hidden" style={{ ['--reveal-delay' as string]: '80ms' }}>
               <div className="badge-pop absolute top-6 right-6 w-12 h-12 bg-gradient-to-br from-[#F47B20] to-[#F5B82E] rounded-full flex items-center justify-center text-white font-extrabold text-xl shadow-lg z-10">
                 2
@@ -334,11 +297,9 @@ export default function LandingPage() {
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent"></div>
               </div>
-              <div className="p-8 text-right">
-                <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">أسعار منخفضة</h3>
-                <p className="text-zinc-600 leading-relaxed text-base">
-                  150 د.ت لـ 6 أشهر أو 250 د.ت للسنة الكاملة أو 600 د.ت مدى الحياة. بدون رسوم خفية.
-                </p>
+              <div className="p-8" style={{ textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">{t('features.noApp.title')}</h3>
+                <p className="text-zinc-600 leading-relaxed text-base">{t('features.noApp.desc')}</p>
               </div>
             </div>
 
@@ -353,11 +314,9 @@ export default function LandingPage() {
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent"></div>
               </div>
-              <div className="p-8 text-right">
-                <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">سهل التحديث</h3>
-                <p className="text-zinc-600 leading-relaxed text-base">
-                  عدّل الأسعار والأطباق في أي وقت. التحديثات فورية.
-                </p>
+              <div className="p-8" style={{ textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">{t('features.instantUpdate.title')}</h3>
+                <p className="text-zinc-600 leading-relaxed text-base">{t('features.instantUpdate.desc')}</p>
               </div>
             </div>
           </div>
@@ -369,47 +328,46 @@ export default function LandingPage() {
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14 reveal">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 mb-4">
-              خطط بأسعار لا تقبل المنافسة
+              {t('pricing.title')}
             </h2>
             <p className="text-lg text-zinc-600">
-              اختر ما يناسبك. كل الخطط تشمل كل المميزات
+              {t('pricing.subtitle')}
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-14 items-center">
-            {/* Plan 1 */}
+            {/* Plan 1 - 6 Months */}
             <div className="reveal lp-card md:scale-95 md:opacity-90 p-8" style={{ ['--reveal-delay' as string]: '0ms' }}>
               <div className="text-center mb-6">
-                <h3 className="text-2xl font-extrabold text-zinc-900 mb-2">6 أشهر</h3>
+                <h3 className="text-2xl font-extrabold text-zinc-900 mb-2">{t('pricing.plan6months')}</h3>
                 <div className="flex items-baseline justify-center gap-2 mb-2">
-                  <span className="text-5xl font-extrabold text-zinc-900">150</span>
-                  <span className="text-xl text-zinc-600">د.ت</span>
+                  <span className="text-5xl font-extrabold text-zinc-900">{formatPrice(convertFromTnd(150))}</span>
                 </div>
-                <p className="text-sm text-zinc-500">≈ 25 د.ت / شهر</p>
+                <p className="text-sm text-zinc-500">{t('pricing.per6months')}</p>
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-2">
                   <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-zinc-700">قائمة QR احترافية</span>
+                  <span className="text-zinc-700">{t('pricing.features.items')}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-zinc-700">عدد غير محدود من الأطباق</span>
+                  <span className="text-zinc-700">{t('pricing.features.categories')}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-zinc-700">تصاميم جاهزة</span>
+                  <span className="text-zinc-700">{t('pricing.features.themes')}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-zinc-700">دعم فني</span>
+                  <span className="text-zinc-700">{t('pricing.features.support')}</span>
                 </li>
               </ul>
               <Link
                 href="/signup?plan=6months"
                 className="btn-shine block w-full text-center px-6 py-4 bg-zinc-900 text-white rounded-xl font-semibold hover:bg-zinc-800"
               >
-                ابدأ الآن →
+                {t('pricing.ctaSelect')} →
               </Link>
             </div>
 
@@ -417,37 +375,36 @@ export default function LandingPage() {
             <div className="reveal pulse-glow relative bg-gradient-to-br from-[#F47B20] to-[#F5B82E] text-white rounded-2xl p-8 md:scale-105 z-10 border border-white/20" style={{ ['--reveal-delay' as string]: '80ms' }}>
               <div className="text-center mb-2">
                 <span className="inline-block bg-white text-orange-600 px-4 py-1 rounded-full text-sm font-extrabold mb-4 shadow">
-                  الأكثر شعبية
+                  {t('pricing.mostPopular')}
                 </span>
               </div>
               <div className="text-center mb-6">
-                <h3 className="text-2xl font-extrabold mb-2">سنة كاملة</h3>
+                <h3 className="text-2xl font-extrabold mb-2">{t('pricing.plan1year')}</h3>
                 <div className="flex items-baseline justify-center gap-2 mb-2">
-                  <span className="text-5xl font-extrabold">250</span>
-                  <span className="text-xl text-white/90">د.ت</span>
+                  <span className="text-5xl font-extrabold">{formatPrice(convertFromTnd(250))}</span>
                 </div>
-                <p className="text-sm text-white/90">≈ 20.83 د.ت / شهر</p>
-                <p className="text-sm mt-2 text-yellow-100 font-semibold">توفر 50 د.ت!</p>
+                <p className="text-sm text-white/90">{t('pricing.perYear')}</p>
+                <p className="text-sm mt-2 text-yellow-100 font-semibold">{t('pricing.save', { amount: formatPrice(convertFromTnd(50)) })}</p>
               </div>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-2">
                   <span className="text-white text-xl">✓</span>
-                  <span>كل ما في خطة 6 أشهر</span>
+                  <span>{t('pricing.features.items')}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-white text-xl">✓</span>
-                  <span>دعم أولوية</span>
+                  <span>{t('pricing.features.support')}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="text-white text-xl">✓</span>
-                  <span>تحديثات مجانية</span>
+                  <span>{t('pricing.features.updates')}</span>
                 </li>
               </ul>
               <Link
                 href="/signup?plan=1year"
                 className="btn-shine block w-full text-center px-6 py-4 bg-white text-orange-600 rounded-xl font-extrabold hover:bg-zinc-50"
               >
-                ابدأ الآن →
+                {t('pricing.ctaSelect')} →
               </Link>
             </div>
 
@@ -457,41 +414,40 @@ export default function LandingPage() {
               <div className="relative">
                 <div className="text-center mb-2">
                   <span className="inline-block bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 px-5 py-1.5 rounded-full text-sm font-extrabold mb-4 shadow-lg shadow-amber-500/30">
-                    ✦ الأفضل ✦
+                    ✦ {t('pricing.bestValue')} ✦
                   </span>
                 </div>
                 <div className="text-center mb-6">
-                  <h3 className="text-2xl font-extrabold mb-2">مدى الحياة</h3>
+                  <h3 className="text-2xl font-extrabold mb-2">{t('pricing.planLifetime')}</h3>
                   <div className="flex items-baseline justify-center gap-2 mb-2">
-                    <span className="text-5xl font-extrabold text-amber-300">600</span>
-                    <span className="text-xl text-amber-200/80">د.ت</span>
+                    <span className="text-5xl font-extrabold text-amber-300">{formatPrice(convertFromTnd(600))}</span>
                   </div>
-                  <p className="text-sm text-zinc-400">دفعة واحدة فقط</p>
-                  <p className="text-sm mt-2 text-amber-400 font-bold bg-amber-400/10 px-3 py-1 rounded-full inline-block border border-amber-500/20">💰 وفر أكثر من 300 د.ت!</p>
+                  <p className="text-sm text-zinc-400">{t('pricing.once')}</p>
+                  <p className="text-sm mt-2 text-amber-400 font-bold bg-amber-400/10 px-3 py-1 rounded-full inline-block border border-amber-500/20">💰 {t('pricing.save', { amount: formatPrice(convertFromTnd(300)) })}</p>
                 </div>
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-center gap-2">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
-                    <span>كل ما في خطة سنة كاملة</span>
+                    <span>{t('pricing.features.items')}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
-                    <span>مميزات حصرية للمشتركين مدى الحياة</span>
+                    <span>{t('pricing.features.support')}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
-                    <span>دعم مميز على مدار الساعة</span>
+                    <span>{t('pricing.features.updates')}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
-                    <span>تحديثات مجانية مدى الحياة</span>
+                    <span>{t('pricing.features.analytics')}</span>
                   </li>
                 </ul>
                 <Link
                   href="/signup?plan=lifetime"
                   className="btn-shine relative block w-full text-center px-6 py-4 bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 rounded-xl font-extrabold text-lg hover:from-amber-300 hover:to-yellow-200 shadow-lg shadow-amber-500/25 transition-all hover:-translate-y-0.5"
                 >
-                  ابدأ الآن ←
+                  {t('pricing.ctaSelect')} →
                 </Link>
               </div>
             </div>
@@ -499,12 +455,11 @@ export default function LandingPage() {
 
           {/* Payment Methods */}
           <div className="text-center mb-8 reveal">
-            <p className="text-xl font-bold text-zinc-900 mb-6">طرق الدفع المتاحة:</p>
+            <p className="text-xl font-bold text-zinc-900 mb-6">{t('checkout.paymentMethods')}</p>
             <div className="marquee">
               <div className="marquee-track py-2">
                 {[0, 1].map((dup) => (
                   <div key={dup} className="flex items-center gap-8 shrink-0" aria-hidden={dup === 1}>
-                    {/* Flouci */}
                     <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-xl border border-zinc-200 shadow-md hover:shadow-lg transition-shadow">
                       <Image
                         src="https://805342.fs1.hubspotusercontent-na1.net/hubfs/805342/flouci_logo_new.png"
@@ -514,7 +469,6 @@ export default function LandingPage() {
                         className="object-contain h-12"
                       />
                     </div>
-                    {/* D17 */}
                     <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-xl border border-zinc-200 shadow-md hover:shadow-lg transition-shadow">
                       <Image
                         src="https://www.thd.tn/wp-content/uploads/2019/12/1200x630wa-1000x600.png"
@@ -525,21 +479,19 @@ export default function LandingPage() {
                       />
                       <span className="text-zinc-900 font-bold text-lg">D17</span>
                     </div>
-                    {/* Bank Transfer */}
                     <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-xl border border-zinc-200 shadow-md hover:shadow-lg transition-shadow">
                       <svg className="w-12 h-12 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
-                      <span className="text-zinc-900 font-bold text-lg">تحويل بنكي</span>
+                      <span className="text-zinc-900 font-bold text-lg">{t('checkout.bankTransfer')}</span>
                     </div>
-                    {/* Dodo Payments */}
                     <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-xl border border-zinc-200 shadow-md hover:shadow-lg transition-shadow">
                       <svg className="w-10 h-10" viewBox="0 0 40 40" fill="none">
                         <rect width="40" height="40" rx="8" fill="#7C3AED" />
                         <path d="M12 20L18 14L24 20L18 26L12 20Z" fill="white" opacity="0.9" />
                         <path d="M18 14L24 20L18 26" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
-                      <span className="text-zinc-900 font-bold text-lg">Dodo Payments</span>
+                      <span className="text-zinc-900 font-bold text-lg">{t('checkout.onlinePayment')}</span>
                     </div>
                   </div>
                 ))}
@@ -549,13 +501,13 @@ export default function LandingPage() {
 
           <div className="text-center reveal">
             <p className="text-zinc-600 mb-4">
-              جميع الخطط تشمل تجربة مجانية 7 أيام
+              {t('pricing.freeTrial')} - {t('pricing.noPayment')}
             </p>
             <Link
               href="/signup"
               className="text-orange-600 font-semibold hover:text-orange-700 underline"
             >
-              ابدأ تجربتك المجانية →
+              {t('pricing.freeTrial')} →
             </Link>
           </div>
         </div>
@@ -565,41 +517,58 @@ export default function LandingPage() {
       <section className="py-24 bg-gradient-to-br from-orange-50 via-amber-50 to-orange-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center reveal">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 mb-6">
-            جاهز للبدء؟
+            {t('pricing.freeTrial')}
           </h2>
           <p className="text-lg text-zinc-600 mb-8">
-            أنشئ قائمتك الرقمية الآن. لا حاجة لبطاقة ائتمانية.<br />
-            <strong className="text-zinc-900">ابدأ مجاناً واستكشف كل المميزات.</strong>
+            {t('pricing.freeTrialDesc')}<br />
+            <strong className="text-zinc-900">{t('pricing.noPayment')}</strong>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/signup"
               className="btn-shine px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl shadow-orange-500/30"
             >
-              ابدأ مجاناً الآن →
+              {t('hero.cta')} →
             </Link>
             <Link
               href="/login"
               className="btn-shine px-10 py-5 bg-white text-zinc-900 rounded-xl font-bold text-xl hover:bg-zinc-50 border-2 border-zinc-200"
             >
-              تسجيل الدخول
+              {t('nav.login')}
             </Link>
           </div>
           <p className="text-sm text-zinc-500 mt-6">
-            تجربة مجانية 7 أيام • بدون التزام • إلغاء في أي وقت
+            {t('pricing.freeTrial')} • {t('pricing.noPayment')}
           </p>
         </div>
       </section>
 
       {/* Simple Footer */}
-      <footer className="bg-zinc-900 text-zinc-400 py-8">
+      <footer className="bg-zinc-900 text-zinc-400 py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <p className="mb-2">© 2024 Scaniha. جميع الحقوق محفوظة.</p>
-            <div className="flex justify-center gap-6 text-sm">
-              <Link href="/login" className="hover:text-white transition-colors">تسجيل الدخول</Link>
-              <Link href="/signup" className="hover:text-white transition-colors">إنشاء حساب</Link>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            <div>
+              <h3 className="text-white font-bold mb-3">{t('app.name')}</h3>
+              <p className="text-sm">{t('app.tagline')}</p>
             </div>
+            <div>
+              <h3 className="text-white font-bold mb-3">{t('nav.links') || 'Links'}</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/" className="hover:text-white transition-colors">{t('nav.home')}</Link></li>
+                <li><Link href="/signup" className="hover:text-white transition-colors">{t('nav.signup')}</Link></li>
+                <li><Link href="/login" className="hover:text-white transition-colors">{t('nav.login')}</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-white font-bold mb-3">{t('nav.language')}</h3>
+              <div className="flex gap-4 mb-4">
+                <LanguageSwitcher />
+                <CurrencySelector />
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-zinc-800 pt-6 text-center text-sm">
+            <p className="mb-2">© 2024 Scaniha. {t('app.name')}</p>
           </div>
         </div>
       </footer>
@@ -610,7 +579,7 @@ export default function LandingPage() {
           href="/signup"
           className="btn-shine block w-full text-center px-6 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-lg shadow-lg shadow-orange-500/30"
         >
-          ابدأ الآن مجاناً
+          {t('hero.cta')}
         </Link>
       </div>
     </div>

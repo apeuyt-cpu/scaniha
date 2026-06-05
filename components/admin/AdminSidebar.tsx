@@ -6,22 +6,24 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Image from 'next/image'
-
-const navItems = [
-  { href: '/admin', label: 'لوحة التحكم', icon: (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-    </svg>
-  )},
-  { href: '/admin/menu', label: 'القائمة', icon: (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  )},
-]
+import { useLocale } from '@/lib/i18n/LocaleContext'
 
 export default function AdminSidebar() {
+  const { t, dir } = useLocale()
   const pathname = usePathname()
+
+  const navItems = [
+    { href: '/admin', label: t('nav.dashboard'), icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+      </svg>
+    )},
+    { href: '/admin/menu', label: t('nav.menu'), icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    )},
+  ]
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
@@ -41,7 +43,7 @@ export default function AdminSidebar() {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-56 bg-zinc-950 text-white flex-col border-l border-zinc-800/50" dir="rtl">
+      <aside className="hidden lg:flex w-56 bg-zinc-950 text-white flex-col border-l border-zinc-800/50" dir={dir}>
         {/* Logo */}
         <div className="h-16 flex items-center justify-center px-5 border-b border-zinc-800/50 bg-white">
           <Image
@@ -82,13 +84,13 @@ export default function AdminSidebar() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            <span>{loading ? 'جاري الخروج...' : 'تسجيل الخروج'}</span>
+            <span>{loading ? t('nav.signingOut') : t('nav.signout')}</span>
           </button>
         </div>
       </aside>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-50 shadow-lg" dir="rtl">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 z-50 shadow-lg" dir={dir}>
         <div className="flex items-center justify-around h-16">
           {navItems.map((item) => (
             <Link
@@ -116,7 +118,7 @@ export default function AdminSidebar() {
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            <span className="text-xs font-medium">خروج</span>
+            <span className="text-xs font-medium">{t('nav.signout')}</span>
           </button>
         </div>
       </nav>

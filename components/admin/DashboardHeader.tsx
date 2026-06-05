@@ -1,5 +1,7 @@
 'use client'
 
+import { useLocale } from '@/lib/i18n/LocaleContext'
+
 interface Business {
   id: string
   name: string
@@ -9,6 +11,7 @@ interface Business {
 }
 
 export default function DashboardHeader({ business }: { business: Business }) {
+  const { t } = useLocale()
   const menuUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/${business.slug}`
     : `/${business.slug}`
@@ -41,7 +44,7 @@ export default function DashboardHeader({ business }: { business: Business }) {
                   ? 'bg-green-500/30 text-green-100'
                   : 'bg-yellow-500/30 text-yellow-100'
               }`}>
-                {business.status === 'active' ? 'Active' : 'Paused'}
+                {business.status === 'active' ? t('pricing.active') : t('dashboard.menuPaused')}
               </span>
             </div>
           </div>

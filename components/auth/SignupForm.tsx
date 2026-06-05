@@ -3,14 +3,13 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/utils/slug'
-
-const PLAN_LABELS: Record<string, string> = {
-  '6months': '6 أشهر - 150 د.ت',
-  '1year': 'سنة كاملة - 250 د.ت',
-  lifetime: 'مدى الحياة - 600 د.ت',
-}
+import { useLocale } from '@/lib/i18n/LocaleContext'
+import { useCurrency } from '@/lib/i18n/CurrencyContext'
+import CurrencySelector from '@/components/ui/CurrencySelector'
 
 export default function SignupForm({ plan }: { plan?: string }) {
+  const { t, dir } = useLocale()
+  const { formatPrice, convertFromTnd, currencyCode } = useCurrency()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -25,7 +24,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
     setLoading(true)
 
     if (!email || !password || !phoneNumber || !businessName) {
-      setError('يرجى ملء جميع الحقول')
+      setError(t('auth.required'))
       setLoading(false)
       return
     }
@@ -39,7 +38,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
       .maybeSingle()
 
     if (existingEmail) {
-      setError('البريد الإلكتروني مستخدم بالفعل. يرجى استخدام بريد آخر أو تسجيل الدخول.')
+      setError(t('auth.errorGeneric'))
       setLoading(false)
       return
     }
@@ -51,7 +50,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
       .maybeSingle()
 
     if (existingBusinessName) {
-      setError('اسم النشاط التجاري مستخدم بالفعل. يرجى اختيار اسم آخر.')
+      setError(t('auth.errorGeneric'))
       setLoading(false)
       return
     }
@@ -63,7 +62,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
       .maybeSingle()
 
     if (existingSlug) {
-      setError('اسم النشاط التجاري يُنشئ رابط مستخدم بالفعل. يرجى اختيار اسم آخر.')
+      setError(t('auth.errorGeneric'))
       setLoading(false)
       return
     }
@@ -76,7 +75,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
       })
 
       if (authError || !authData.user) {
-        setError(authError?.message || 'فشل إنشاء حساب المستخدم')
+        setError(authError?.message || t('auth.errorGeneric'))
         setLoading(false)
         return
       }
@@ -109,7 +108,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
           })
 
         if (profileError) {
-          setError('فشل إنشاء الملف الشخصي. يرجى المحاولة مرة أخرى.')
+          setError(t('auth.errorGeneric'))
           setLoading(false)
           return
         }
@@ -138,12 +137,13 @@ export default function SignupForm({ plan }: { plan?: string }) {
             slug: slug,
             expires_at: null,
             status: 'pending',
+            currency: currencyCode,
           })
           .select()
           .single()
 
         if (businessError) {
-          setError(businessError.message || 'فشل إنشاء النشاط التجاري')
+          setError(businessError.message || t('auth.errorGeneric'))
           setLoading(false)
           return
         }
@@ -178,12 +178,13 @@ export default function SignupForm({ plan }: { plan?: string }) {
             slug: slug,
             expires_at: expirationDate.toISOString(),
             status: 'active',
+            currency: currencyCode,
           })
           .select()
           .single()
 
         if (businessError) {
-          setError(businessError.message || 'فشل إنشاء النشاط التجاري')
+          setError(businessError.message || t('auth.errorGeneric'))
           setLoading(false)
           return
         }
@@ -191,20 +192,20 @@ export default function SignupForm({ plan }: { plan?: string }) {
         window.location.href = '/admin'
       }
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ. يرجى المحاولة مرة أخرى.')
+      setError(err.message || t('auth.errorGeneric'))
       setLoading(false)
     }
   }
 
   return (
-    <form className="space-y-5" onSubmit={handleSubmit} dir="rtl">
-      {plan && PLAN_LABELS[plan] && (
+    <form className="space-y-5" onSubmit={handleSubmit} dir={dir}>
+      {plan && (
         <div className="bg-gradient-to-l from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-4">
           <div className="flex items-start gap-3">
             <div className="text-2xl">📋</div>
             <div>
-              <p className="text-sm font-semibold text-orange-900">الخطة المختارة: {PLAN_LABELS[plan]}</p>
-              <p className="text-xs text-orange-700 mt-0.5">سيتم توجيهك للدفع بعد إنشاء الحساب</p>
+              <p className="text-sm font-semibold text-orange-900">{t('auth.selectPlan')}: {formatPrice(convertFromTnd(plan === 'lifetime' ? 600 : plan === '1year' ? 250 : 150))}</p>
+              <p className="text-xs text-orange-700 mt-0.5">{t('checkout.redirecting')}</p>
             </div>
           </div>
         </div>
@@ -213,7 +214,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
       <div className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-2">
-            البريد الإلكتروني
+            {t('auth.email')}
           </label>
           <input
             id="email"
@@ -231,7 +232,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-zinc-700 mb-2">
-            كلمة المرور
+            {t('auth.password')}
           </label>
           <input
             id="password"
@@ -248,7 +249,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
 
         <div>
           <label htmlFor="phone" className="block text-sm font-medium text-zinc-700 mb-2">
-            رقم الهاتف
+            {t('auth.phone')}
           </label>
           <input
             id="phone"
@@ -256,7 +257,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
             type="tel"
             required
             className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent bg-white"
-            placeholder="+21612345678"
+            placeholder={t('auth.phonePlaceholder')}
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
             dir="ltr"
@@ -265,7 +266,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
 
         <div>
           <label htmlFor="business" className="block text-sm font-medium text-zinc-700 mb-2">
-            اسم النشاط التجاري
+            {t('auth.businessName')}
           </label>
           <input
             id="business"
@@ -273,10 +274,18 @@ export default function SignupForm({ plan }: { plan?: string }) {
             type="text"
             required
             className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent bg-white"
-            placeholder="اسم المطعم أو المقهى"
+            placeholder={t('dashboard.businessNamePlaceholder')}
             value={businessName}
             onChange={(e) => setBusinessName(e.target.value)}
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 mb-2">
+            {t('auth.menuCurrency')}
+          </label>
+          <p className="text-xs text-zinc-500 mb-2">{t('auth.menuCurrencyDesc')}</p>
+          <CurrencySelector showLabel={true} />
         </div>
       </div>
 
@@ -285,8 +294,8 @@ export default function SignupForm({ plan }: { plan?: string }) {
           <div className="flex items-start gap-3">
             <div className="text-2xl">🎁</div>
             <div>
-              <p className="text-sm font-semibold text-blue-900">تجربة مجانية لمدة 7 أيام</p>
-              <p className="text-xs text-blue-700 mt-0.5">ابدأ الآن واستمتع بكل الميزات</p>
+              <p className="text-sm font-semibold text-blue-900">{t('pricing.freeTrial')}</p>
+              <p className="text-xs text-blue-700 mt-0.5">{t('pricing.freeTrialDesc')}</p>
             </div>
           </div>
         </div>
@@ -304,7 +313,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
           disabled={loading}
           className="w-full py-3 px-4 bg-zinc-900 text-white rounded-xl text-base font-medium hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 transition-colors"
         >
-          {loading ? 'جاري إنشاء الحساب...' : plan ? 'إنشاء حساب والدفع' : 'إنشاء حساب'}
+          {loading ? t('auth.signingUp') : plan ? t('auth.createAccount') : t('auth.createAccount')}
         </button>
       </div>
     </form>

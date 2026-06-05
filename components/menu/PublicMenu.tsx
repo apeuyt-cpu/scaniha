@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import DynamicFavicon from '@/components/admin/DynamicFavicon'
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
+import CurrencySelector from '@/components/ui/CurrencySelector'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Theme } from '@/lib/themes'
 
@@ -548,7 +550,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                                 }}
                                 dir="ltr"
                               >
-                                {Number(item.price).toFixed(2)} TD
+                                {Number(item.price).toFixed(2)} {(business as any).currency || 'TND'}
                               </span>
                             </div>
                           )}
@@ -682,17 +684,12 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
             )}
             
             <p className="text-xs tracking-[0.15em] uppercase mb-2" style={{ color: theme.colors.muted }}>
-              شكراً لزيارتكم
-            </p>
-            <p 
-              className={`text-lg font-medium ${isDark ? 'gold-glow' : ''}`}
-              style={{ 
-                fontFamily: "'Cairo', " + theme.font.heading,
-                color: isDark ? theme.colors.primary : theme.colors.text,
-              }}
-            >
               {business.name}
             </p>
+            <div className="flex items-center justify-center gap-4 mt-4">
+              <LanguageSwitcher />
+              <CurrencySelector />
+            </div>
           </div>
         </footer>
           </>
@@ -1011,7 +1008,7 @@ function MinimalLayout({
                             style={{ color: theme.colors.accent }}
                             dir="ltr"
                           >
-                            {Number(item.price).toFixed(2)} TD
+                            {Number(item.price).toFixed(2)} {(business as any).currency || 'TND'}
                           </span>
                         )}
                       </div>
@@ -1043,6 +1040,10 @@ function MinimalLayout({
               className="border-t py-4 px-4 text-center"
               style={{ borderColor: theme.colors.border }}
             >
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <LanguageSwitcher />
+                <CurrencySelector />
+              </div>
               {/* Social Media Links */}
               {(business.facebook_url || business.instagram_url || business.twitter_url || business.whatsapp_number || business.website_url) && (
                 <div className="flex items-center justify-center gap-3 mb-4">

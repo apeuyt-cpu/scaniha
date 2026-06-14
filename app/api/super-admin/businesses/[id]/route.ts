@@ -7,54 +7,55 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireSuperAdmin()
-    
+    const { user } = await requireSuperAdmin()
+
     const { id } = await params
+
+    // Require the operator to type the exact business name to confirm.
+    // This is an irreversible cascade delete (categories, items, subscriptions,
+    // images) — the typed confirmation is the guard against accidental loss.
+    let confirmName: string | null = null
+    try {
+      const body = await request.json()
+      confirmName = typeof body?.confirmName === 'string' ? body.confirmName : null
+    } catch {
+      confirmName = null
+    }
+
     const supabase = await createServiceRoleClient()
-    
-    // First, get the business to check if it exists and get logo_url for cleanup
+
+    // Fetch the business to verify it exists and to validate the typed name.
     const { data: business, error: fetchError } = await (supabase
       .from('businesses') as any)
-      .select('id, logo_url, owner_id')
+      .select('id, name, logo_url, owner_id')
       .eq('id', id)
       .single()
 
-    if (fetchError) {
+    if (fetchError || !business) {
+      return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
+    }
+
+    if (!confirmName || confirmName.trim() !== business.name) {
       return NextResponse.json(
-        { error: 'Business not found' },
-        { status: 404 }
+        { error: 'Le nom saisi ne correspond pas. Suppression annulée.' },
+        { status: 400 }
       )
     }
 
-    // Clean up Cloudinary images if they exist
+    // Audit trail (no soft-delete/audit table exists — log to server console).
+    console.warn(
+      `[AUDIT] super-admin ${user.id} (${user.email ?? 'n/a'}) is DELETING business ` +
+        `${business.id} ("${business.name}") at ${new Date().toISOString()}`
+    )
+
+    // Clean up stored images (Supabase Storage) if they exist.
     try {
-      const { deleteFromCloudinary } = await import('@/lib/cloudinary')
+      const { deleteStoredImage } = await import('@/lib/storage-server')
 
-      // Helper to extract Cloudinary public_id from URL
-      const extractPublicId = (url: string): string | null => {
-        try {
-          if (!url || !url.includes('res.cloudinary.com')) return null
-          const urlObj = new URL(url)
-          const parts = urlObj.pathname.split('/')
-          const uploadIdx = parts.indexOf('upload')
-          if (uploadIdx === -1) return null
-          let start = uploadIdx + 1
-          if (parts[start] && /^v\d+$/.test(parts[start])) start++
-          const withExt = parts.slice(start).join('/')
-          const dotIdx = withExt.lastIndexOf('.')
-          return dotIdx > -1 ? withExt.substring(0, dotIdx) : withExt
-        } catch { return null }
-      }
-
-      // Delete logo from Cloudinary
       if (business.logo_url) {
-        const logoPublicId = extractPublicId(business.logo_url)
-        if (logoPublicId) {
-          try { await deleteFromCloudinary(logoPublicId) } catch {}
-        }
+        try { await deleteStoredImage(business.logo_url) } catch {}
       }
 
-      // Delete item and category images from Cloudinary
       const { data: cats } = await (supabase.from('categories') as any)
         .select('image_url, items(image_url)')
         .eq('business_id', id)
@@ -62,25 +63,21 @@ export async function DELETE(
       if (cats) {
         for (const cat of cats) {
           if (cat.image_url) {
-            const pid = extractPublicId(cat.image_url)
-            if (pid) { try { await deleteFromCloudinary(pid) } catch {} }
+            try { await deleteStoredImage(cat.image_url) } catch {}
           }
-          if (cat.items) {
-            for (const item of cat.items) {
-              if (item.image_url) {
-                const pid = extractPublicId(item.image_url)
-                if (pid) { try { await deleteFromCloudinary(pid) } catch {} }
-              }
+          for (const item of cat.items || []) {
+            if (item.image_url) {
+              try { await deleteStoredImage(item.image_url) } catch {}
             }
           }
         }
       }
     } catch (cleanupError: any) {
-      // Log cleanup errors but don't fail the deletion
-      console.warn('Cloudinary cleanup warning:', cleanupError.message)
+      // Log cleanup errors but don't fail the deletion.
+      console.warn('Image cleanup warning:', cleanupError?.message)
     }
 
-    // Delete the business (this will cascade delete categories, items, subscriptions)
+    // Delete the business (cascades categories, items, subscriptions).
     const { error: deleteError } = await (supabase
       .from('businesses') as any)
       .delete()
@@ -88,21 +85,24 @@ export async function DELETE(
 
     if (deleteError) {
       return NextResponse.json(
-        { error: deleteError.message || 'Failed to delete business' },
+        { error: 'Échec de la suppression du compte.' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Business deleted successfully' 
+      message: 'Compte supprimé avec succès.',
     })
   } catch (error: any) {
+    if (error?.digest?.startsWith?.('NEXT_REDIRECT') || error?.message === 'NEXT_REDIRECT') {
+      return NextResponse.json({ error: 'Non autorisé.' }, { status: 401 })
+    }
     console.error('Delete business error:', error)
+    const unauthorized = error.message?.includes('Unauthorized') || error.message?.includes('auth')
     return NextResponse.json(
-      { error: error.message || 'Unauthorized' },
-      { status: error.message?.includes('Unauthorized') ? 401 : 500 }
+      { error: unauthorized ? 'Non autorisé.' : 'Erreur serveur.' },
+      { status: unauthorized ? 401 : 500 }
     )
   }
 }
-

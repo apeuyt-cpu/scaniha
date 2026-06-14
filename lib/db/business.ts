@@ -1,6 +1,7 @@
 import { createServerClient } from '../supabase/server'
 import { createServiceRoleClient } from '../supabase/server'
 import type { Database } from '../supabase/database.types'
+import { menuImageUrl } from '../image-url'
 
 type Business = Database['public']['Tables']['businesses']['Row']
 
@@ -75,7 +76,12 @@ export async function getBusinessWithCategoriesAndItems(businessId: string) {
   // Supabase doesn't support ordering nested relations, so we sort in JavaScript
   if (categories) {
     (categories as any[]).forEach((category: any) => {
+      // Resize images to display size (huge load-time win — see lib/image-url).
+      category.image_url = menuImageUrl(category.image_url, 480)
       if (category.items && Array.isArray(category.items)) {
+        category.items.forEach((item: any) => {
+          item.image_url = menuImageUrl(item.image_url, 640)
+        })
         category.items.sort((a: any, b: any) => {
           // Sort by position first, then by created_at if position is null or equal
           const posA = a.position !== null && a.position !== undefined ? a.position : 999999
@@ -89,183 +95,131 @@ export async function getBusinessWithCategoriesAndItems(businessId: string) {
       }
     })
   }
-  
+
   return categories
 }
 
-export async function getActiveBusinesses(): Promise<Array<{ slug: string; updated_at: string | null }>> {
+export async function getActiveBusinesses(): Promise<Array<{ slug: string; created_at: string | null }>> {
   const supabase = await createServerClient()
   const now = new Date().toISOString()
-  
-  // Get only active businesses that haven't expired
+
+  // Get only active businesses that haven't expired.
+  // NB: the businesses table has no `updated_at` column — use `created_at`
+  // (selecting a missing column errors and silently drops every menu from the sitemap).
   const { data, error } = await supabase
     .from('businesses')
-    .select('slug, updated_at')
+    .select('slug, created_at')
     .eq('status', 'active')
     .or(`expires_at.is.null,expires_at.gt.${now}`)
-    .order('updated_at', { ascending: false })
-  
+    .order('created_at', { ascending: false })
+
   if (error) {
     return []
   }
-  return (data || []) as Array<{ slug: string; updated_at: string | null }>
+  return (data || []) as Array<{ slug: string; created_at: string | null }>
 }
 
 export async function getAllBusinesses() {
-  // Try service role first, fallback to regular client if not available
+  // Try service role first, fallback to regular client if not available.
   let supabase
-  let serviceRoleAvailable = false
-  
   try {
     supabase = await createServiceRoleClient()
-    serviceRoleAvailable = true
   } catch (error) {
-    // Service role not available, use regular authenticated client
+    // Service role not available, use regular authenticated client.
     supabase = await createServerClient()
   }
-  
-  // Auto-pause any expired businesses when super admin loads the list
-  // This keeps the database in sync (only if service role is available)
-  if (serviceRoleAvailable) {
-    try {
-      const now = new Date().toISOString()
-      await (supabase.from('businesses') as any)
-        .update({ status: 'paused' })
-        .lt('expires_at', now)
-        .eq('status', 'active')
-    } catch (updateError) {
-      // Silently fail if update fails (might be RLS or rate limit)
-    }
-  }
-  
-  // Fetch businesses first
+
+  // NOTE: This is a READ-ONLY function. It must NOT mutate the database.
+  // Expiry-based auto-pausing used to happen here as a side effect of loading
+  // the list — that was moved out so listing never changes state. Display
+  // status is computed by callers (expires_at in the past → treat as expired);
+  // actual status transitions belong in a dedicated endpoint / cron.
+
+  // Fetch businesses first.
   const { data, error } = await supabase
     .from('businesses')
     .select('*')
     .order('created_at', { ascending: false })
-  
+
   if (error) {
-    // Return empty array instead of throwing to prevent 500 errors
+    // Return empty array instead of throwing to prevent 500 errors.
     return []
   }
-  
+
   if (!data || data.length === 0) {
     return []
   }
-  
-  // Always fetch profiles separately to ensure we get the data
+
+  // Fetch all owner profiles in a SINGLE batched query (no N+1 loop).
   const ownerIds = Array.from(new Set(data.map((b: any) => b.owner_id).filter(Boolean)))
-  
+
   if (ownerIds.length > 0) {
-    const profileMap = new Map()
-    
-    // Always use service role client for profile queries to bypass RLS
+    const profileMap = new Map<string, { email: string | null; phone_number: string | null }>()
+
+    // Prefer the service-role client for profiles (bypasses RLS); fall back otherwise.
     let profileSupabase = supabase
     try {
-      // Try to get service role client for profiles (bypasses RLS)
       profileSupabase = await createServiceRoleClient()
-      console.log('[getAllBusinesses] Using service role client for profile queries')
-    } catch (err) {
-      console.warn('[getAllBusinesses] Service role not available for profiles, using regular client:', err)
-      // Fall back to regular client
+    } catch {
       profileSupabase = supabase
     }
-    
-    // Fetch profiles - query each one individually to ensure we get the data
+
     try {
-      console.log(`[getAllBusinesses] Fetching profiles for ${ownerIds.length} owner IDs`)
-      
-      // Query each profile individually to ensure we get the data
-      for (const ownerId of ownerIds) {
-        try {
-          const { data: profile, error: profileError } = await (profileSupabase
-            .from('profiles') as any)
-            .select('user_id, email, phone_number')
-            .eq('user_id', ownerId)
-            .maybeSingle()
-          
-          if (profileError) {
-            console.error(`[getAllBusinesses] Error fetching profile for ${ownerId}:`, profileError)
-            continue
-          }
-          
-          if (profile) {
-            const profileData = profile as any
-            const email = profileData.email ? String(profileData.email).trim() : null
-            const phone = profileData.phone_number ? String(profileData.phone_number).trim() : null
-            profileMap.set(profileData.user_id, {
-              email: email,
-              phone_number: phone
-            })
-            console.log(`[getAllBusinesses] Found profile for ${ownerId}:`, { email, phone })
-          } else {
-            console.warn(`[getAllBusinesses] No profile found for ${ownerId}`)
-          }
-        } catch (err) {
-          console.error(`[getAllBusinesses] Exception fetching profile for ${ownerId}:`, err)
-        }
+      const { data: profiles } = await (profileSupabase
+        .from('profiles') as any)
+        .select('user_id, email, phone_number')
+        .in('user_id', ownerIds)
+
+      for (const profile of (profiles || []) as any[]) {
+        const email = profile.email ? String(profile.email).trim() : null
+        const phone = profile.phone_number ? String(profile.phone_number).trim() : null
+        profileMap.set(profile.user_id, { email, phone_number: phone })
       }
-      
-      console.log(`[getAllBusinesses] Profile map after individual queries:`, {
-        mapSize: profileMap.size,
-        entries: Array.from(profileMap.entries())
-      })
-    } catch (err) {
-      console.error('[getAllBusinesses] Error fetching profiles:', err)
+    } catch {
+      // On failure, businesses simply render without contact info.
     }
-    
-    // Debug: Log profile map before mapping to businesses
-    console.log('[getAllBusinesses] Profile map before mapping:', {
-      mapSize: profileMap.size,
-      ownerIds: ownerIds,
-      mapEntries: Array.from(profileMap.entries())
-    })
-    
-    // Map profiles to businesses
+
     data.forEach((business: any) => {
-      let profile = profileMap.get(business.owner_id)
-      
-      // Debug: Log profile data
-      if (business.owner_id) {
-        if (profile) {
-          console.log(`[getAllBusinesses] Profile for ${business.owner_id}:`, {
-            email: profile.email,
-            phone: profile.phone_number,
-            hasEmail: !!profile.email,
-            hasPhone: !!profile.phone_number
-          })
-        } else {
-          console.warn(`[getAllBusinesses] No profile found for owner_id: ${business.owner_id}`)
-        }
-      }
-      
-      // Ensure profile structure is correct - preserve all values including empty strings
-      if (profile) {
-        business.profiles = {
-          email: profile.email !== undefined && profile.email !== null ? String(profile.email) : null,
-          phone_number: profile.phone_number !== undefined && profile.phone_number !== null ? String(profile.phone_number) : null
-        }
-      } else {
-        business.profiles = null
-      }
+      const profile = profileMap.get(business.owner_id)
+      business.profiles = profile
+        ? { email: profile.email ?? null, phone_number: profile.phone_number ?? null }
+        : null
     })
-    
-    // Debug: Log final data structure
-    console.log('[getAllBusinesses] Final businesses with profiles:', data.map((b: any) => ({
-      name: b.name,
-      owner_id: b.owner_id,
-      hasProfile: !!b.profiles,
-      email: b.profiles?.email,
-      phone: b.profiles?.phone_number
-    })))
   } else {
-    // No owner IDs, set all profiles to null
     data.forEach((business: any) => {
       business.profiles = null
     })
   }
-  
+
   return data
+}
+
+/**
+ * Pause all active businesses whose subscription has expired.
+ * This MUTATES the database, so it is deliberately kept OUT of the list-read
+ * path (see getAllBusinesses). Call it from a dedicated endpoint or a cron job.
+ */
+export async function pauseExpiredBusinesses(): Promise<number> {
+  let supabase
+  try {
+    supabase = await createServiceRoleClient()
+  } catch {
+    return 0
+  }
+
+  try {
+    const now = new Date().toISOString()
+    const { data, error } = await (supabase.from('businesses') as any)
+      .update({ status: 'paused' })
+      .lt('expires_at', now)
+      .eq('status', 'active')
+      .select('id')
+
+    if (error) return 0
+    return (data || []).length
+  } catch {
+    return 0
+  }
 }
 
 export async function updateBusinessStatus(businessId: string, status: 'active' | 'paused') {

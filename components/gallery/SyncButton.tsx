@@ -39,7 +39,7 @@ export default function SyncButton({ className = "", onSyncComplete }: SyncButto
       if (!res.ok || !data.success) {
         setResult({
           success: false,
-          error: data.error || "Sync failed unexpectedly.",
+          error: data.error || "La synchronisation a échoué de manière inattendue.",
         });
       } else {
         setResult({ success: true, stats: data.stats });
@@ -50,7 +50,7 @@ export default function SyncButton({ className = "", onSyncComplete }: SyncButto
     } catch (err: any) {
       setResult({
         success: false,
-        error: err.message || "Network error during sync.",
+        error: err.message || "Erreur réseau lors de la synchronisation.",
       });
     } finally {
       setIsSyncing(false);
@@ -96,7 +96,7 @@ export default function SyncButton({ className = "", onSyncComplete }: SyncButto
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
               />
             </svg>
-            Syncing…
+            Synchronisation…
           </>
         ) : (
           <>
@@ -114,7 +114,7 @@ export default function SyncButton({ className = "", onSyncComplete }: SyncButto
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            Sync from Cloudinary
+            Synchroniser depuis Cloudinary
           </>
         )}
       </button>
@@ -149,27 +149,27 @@ export default function SyncButton({ className = "", onSyncComplete }: SyncButto
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <span className="font-semibold">Sync completed successfully!</span>
+                <span className="font-semibold">Synchronisation réussie !</span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                <div className="bg-white/5 rounded-lg p-2 text-center">
+                <div className="bg-[#FEFEFE]/5 rounded-lg p-2 text-center">
                   <p className="text-lg font-bold text-white">{result.stats.fetched}</p>
-                  <p className="text-[10px] uppercase tracking-wider opacity-70">Fetched</p>
+                  <p className="text-[10px] uppercase tracking-wider opacity-70">Récupérées</p>
                 </div>
-                <div className="bg-white/5 rounded-lg p-2 text-center">
+                <div className="bg-[#FEFEFE]/5 rounded-lg p-2 text-center">
                   <p className="text-lg font-bold text-white">{result.stats.upserted}</p>
-                  <p className="text-[10px] uppercase tracking-wider opacity-70">Synced</p>
+                  <p className="text-[10px] uppercase tracking-wider opacity-70">Synchronisées</p>
                 </div>
-                <div className="bg-white/5 rounded-lg p-2 text-center">
+                <div className="bg-[#FEFEFE]/5 rounded-lg p-2 text-center">
                   <p className="text-lg font-bold text-white">{result.stats.deleted}</p>
-                  <p className="text-[10px] uppercase tracking-wider opacity-70">Cleaned</p>
+                  <p className="text-[10px] uppercase tracking-wider opacity-70">Nettoyées</p>
                 </div>
-                <div className="bg-white/5 rounded-lg p-2 text-center">
+                <div className="bg-[#FEFEFE]/5 rounded-lg p-2 text-center">
                   <p className="text-lg font-bold text-white">
                     {(result.stats.duration_ms / 1000).toFixed(1)}s
                   </p>
-                  <p className="text-[10px] uppercase tracking-wider opacity-70">Duration</p>
+                  <p className="text-[10px] uppercase tracking-wider opacity-70">Durée</p>
                 </div>
               </div>
             </div>

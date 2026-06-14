@@ -8,30 +8,41 @@ export async function GET(req: Request) {
 
   let businessId: string
 
+  // /api/* is NOT covered by middleware — authenticate every request here.
+  const authClient = await createServerClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Connexion requise.' }, { status: 401 })
+  }
+
   if (businessSlug) {
-    const supabase = await createServiceRoleClient()
-    const { data: biz } = await (supabase
+    // Drill-down by slug is allowed only for super-admins or the business owner.
+    const admin = await createServiceRoleClient()
+    const { data: biz } = await (admin
       .from('businesses') as any)
-      .select('id')
+      .select('id, owner_id')
       .eq('slug', businessSlug)
       .single()
     if (!biz) {
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
+    }
+    const { data: profile } = await (authClient
+      .from('profiles') as any)
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (profile?.role !== 'super_admin' && biz.owner_id !== user.id) {
+      return NextResponse.json({ error: 'Accès refusé.' }, { status: 403 })
     }
     businessId = biz.id
   } else {
-    const supabase = await createServerClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const { data: business } = await (supabase
+    const { data: business } = await (authClient
       .from('businesses') as any)
       .select('id')
       .eq('owner_id', user.id)
       .single()
     if (!business) {
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }
     businessId = business.id
   }
@@ -57,7 +68,11 @@ export async function GET(req: Request) {
     .order('viewed_at', { ascending: true })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('[admin/analytics] menu_views query error:', error.message)
+    return NextResponse.json(
+      { error: 'Impossible de charger les statistiques.' },
+      { status: 500 }
+    )
   }
 
   const total = views?.length || 0

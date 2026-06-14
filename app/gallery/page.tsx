@@ -1,23 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 import ImageGrid from "@/components/gallery/ImageGrid";
 import SyncButton from "@/components/gallery/SyncButton";
+import { requireSuperAdmin } from "@/lib/auth";
 import type { Metadata } from "next";
 
+// Internal image-management tool — operator only. Never public/indexed.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
-  title: "Image Gallery | Scaniha - QR Menu Builder",
-  description: "Browse image uploads for your digital restaurant menu. View and manage menu item images, restaurant photos, and more.",
-  openGraph: {
-    title: "Image Gallery | Scaniha",
-    description: "Browse image uploads for your digital restaurant menu.",
-    url: "https://scaniha.com/gallery",
-    siteName: "Scaniha",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Image Gallery | Scaniha",
-    description: "Browse image uploads for your digital restaurant menu.",
-  },
+  title: "Galerie d'images | Scaniha",
+  robots: { index: false, follow: false },
 };
 
 const PAGE_SIZE = 20;
@@ -62,6 +54,9 @@ async function getImages() {
 }
 
 export default async function GalleryPage() {
+  // Operator-only: redirects owners → /admin and unauthenticated → /login.
+  await requireSuperAdmin();
+
   const { images, totalCount, folders } = await getImages();
 
   return (
@@ -78,11 +73,11 @@ export default async function GalleryPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-violet-200 to-indigo-200 bg-clip-text text-transparent">
-              Image Gallery
+            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-[#FEFEFE] via-violet-200 to-indigo-200 bg-clip-text text-transparent">
+              Galerie d'images
             </h1>
             <p className="text-gray-400 mt-2 text-sm">
-              {totalCount} image{totalCount !== 1 ? "s" : ""} synced from Cloudinary
+              {totalCount} image{totalCount !== 1 ? "s" : ""} synchronisée{totalCount !== 1 ? "s" : ""} depuis Cloudinary
             </p>
           </div>
 
@@ -91,21 +86,21 @@ export default async function GalleryPage() {
 
         {/* Stats Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4">
+          <div className="bg-[#FEFEFE]/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4">
             <p className="text-2xl font-bold text-white">{totalCount}</p>
-            <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">Total Images</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">Total images</p>
           </div>
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4">
+          <div className="bg-[#FEFEFE]/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4">
             <p className="text-2xl font-bold text-white">{folders.length}</p>
-            <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">Folders</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">Dossiers</p>
           </div>
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4">
+          <div className="bg-[#FEFEFE]/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4">
             <p className="text-2xl font-bold text-violet-400">CDN</p>
             <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">Source</p>
           </div>
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4">
-            <p className="text-2xl font-bold text-emerald-400">Live</p>
-            <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">Status</p>
+          <div className="bg-[#FEFEFE]/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4">
+            <p className="text-2xl font-bold text-emerald-400">En ligne</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">Statut</p>
           </div>
         </div>
 

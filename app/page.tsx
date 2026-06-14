@@ -4,26 +4,26 @@ import LandingPage from '@/components/landing/LandingPage'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Scaniha | QR Menu Builder for Restaurants & Cafés',
-  description: 'Scaniha helps restaurants and cafés create beautiful digital menus with QR codes in minutes. Easy, fast, no technical skills needed. Start for free.',
+  title: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
+  description: 'Scaniha aide les restaurants et cafés à créer de superbes menus numériques avec QR code en quelques minutes. Simple, rapide, sans compétences techniques. Commencez gratuitement.',
   keywords: [
-    'Scaniha', 'QR Menu Builder', 'Digital Menu for Restaurants', 'Restaurant QR Menu',
-    'Scaniha QR Menu', 'Create QR Menu', 'Online Menu for Restaurants', 'Digital Menu Maker',
-    'QR Code Menu for Restaurants', 'Free QR Menu Builder', 'Contactless Menu App',
-    'restaurant menu app', 'digital menu café', 'menu QR restaurant', 'قائمة QR للمطاعم',
-    'digital menu', 'cafe menu', 'menu builder'
+    'Scaniha', 'créateur de menu QR', 'menu numérique restaurant', 'menu QR restaurant',
+    'menu QR', 'créer un menu QR', 'menu en ligne restaurant', 'créateur de menu numérique',
+    'QR code menu restaurant', 'menu QR gratuit', 'menu sans contact',
+    'application menu restaurant', 'menu numérique café', 'carte numérique restaurant',
+    'menu numérique', 'menu café', 'créateur de menu'
   ],
   openGraph: {
-    title: 'Scaniha | QR Menu Builder for Restaurants & Cafés',
-    description: 'Scaniha helps restaurants and cafés create beautiful digital menus with QR codes in minutes. Easy, fast, no technical skills needed. Start for free.',
+    title: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
+    description: 'Scaniha aide les restaurants et cafés à créer de superbes menus numériques avec QR code en quelques minutes. Simple, rapide, sans compétences techniques. Commencez gratuitement.',
     type: 'website',
     url: 'https://scaniha.com',
     siteName: 'Scaniha',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Scaniha | QR Menu Builder for Restaurants & Cafés',
-    description: 'Scaniha helps restaurants and cafés create beautiful digital menus with QR codes in minutes. Start for free.',
+    title: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
+    description: 'Scaniha aide les restaurants et cafés à créer de superbes menus numériques avec QR code en quelques minutes. Commencez gratuitement.',
   },
   alternates: {
     canonical: 'https://scaniha.com',

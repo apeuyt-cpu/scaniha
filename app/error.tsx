@@ -8,18 +8,20 @@ export default function Error({
   reset: () => void
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Something went wrong!</h2>
-        <p className="text-gray-600 mb-4">{error.message}</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#FEFEFE]">
+      <div className="text-center max-w-sm px-6">
+        <h2 className="text-2xl font-bold text-zinc-900 mb-3">Une erreur est survenue</h2>
+        <p className="text-zinc-600 mb-4">
+          Quelque chose s&apos;est mal passé de notre côté. Veuillez réessayer dans un instant.
+        </p>
         {error.digest && (
-          <p className="text-sm text-gray-500 mb-4">Error ID: {error.digest}</p>
+          <p className="text-xs text-zinc-400 mb-4">Référence&nbsp;: {error.digest}</p>
         )}
         <button
           onClick={reset}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
         >
-          Try again
+          Réessayer
         </button>
       </div>
     </div>

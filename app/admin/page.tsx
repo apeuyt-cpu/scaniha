@@ -2,16 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import QRCode from 'qrcode'
-import { createClient } from '@/lib/supabase/client'
-import LogoUpload from '@/components/business/LogoUpload'
-import SettingsManager from '@/components/admin/SettingsManager'
-import WheelManager from '@/components/wheel/WheelManager'
-import MenuAnalytics from '@/components/admin/MenuAnalytics'
+import PaymentRequestModal from '@/components/admin/PaymentRequestModal'
+import SectionHeader from '@/components/admin/ui/SectionHeader'
+import OnboardingChecklist from '@/components/admin/OnboardingChecklist'
 import { useLocale } from '@/lib/i18n/LocaleContext'
-import { useCurrency } from '@/lib/i18n/CurrencyContext'
-import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
-import CurrencySelector from '@/components/ui/CurrencySelector'
+import { createClient } from '@/lib/supabase/client'
 
 interface Business {
   id: string
@@ -22,522 +17,275 @@ interface Business {
   logo_url: string | null
   expires_at: string | null
   primary_color: string | null
+  design_settings: any
   wheel_enabled: boolean
   wheel_visible: boolean
 }
 
-export default function AdminDashboard() {
+export default function AdminHome() {
   const { t, dir } = useLocale()
-  const { formatPrice, currencyCode, setCurrency, convertFromTnd } = useCurrency()
   const [business, setBusiness] = useState<Business | null>(null)
   const [loading, setLoading] = useState(true)
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
-  const [activeTheme, setActiveTheme] = useState<string>('')
-  const [copied, setCopied] = useState(false)
-  const [subscribeLoading, setSubscribeLoading] = useState(false)
   const [showPlanPicker, setShowPlanPicker] = useState(false)
-  const [countdown, setCountdown] = useState<{
-    days: number
-    hours: number
-    minutes: number
-    seconds: number
-  } | null>(null)
-  const supabase = createClient()
+  const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null)
 
   useEffect(() => {
     fetchBusiness()
   }, [])
 
   useEffect(() => {
-    if (business?.slug) {
-      generateQR()
-      setActiveTheme(business.theme_id)
-    }
-  }, [business?.slug])
-
-  useEffect(() => {
     if (!business?.expires_at) {
       setCountdown(null)
       return
     }
-
-    const updateCountdown = () => {
-      const now = new Date().getTime()
-      const expiry = new Date(business.expires_at!).getTime()
-      const diff = expiry - now
-
+    const update = () => {
+      const diff = new Date(business.expires_at!).getTime() - Date.now()
       if (diff <= 0) {
         setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 })
         return
       }
-
       setCountdown({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((diff % (1000 * 60)) / 1000),
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        minutes: Math.floor((diff % 3600000) / 60000),
+        seconds: Math.floor((diff % 60000) / 1000),
       })
     }
-
-    updateCountdown()
-    const interval = setInterval(updateCountdown, 1000)
-    return () => clearInterval(interval)
+    update()
+    const id = setInterval(update, 1000)
+    return () => clearInterval(id)
   }, [business?.expires_at])
+
+  // When the subscription is over, open the renewal form once per visit.
+  useEffect(() => {
+    if (!business || business.status === 'pending') return
+    const expired = business.status === 'paused' || (business.expires_at && new Date(business.expires_at).getTime() <= Date.now())
+    if (expired && !sessionStorage.getItem('renewal_prompted')) {
+      sessionStorage.setItem('renewal_prompted', '1')
+      setShowPlanPicker(true)
+    }
+  }, [business])
 
   const fetchBusiness = async () => {
     try {
       const res = await fetch('/api/admin/business')
-      if (res.ok) {
-        const contentType = res.headers.get('content-type')
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json()
-          setBusiness(data)
-        } else {
-          if (res.status === 401 || res.status === 403) {
-            window.location.href = '/login'
-          }
-        }
-      } else {
-        const contentType = res.headers.get('content-type')
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await res.json()
-          console.error('Error fetching business:', errorData.error || 'Unknown error')
-        } else {
-          if (res.status === 401 || res.status === 403) {
-            window.location.href = '/login'
-          }
-        }
+      const ct = res.headers.get('content-type')
+      if (res.ok && ct?.includes('application/json')) {
+        setBusiness(await res.json())
+      } else if (res.status === 401 || res.status === 403) {
+        window.location.href = '/login'
       }
     } catch (err) {
       console.error('Error fetching business:', err)
-      if (err instanceof SyntaxError && err.message.includes('JSON')) {
-        window.location.reload()
-      }
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSubscribe = async (planId: string) => {
-    setSubscribeLoading(true)
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId }),
-      })
-      const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        alert(data.error || 'فشل إنشاء رابط الدفع')
-      }
-    } catch (err) {
-      console.error('Subscribe error:', err)
-      alert('حدث خطأ. يرجى المحاولة مرة أخرى.')
-    } finally {
-      setSubscribeLoading(false)
-    }
-  }
-
-  const generateQR = async () => {
-    if (!business?.slug) return
-    try {
-      const menuUrl = `${window.location.origin}/${business.slug}`
-      const dataUrl = await QRCode.toDataURL(menuUrl, {
-        width: 200,
-        margin: 1,
-        color: { dark: '#18181b', light: '#FFFFFF' }
-      })
-      setQrDataUrl(dataUrl)
-    } catch (err) {
-      console.error('QR error:', err)
-    }
-  }
-
-  const handleThemeChange = async (themeId: string) => {
-    try {
-      await (supabase.from('businesses') as any)
-        .update({ theme_id: themeId })
-        .eq('id', business?.id)
-      setActiveTheme(themeId)
-      fetchBusiness()
-    } catch (err) {
-      console.error('Theme update error:', err)
-    }
-  }
-
-  const copyUrl = () => {
-    if (!business) return
-    navigator.clipboard.writeText(`${window.location.origin}/${business.slug}`)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const downloadQR = () => {
-    if (!qrDataUrl || !business) return
-    const link = document.createElement('a')
-    link.download = `${business.slug}-qr.png`
-    link.href = qrDataUrl
-    link.click()
+  const handleSignOut = async () => {
+    try { await createClient().auth.signOut() } catch {}
+    window.location.href = '/login'
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="w-8 h-8 border-2 border-zinc-300 border-t-zinc-900 rounded-full animate-spin" />
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
       </div>
     )
   }
 
   if (!business) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <p className="text-zinc-500">لم يتم العثور على نشاط تجاري</p>
+      <div className="admin-page flex min-h-screen items-center justify-center bg-zinc-50 p-4" dir={dir}>
+        <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4" /><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01" />
+            </svg>
+          </div>
+          <h1 className="text-lg font-bold text-zinc-900">Impossible de charger votre établissement</h1>
+          <p className="mt-1.5 text-sm text-zinc-500">
+            Vérifiez votre connexion, puis réessayez. Si le problème persiste, reconnectez-vous.
+          </p>
+          <div className="mt-5 flex flex-col gap-2">
+            <button
+              onClick={() => { setLoading(true); fetchBusiness() }}
+              className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"
+            >
+              Réessayer
+            </button>
+            <a
+              href="/login"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-zinc-100 px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-200"
+            >
+              Se reconnecter
+            </a>
+          </div>
         </div>
       </div>
     )
   }
 
-  // ─── Pending Payment Page ─────────────────────────────────────
+  // ─── Pending payment ──────────────────────────────────────────
   if (business.status === 'pending') {
     return (
-      <div className="admin-page p-4 lg:p-8 max-w-6xl mx-auto" dir={dir}>
-        <div className="max-w-lg mx-auto text-center">
-          <div className="text-6xl mb-6">💳</div>
-          <h1 className="text-2xl font-bold text-zinc-900 mb-2">{t('dashboard.subscribeToAccess')}</h1>
-          <p className="text-zinc-600 mb-2">{t('dashboard.businessName')} {business.name} {t('dashboard.pendingPayment')}.</p>
-          <p className="text-zinc-500 text-sm mb-8">{t('pricing.selectPlan')}</p>
-
-          <div className={`space-y-4 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
-            <button
-              onClick={() => handleSubscribe('6months')}
-              disabled={subscribeLoading}
-              className={`w-full bg-white border-2 border-zinc-200 rounded-2xl p-6 hover:border-orange-500 transition-all ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
-            >
-              <h3 className="text-xl font-bold text-zinc-900">{t('pricing.plan6months')}</h3>
-              <p className="text-3xl font-bold text-zinc-900 mt-1">{formatPrice(convertFromTnd(150))}</p>
-            </button>
-
-            <button
-              onClick={() => handleSubscribe('1year')}
-              disabled={subscribeLoading}
-              className={`w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl p-6 shadow-lg transition-all ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full font-bold">{t('pricing.mostPopular')}</span>
-              </div>
-              <h3 className="text-xl font-bold">{t('pricing.plan1year')}</h3>
-              <p className="text-3xl font-bold mt-1">{formatPrice(convertFromTnd(250))}</p>
-            </button>
-
-            <button
-              onClick={() => handleSubscribe('lifetime')}
-              disabled={subscribeLoading}
-              className={`w-full bg-gradient-to-br from-[#1a0a2e] via-zinc-900 to-[#2a1a00] text-white rounded-2xl p-6 shadow-lg transition-all text-right border border-amber-500/30 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 px-2 py-0.5 rounded-full font-bold">✦ {t('pricing.bestValue')} ✦</span>
-              </div>
-              <h3 className="text-xl font-bold">{t('pricing.planLifetime')}</h3>
-              <p className="text-3xl font-bold mt-1 text-amber-300">{formatPrice(convertFromTnd(600))}</p>
-            </button>
-          </div>
-
-          {subscribeLoading && (
-            <p className="mt-6 text-zinc-500">{t('checkout.redirecting')}</p>
-          )}
+      <div className="admin-page mx-auto max-w-md p-4 lg:p-8" dir={dir}>
+        <div className="mt-10 rounded-3xl border border-zinc-200 bg-white p-8 text-center">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-3xl" aria-hidden="true">💳</div>
+          <h1 className="text-xl font-bold text-zinc-900">{t('dashboard.subscribeToAccess')}</h1>
+          <p className="mt-2 text-sm text-zinc-500">{business.name} — {t('dashboard.pendingPayment')}.</p>
+          <button
+            onClick={() => setShowPlanPicker(true)}
+            className="mt-6 w-full rounded-2xl bg-orange-500 px-6 py-3.5 text-base font-bold text-white transition hover:bg-orange-600"
+          >
+            {t('pricing.selectPlan')} →
+          </button>
         </div>
+        <PaymentRequestModal businessId={business.id} open={showPlanPicker} onClose={() => setShowPlanPicker(false)} />
       </div>
     )
   }
 
-  // ─── Active Dashboard ─────────────────────────────────────────
+  // ─── Active home hub ──────────────────────────────────────────
   const menuUrl = `${window.location.origin}/${business.slug}`
-  const themes = [
-    { id: 'classic', name: 'Classic', color: '#8B2635', bg: '#FFFDF9' },
-    { id: 'dark', name: 'Dark', color: '#D4AF37', bg: '#0A0A0A' },
-    { id: 'minimal', name: 'Minimal', color: '#E85D04', bg: '#F7F7F5' },
-  ]
+  const isActiveStatus = business.status === 'active'
 
-  const isExpired = countdown && countdown.days === 0 && countdown.hours === 0 && countdown.minutes === 0 && countdown.seconds === 0
-  const isUrgent = countdown && countdown.days <= 3
+  const isExpired = !!countdown && countdown.days === 0 && countdown.hours === 0 && countdown.minutes === 0 && countdown.seconds === 0
+  const isUrgent = !!countdown && !isExpired && countdown.days <= 3
+  const timeLeft = !countdown || isExpired
+    ? ''
+    : countdown.days > 0
+      ? `${countdown.days} jour${countdown.days > 1 ? 's' : ''}`
+      : countdown.hours > 0
+        ? `${countdown.hours} heure${countdown.hours > 1 ? 's' : ''}`
+        : `${countdown.minutes} min`
+
+  const sub = isExpired
+    ? { dot: 'bg-red-500', border: 'border-red-200', title: 'Abonnement expiré', text: 'Renouvelez pour réafficher votre menu.', btn: 'bg-red-600 text-white hover:bg-red-700', cta: 'Renouveler' }
+    : isUrgent
+      ? { dot: 'bg-amber-500', border: 'border-amber-200', title: 'Expire bientôt', text: `Votre menu expire dans ${timeLeft}.`, btn: 'bg-orange-500 text-white hover:bg-orange-600', cta: 'Renouveler' }
+      : { dot: 'bg-green-500', border: 'border-zinc-200', title: 'Abonnement actif', text: timeLeft ? `Expire dans ${timeLeft}.` : 'Votre menu est en ligne.', btn: 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200', cta: 'Gérer' }
 
   return (
-    <>
-      <style jsx>{`
-        @keyframes pulse-urgent {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
-        }
-        .pulse-urgent {
-          animation: pulse-urgent 1s infinite;
-        }
-      `}</style>
+    <div className="admin-page mx-auto max-w-2xl space-y-6 p-5 lg:p-8" dir={dir}>
+      {/* Identity */}
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <div className="flex min-w-0 items-center gap-3">
+          {business.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={business.logo_url} alt="" className="h-12 w-12 rounded-2xl border border-zinc-200 bg-white object-contain p-1" />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-lg font-bold text-white">
+              {business.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-bold text-zinc-900">{business.name}</h1>
+            <span className="mt-0.5 inline-flex items-center gap-1.5 text-sm">
+              <span className={`h-2 w-2 rounded-full ${isActiveStatus ? 'bg-green-500' : 'bg-amber-500'}`} />
+              <span className="text-zinc-500">{isActiveStatus ? t('pricing.active') : t('dashboard.menuPaused')}</span>
+            </span>
+          </div>
+        </div>
+        <a
+          href={menuUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+        >
+          {t('dashboard.viewMenu')} ↗
+        </a>
+      </div>
 
-      <div className="admin-page p-4 lg:p-8 max-w-6xl mx-auto" dir={dir}>
-        {/* Subscription Banner */}
-        {countdown && (
-          <div className={`mb-6 rounded-2xl p-4 lg:p-6 ${
-            isExpired
-              ? 'bg-red-500 text-white'
-              : isUrgent
-                ? 'bg-amber-500 text-white pulse-urgent'
-                : 'bg-gradient-to-l from-blue-500 to-blue-600 text-white'
-          }`}>
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex-1">
-                <h3 className="font-bold text-lg">
-                  {isExpired ? t('pricing.expired') : isUrgent ? t('pricing.expiresSoon', { days: countdown.days }) : t('pricing.active')}
-                </h3>
-                <p className="text-sm opacity-90">
-                  {isExpired ? t('dashboard.subscribeToAccess') : t('pricing.orRenew')}
-                </p>
-              </div>
-
-              {!isExpired && (
-                <div className="flex gap-3 text-center">
-                  <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 min-w-[60px]">
-                    <div className="text-2xl lg:text-3xl font-bold">{countdown.days}</div>
-                    <div className="text-xs opacity-80">{t('common.all') === 'All' ? 'days' : 'يوم'}</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 min-w-[60px]">
-                    <div className="text-2xl lg:text-3xl font-bold">{countdown.hours}</div>
-                    <div className="text-xs opacity-80">{t('common.all') === 'All' ? 'hrs' : 'ساعة'}</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 min-w-[60px]">
-                    <div className="text-2xl lg:text-3xl font-bold">{countdown.minutes}</div>
-                    <div className="text-xs opacity-80">{t('common.all') === 'All' ? 'min' : 'دقيقة'}</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 min-w-[60px]">
-                    <div className="text-2xl lg:text-3xl font-bold">{countdown.seconds}</div>
-                    <div className="text-xs opacity-80">{t('common.all') === 'All' ? 'sec' : 'ثانية'}</div>
-                  </div>
-                </div>
-              )}
+      {/* Subscription */}
+      {countdown && (
+        <div className={`flex items-center justify-between gap-3 rounded-2xl border bg-white p-4 ${sub.border}`}>
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${sub.dot} ${isUrgent ? 'animate-pulse' : ''}`} />
+            <div className="min-w-0">
+              <p className="font-semibold text-zinc-900">{sub.title}</p>
+              <p className="text-sm text-zinc-500">{sub.text}</p>
             </div>
           </div>
-        )}
-
-        {/* Subscribe / Extend Button */}
-        <div className="mb-6">
-          <button
-            onClick={() => setShowPlanPicker(true)}
-            disabled={subscribeLoading}
-            className="w-full bg-gradient-to-l from-orange-500 to-amber-500 text-white rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all"
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-lg">
-                {isExpired ? '🔴 ' + t('pricing.renew') : '🟢 ' + t('pricing.orRenew')}
-              </span>
-              <span className="text-sm opacity-90">{t('pricing.selectPlan')} ←</span>
-            </div>
+          <button onClick={() => setShowPlanPicker(true)} className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${sub.btn}`}>
+            {sub.cta}
           </button>
         </div>
+      )}
 
-        {/* Plan Picker Modal */}
-        {showPlanPicker && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir={dir}>
-            <div className="absolute inset-0 bg-black/50" onClick={() => setShowPlanPicker(false)} />
-            <div className="relative bg-white rounded-3xl p-6 lg:p-8 max-w-sm w-full shadow-2xl">
-              <button
-                onClick={() => setShowPlanPicker(false)}
-                className="absolute top-4 left-4 text-zinc-400 hover:text-zinc-600 text-2xl leading-none"
-              >
-                ✕
-              </button>
-              <h2 className="text-xl font-bold text-zinc-900 mb-1">{t('pricing.selectPlan')}</h2>
-              <p className="text-zinc-500 text-sm mb-6">{t('pricing.orRenew')}</p>
+      {/* First-run onboarding — hides itself once complete or dismissed */}
+      {isActiveStatus && (
+        <OnboardingChecklist
+          business={{
+            id: business.id,
+            logo_url: business.logo_url,
+            primary_color: business.primary_color,
+            design_settings: business.design_settings,
+          }}
+        />
+      )}
 
-              <div className={`space-y-3 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
-                <button
-                  onClick={() => { setShowPlanPicker(false); handleSubscribe('6months') }}
-                  disabled={subscribeLoading}
-                  className={`w-full bg-white border-2 border-zinc-200 rounded-2xl p-5 hover:border-orange-500 transition-all ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
-                >
-                  <h3 className="text-lg font-bold text-zinc-900">{t('pricing.plan6months')}</h3>
-                  <p className="text-2xl font-bold text-zinc-900 mt-1">{formatPrice(convertFromTnd(150))}</p>
-                </button>
-
-                <button
-                  onClick={() => { setShowPlanPicker(false); handleSubscribe('1year') }}
-                  disabled={subscribeLoading}
-                  className={`w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl p-5 shadow-lg transition-all ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs bg-white text-orange-600 px-2 py-0.5 rounded-full font-bold">{t('pricing.mostPopular')}</span>
-                  </div>
-                  <h3 className="text-lg font-bold">{t('pricing.plan1year')}</h3>
-                  <p className="text-2xl font-bold mt-1">{formatPrice(convertFromTnd(250))}</p>
-                </button>
-
-                <button
-                  onClick={() => { setShowPlanPicker(false); handleSubscribe('lifetime') }}
-                  disabled={subscribeLoading}
-                  className={`w-full bg-gradient-to-br from-[#1a0a2e] via-zinc-900 to-[#2a1a00] text-white rounded-2xl p-5 shadow-lg transition-all border border-amber-500/30 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 px-2 py-0.5 rounded-full font-bold">✦ {t('pricing.bestValue')} ✦</span>
-                  </div>
-                  <h3 className="text-lg font-bold">{t('pricing.planLifetime')}</h3>
-                  <p className="text-2xl font-bold mt-1 text-amber-300">{formatPrice(convertFromTnd(600))}</p>
-                </button>
-              </div>
-
-              {subscribeLoading && (
-                <p className="mt-4 text-center text-zinc-500">{t('checkout.redirecting')}</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Language & Currency Selector */}
-        <div className="flex items-center gap-2 mb-6">
-          <LanguageSwitcher />
-          <CurrencySelector />
-        </div>
-
-        {/* Header */}
-        <div className="flex items-start justify-between mb-8">
-          <div className="flex items-center gap-4">
-            {business.logo_url ? (
-              <img 
-                src={business.logo_url} 
-                alt="" 
-                className="w-14 h-14 lg:w-16 lg:h-16 rounded-xl object-cover border border-zinc-200"
-              />
-            ) : (
-              <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-xl bg-zinc-200 flex items-center justify-center text-zinc-400 text-xl font-medium">
-                {business.name.charAt(0)}
-              </div>
-            )}
-            <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-zinc-900">{business.name}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <span className={`w-2 h-2 rounded-full ${business.status === 'active' ? 'bg-green-500' : 'bg-amber-500'}`} />
-                <span className="text-sm lg:text-base text-zinc-500">
-                  {business.status === 'active' ? t('pricing.active') : t('dashboard.menuPaused')}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <a
-            href={menuUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 bg-zinc-900 text-white text-sm lg:text-base font-medium rounded-xl hover:bg-zinc-800 transition-colors"
-          >
-            {t('dashboard.viewMenu')} ←
-          </a>
-        </div>
-
-        {/* Quick Actions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
-          {/* Menu Builder Card */}
-          <Link
-            href="/admin/menu"
-            className="group bg-white rounded-2xl p-5 lg:p-6 border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </div>
-              <span className="text-zinc-400 group-hover:text-zinc-600 transition-colors text-xl">←</span>
-            </div>
-            <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-1">{t('dashboard.manageMenu')}</h3>
-            <p className="text-zinc-500 text-sm lg:text-base">{t('dashboard.addItems')}</p>
-          </Link>
-
-          {/* QR Code Card */}
-          <div className="bg-white rounded-2xl p-5 lg:p-6 border border-zinc-200">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-1">QR Code</h3>
-                <p className="text-zinc-500 text-sm lg:text-base mb-4">{t('dashboard.viewMenu')}</p>
-                <button
-                  onClick={downloadQR}
-                  disabled={!qrDataUrl}
-                  className="px-4 py-2 bg-zinc-100 text-zinc-700 text-sm lg:text-base font-medium rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-50"
-                >
-                  {t('common.save')}
-                </button>
-              </div>
-              {qrDataUrl && (
-                <img src={qrDataUrl} alt="QR" className="w-24 h-24 lg:w-28 lg:h-28 rounded-xl" />
-              )}
-            </div>
-          </div>
-
-          {/* Menu URL Card */}
-          <div className="bg-white rounded-2xl p-5 lg:p-6 border border-zinc-200">
-            <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-1">{t('dashboard.menuUrl')}</h3>
-            <p className="text-zinc-500 text-sm lg:text-base mb-4">{t('settings.copy')}</p>
-            <div className="flex items-center gap-3">
-              <code className="flex-1 text-sm lg:text-base bg-zinc-100 px-3 py-2 rounded-xl text-zinc-600 truncate" dir="ltr">
-                /{business.slug}
-              </code>
-              <button
-                onClick={copyUrl}
-                className={`px-4 py-2 text-sm lg:text-base font-medium rounded-xl transition-colors ${
-                  copied 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
-                }`}
-              >
-                {copied ? '✓' : t('settings.copy')}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Theme Selector */}
-        <div className="bg-white rounded-2xl p-5 lg:p-6 border border-zinc-200 mb-5">
-          <h3 className="font-bold text-zinc-900 text-lg lg:text-xl mb-4">{t('settings.appearance')}</h3>
-          <div className="flex gap-3">
-            {themes.map((theme) => (
-              <button
-                key={theme.id}
-                onClick={() => handleThemeChange(theme.id)}
-                className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                  activeTheme === theme.id
-                    ? 'border-zinc-900 shadow-md'
-                    : 'border-zinc-200 hover:border-zinc-300'
-                }`}
-              >
-                <div 
-                  className="h-10 lg:h-12 rounded-lg mb-3 flex items-center justify-center"
-                  style={{ backgroundColor: theme.bg }}
-                >
-                  <div 
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: theme.color }}
-                  />
-                </div>
-                <p className="text-sm lg:text-base font-medium text-zinc-700 text-center">{theme.name}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Menu Analytics */}
-        <div className="mb-5">
-          <MenuAnalytics />
-        </div>
-
-        {/* Lucky Wheel */}
-        {business.wheel_enabled && (
-          <div className="mb-5">
-            <WheelManager businessId={business.id} initialVisible={business.wheel_visible} />
-          </div>
-        )}
-
-        {/* Settings Manager */}
-        <SettingsManager business={business} onUpdate={fetchBusiness} />
+      {/* Primary tasks */}
+      <div className="space-y-3">
+        <TaskRow href="/admin/menu" primary title="Gérer le menu" subtitle="Catégories, plats et prix" icon={<IconMenu />} />
+        <TaskRow href="/admin/caisse" title="Caisse" subtitle="Valider les codes et créditer les points" icon={<IconScan />} />
+        <TaskRow href="/admin/theme" title="Design" subtitle="Style et couleurs de votre menu" icon={<IconBrush />} />
+        <TaskRow href="/admin/share" title="Partage" subtitle="QR code et lien du menu" icon={<IconShare />} />
       </div>
-    </>
+
+      {/* Secondary, discoverable */}
+      <div>
+        <SectionHeader title="Plus" />
+        <div className="space-y-3.5">
+          <TaskRow href="/admin/analytics" title="Statistiques" subtitle="Visites de votre menu" icon={<IconChart />} />
+          <TaskRow href="/admin/game" title="Jeu & Fidélité" subtitle="Roue et points de fidélité" icon={<IconGift />} />
+          <TaskRow href="/admin/settings" title="Réglages" subtitle="Lien du menu, SEO, préférences" icon={<IconGear />} />
+        </div>
+      </div>
+
+      {/* Logout */}
+      <button
+        type="button"
+        onClick={handleSignOut}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-600 transition hover:bg-red-100 active:scale-[0.99]"
+      >
+        <IconLogout /> Se déconnecter
+      </button>
+
+      <PaymentRequestModal businessId={business.id} open={showPlanPicker} onClose={() => setShowPlanPicker(false)} />
+    </div>
   )
 }
+
+/* ---------- row + icons ---------- */
+
+function TaskRow({ href, title, subtitle, icon, primary }: { href: string; title: string; subtitle: string; icon: React.ReactNode; primary?: boolean }) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-4 transition hover:border-zinc-300 hover:shadow-sm active:scale-[0.995]"
+    >
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${primary ? 'bg-orange-50 text-orange-600' : 'bg-zinc-100 text-zinc-600'}`}>
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-semibold text-zinc-900">{title}</span>
+        <span className="block truncate text-sm text-zinc-500">{subtitle}</span>
+      </span>
+      <svg className="text-zinc-300 transition group-hover:translate-x-0.5 group-hover:text-zinc-400" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M9 6l6 6-6 6" />
+      </svg>
+    </Link>
+  )
+}
+
+const iconProps = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true }
+const IconMenu = () => <svg {...iconProps}><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+const IconScan = () => <svg {...iconProps}><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M3 12h18" /></svg>
+const IconBrush = () => <svg {...iconProps}><path d="M9.5 14.5 4 20M14 4l6 6M14.5 9.5 7 17a3 3 0 0 1-3 0 3 3 0 0 1 0-3l7.5-7.5" /><circle cx="17" cy="7" r="1.2" fill="currentColor" stroke="none" /></svg>
+const IconShare = () => <svg {...iconProps}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><path d="M14 14h3M20 14v3M14 20h3M20 20h.01M17 17h.01" /></svg>
+const IconChart = () => <svg {...iconProps}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
+const IconGift = () => <svg {...iconProps}><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7S10.5 3 8.5 3 6 5 6 5s1 2 2.5 2M12 7s1.5-4 3.5-4S18 5 18 5s-1 2-2.5 2" /></svg>
+const IconLogout = () => <svg {...iconProps} width={18} height={18}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+const IconGear = () => <svg {...iconProps}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>

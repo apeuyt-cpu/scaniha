@@ -1,7 +1,8 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { SUPPORTED_LOCALES, DEFAULT_LOCALE, LOCALE_CONFIGS, type Locale } from './config'
+import React, { createContext, useContext, useCallback } from 'react'
+import { DEFAULT_LOCALE, LOCALE_CONFIGS, type Locale } from './config'
+import frTranslations from '../../public/locales/fr/common.json'
 
 interface Translations {
   [key: string]: any
@@ -14,14 +15,6 @@ interface LocaleContextType {
   setLocale: (locale: Locale) => void
   t: (key: string, params?: Record<string, string | number>) => string
 }
-
-const LocaleContext = createContext<LocaleContextType>({
-  locale: DEFAULT_LOCALE,
-  dir: 'ltr',
-  translations: {},
-  setLocale: () => {},
-  t: (key: string) => key,
-})
 
 function resolveNested(obj: any, path: string): string {
   const keys = path.split('.')
@@ -40,60 +33,32 @@ function interpolate(text: string, params?: Record<string, string | number>): st
   )
 }
 
+// The app is French-only, so the translations are bundled and available
+// synchronously on both the server and the client — no runtime fetch, no
+// flash of raw translation keys.
+const translations = frTranslations as Translations
+
+function translate(key: string, params?: Record<string, string | number>): string {
+  return interpolate(resolveNested(translations, key), params)
+}
+
+const LocaleContext = createContext<LocaleContextType>({
+  locale: DEFAULT_LOCALE,
+  dir: LOCALE_CONFIGS[DEFAULT_LOCALE].dir,
+  translations,
+  setLocale: () => {},
+  t: translate,
+})
+
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE)
-  const [translations, setTranslations] = useState<Translations>({})
-
-  useEffect(() => {
-    const stored = localStorage.getItem('scaniha-locale') as Locale | null
-    if (stored && SUPPORTED_LOCALES.includes(stored)) {
-      setLocaleState(stored)
-      loadTranslations(stored)
-    } else {
-      const browserLang = navigator.language.slice(0, 2).toLowerCase()
-      const detected = SUPPORTED_LOCALES.includes(browserLang as Locale)
-        ? (browserLang as Locale)
-        : DEFAULT_LOCALE
-      setLocaleState(detected)
-      loadTranslations(detected)
-    }
-  }, [])
-
-  const loadTranslations = async (loc: Locale) => {
-    try {
-      const res = await fetch(`/locales/${loc}/common.json`)
-      const data = await res.json()
-      setTranslations(data)
-    } catch {
-      const res = await fetch(`/locales/${DEFAULT_LOCALE}/common.json`)
-      const data = await res.json()
-      setTranslations(data)
-    }
-  }
-
-  const setLocale = useCallback((newLocale: Locale) => {
-    setLocaleState(newLocale)
-    localStorage.setItem('scaniha-locale', newLocale)
-    document.documentElement.lang = newLocale
-    document.documentElement.dir = LOCALE_CONFIGS[newLocale].dir
-    loadTranslations(newLocale)
-  }, [])
-
-  const t = useCallback(
-    (key: string, params?: Record<string, string | number>): string => {
-      const text = resolveNested(translations, key)
-      return interpolate(text, params)
-    },
-    [translations]
-  )
-
+  const t = useCallback(translate, [])
   return (
     <LocaleContext.Provider
       value={{
-        locale,
-        dir: LOCALE_CONFIGS[locale].dir,
+        locale: DEFAULT_LOCALE,
+        dir: LOCALE_CONFIGS[DEFAULT_LOCALE].dir,
         translations,
-        setLocale,
+        setLocale: () => {},
         t,
       }}
     >

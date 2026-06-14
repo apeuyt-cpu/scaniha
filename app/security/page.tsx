@@ -2,82 +2,101 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Security | Scaniha - QR Menu Builder',
-  description: 'Learn about Scaniha security practices. Encryption, access controls, compliance, and data protection for your digital restaurant menu platform.',
+  title: 'Sécurité | Scaniha - Créateur de menu QR',
+  description: 'Comment Scaniha protège vos données : connexions chiffrées (HTTPS/TLS), base de données Postgres avec isolation par compte, identifiants gérés par Supabase Auth, accès au moindre privilège et sauvegardes régulières.',
   openGraph: {
-    title: 'Security | Scaniha - QR Menu Builder',
-    description: 'Enterprise-grade security for your digital menu platform.',
+    title: 'Sécurité | Scaniha - Créateur de menu QR',
+    description: 'Comment Scaniha protège les données de votre menu numérique : chiffrement des connexions, isolation des données et accès au moindre privilège.',
     url: 'https://scaniha.com/security',
     siteName: 'Scaniha',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Security | Scaniha - QR Menu Builder',
-    description: 'Enterprise-grade security for your digital menu platform.',
+    title: 'Sécurité | Scaniha - Créateur de menu QR',
+    description: 'Comment Scaniha protège les données de votre menu numérique.',
   },
 }
 
 export default function SecurityPage() {
   return (
-    <div className="min-h-screen bg-white" dir="ltr">
+    <div className="min-h-screen bg-[#FEFEFE]" dir="ltr">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <Link href="/" className="text-orange-600 hover:text-orange-700 font-medium mb-8 inline-block">&larr; Back to Home</Link>
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-zinc-900 mb-6">Security at Scaniha</h1>
-        <p className="text-xl text-zinc-600 mb-12">Your data security is our top priority. We implement enterprise-grade security measures across all layers of our platform.</p>
+        <Link href="/" className="text-orange-600 hover:text-orange-700 font-medium mb-8 inline-block">&larr; Retour à l&apos;accueil</Link>
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-zinc-900 mb-6">La sécurité chez Scaniha</h1>
+        <p className="text-xl text-zinc-600 mb-12">
+          La protection de vos données est une priorité. Voici, concrètement et sans jargon, les mesures que nous appliquons
+          pour garder votre menu et votre compte en sécurité.
+        </p>
 
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-zinc-900 mb-4">Encryption</h2>
+          <h2 className="text-2xl font-bold text-zinc-900 mb-4">Connexions chiffrées</h2>
           <div className="space-y-4 text-zinc-600">
-            <p><strong>In Transit:</strong> All data transmitted between your browser and our servers is encrypted using TLS 1.3 (preferred) or TLS 1.2 (minimum). We enforce HTTPS Strict Transport Security (HSTS).</p>
-            <p><strong>At Rest:</strong> All stored data is encrypted using AES-256 encryption. This includes databases, backups, file storage, and configuration data.</p>
-            <p><strong>Key Management:</strong> Encryption keys are managed through AWS KMS with automatic annual rotation.</p>
+            <p>
+              <strong>HTTPS partout :</strong> l&apos;intégralité du trafic entre votre navigateur et nos serveurs passe
+              par une connexion chiffrée (HTTPS/TLS). Vos identifiants et les données de votre menu ne circulent jamais en clair.
+            </p>
+            <p>
+              <strong>Images :</strong> les photos de vos plats sont servies via un CDN d&apos;images en HTTPS,
+              pour un affichage rapide et sécurisé sur tous les appareils.
+            </p>
           </div>
         </section>
 
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-zinc-900 mb-4">Access Control</h2>
+          <h2 className="text-2xl font-bold text-zinc-900 mb-4">Vos données et votre compte</h2>
           <ul className="space-y-3 text-zinc-600">
-            <li><strong>Multi-Factor Authentication (MFA):</strong> Required for all administrative accounts</li>
-            <li><strong>Role-Based Access Control (RBAC):</strong> Granular permissions for Owner, Manager, Editor, and Viewer roles</li>
-            <li><strong>Single Sign-On (SSO):</strong> OAuth 2.0 support via Google and Apple</li>
-            <li><strong>Session Management:</strong> Automatic timeout after inactivity</li>
+            <li className="flex items-start gap-2">
+              <span className="text-orange-600 font-bold">•</span>
+              <span><strong>Base de données Postgres :</strong> vos données sont stockées dans une base PostgreSQL gérée par Supabase, un fournisseur cloud reconnu.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-orange-600 font-bold">•</span>
+              <span><strong>Isolation par compte :</strong> grâce aux règles de sécurité au niveau des lignes (Row-Level Security), chaque établissement n&apos;accède qu&apos;à ses propres données.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-orange-600 font-bold">•</span>
+              <span><strong>Mots de passe protégés :</strong> l&apos;authentification est assurée par Supabase Auth. Vos mots de passe sont stockés sous forme hachée — nous ne pouvons jamais les lire.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-orange-600 font-bold">•</span>
+              <span><strong>Accès au moindre privilège :</strong> chaque accès est limité au strict nécessaire pour faire fonctionner le service.</span>
+            </li>
           </ul>
         </section>
 
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-zinc-900 mb-4">Infrastructure</h2>
-          <p className="text-zinc-600 mb-4">Our platform is hosted on Amazon Web Services (AWS), which maintains:</p>
-          <ul className="space-y-3 text-zinc-600">
-            <li>• SOC 1/2/3 certifications</li>
-            <li>• ISO 27001, 27017, 27018 certifications</li>
-            <li>• PCI DSS Level 1 compliance</li>
-            <li>• 24/7 physical security with multi-factor access controls</li>
-          </ul>
+          <h2 className="text-2xl font-bold text-zinc-900 mb-4">Hébergement et sauvegardes</h2>
+          <div className="space-y-4 text-zinc-600">
+            <p>
+              <strong>Hébergement fiable :</strong> notre plateforme et notre base de données sont hébergées chez des
+              fournisseurs cloud reconnus, qui assurent la disponibilité et la maintenance de l&apos;infrastructure.
+            </p>
+            <p>
+              <strong>Sauvegardes régulières :</strong> votre base de données est sauvegardée régulièrement par notre
+              hébergeur, afin de pouvoir restaurer vos données en cas d&apos;incident.
+            </p>
+          </div>
         </section>
 
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-zinc-900 mb-4">Compliance</h2>
-          <ul className="space-y-3 text-zinc-600">
-            <li>• <strong>ISO 27001:2022</strong> — Information Security Management</li>
-            <li>• <strong>PCI DSS v4.0</strong> — Payment card data security</li>
-            <li>• <strong>GDPR</strong> — European data protection compliance</li>
-            <li>• <strong>CCPA/CPRA</strong> — California privacy rights</li>
-          </ul>
+          <h2 className="text-2xl font-bold text-zinc-900 mb-4">Paiements</h2>
+          <p className="text-zinc-600">
+            Le paiement de votre forfait se fait par virement bancaire, avec envoi d&apos;un reçu depuis votre tableau de bord.
+            Scaniha ne stocke aucune donnée de carte bancaire et ne traite aucun paiement par carte sur la plateforme.
+          </p>
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold text-zinc-900 mb-4">Vulnerability Management</h2>
-          <ul className="space-y-3 text-zinc-600">
-            <li>• Weekly automated vulnerability scanning</li>
-            <li>• Annual penetration testing by independent third-party</li>
-            <li>• SAST/SCA integrated into CI/CD pipeline</li>
-            <li>• Responsible disclosure program for security researchers</li>
-          </ul>
+          <h2 className="text-2xl font-bold text-zinc-900 mb-4">Une question sur la sécurité ?</h2>
+          <p className="text-zinc-600">
+            Vous avez repéré un problème ou vous vous posez une question sur la protection de vos données ?
+            Écrivez-nous via la page <Link href="/contact" className="text-orange-600 hover:text-orange-700 font-medium">Contact</Link> — nous vous répondrons.
+          </p>
         </section>
 
         <div className="text-center mt-12">
-          <Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Start Your Free Trial</Link>
+          <Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Démarrer votre essai gratuit</Link>
         </div>
       </div>
     </div>

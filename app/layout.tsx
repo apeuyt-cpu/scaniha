@@ -1,30 +1,31 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import AppProvider from '@/components/AppProvider'
+import NoDownloadGuard from '@/components/NoDownloadGuard'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://scaniha.com'),
   title: {
-    default: 'Scaniha | QR Menu Builder for Restaurants & Cafés',
+    default: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
     template: '%s | Scaniha',
   },
-  description: 'Scaniha helps restaurants and cafés create beautiful digital menus with QR codes in minutes. Easy, fast, no technical skills needed. Start for free.',
+  description: 'Scaniha aide les restaurants et cafés à créer de superbes menus numériques avec QR code en quelques minutes. Simple, rapide, sans compétences techniques. Commencez gratuitement.',
   keywords: [
-    'Scaniha', 'Scaniha QR Menu', 'QR Menu Builder', 'Digital Menu for Restaurants',
-    'Restaurant QR Menu', 'Scaniha Digital Menu', 'Create QR Menu', 'Online Menu for Restaurants',
-    'Digital Menu Maker', 'QR Code Menu for Restaurants', 'Free QR Menu Builder',
-    'Contactless Menu App', 'scaniha.com', 'digital menu', 'cafe menu', 'restaurant menu app',
-    'menu QR restaurant', 'قائمة QR للمطاعم', 'menu QR', 'carte numérique restaurant'
+    'Scaniha', 'menu QR', 'créateur de menu QR', 'menu numérique restaurant',
+    'menu QR restaurant', 'carte numérique restaurant', 'créer un menu QR', 'menu en ligne restaurant',
+    'menu numérique café', 'QR code menu restaurant', 'menu QR gratuit',
+    'menu sans contact', 'scaniha.com', 'menu numérique', 'menu café', 'application menu restaurant',
+    'carte numérique café', 'menu digital Tunisie'
   ],
   authors: [{ name: 'Scaniha' }],
   creator: 'Scaniha',
   publisher: 'Scaniha',
   icons: {
     icon: [
-      { url: '/logo-icon.png', type: 'image/png' },
+      { url: '/logo.png', type: 'image/png' },
     ],
     apple: [
-      { url: '/logo-icon.png', type: 'image/png' },
+      { url: '/logo.png', type: 'image/png' },
     ],
   },
   robots: {
@@ -40,40 +41,32 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    locale: 'en_US',
+    locale: 'fr_FR',
     siteName: 'Scaniha',
-    title: 'Scaniha | QR Menu Builder for Restaurants & Cafés',
-    description: 'Scaniha helps restaurants and cafés create beautiful digital menus with QR codes in minutes. Easy, fast, no technical skills needed. Start for free.',
+    title: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
+    description: 'Scaniha aide les restaurants et cafés à créer de superbes menus numériques avec QR code en quelques minutes. Simple, rapide, sans compétences techniques. Commencez gratuitement.',
     url: 'https://scaniha.com',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Scaniha - QR Menu Builder for Restaurants' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Scaniha - Créateur de menu QR pour restaurants' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Scaniha | QR Menu Builder for Restaurants & Cafés',
-    description: 'Scaniha helps restaurants and cafés create beautiful digital menus with QR codes in minutes. Start for free.',
+    title: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
+    description: 'Scaniha aide les restaurants et cafés à créer de superbes menus numériques avec QR code en quelques minutes. Commencez gratuitement.',
     images: ['/og-image.png'],
   },
   alternates: {
     canonical: 'https://scaniha.com',
     languages: {
-      en: 'https://scaniha.com/en',
-      ar: 'https://scaniha.com/ar',
-      fr: 'https://scaniha.com/fr',
+      fr: 'https://scaniha.com',
     },
   },
 }
 
 const LOCALE_SCRIPT = `
 (function() {
-  var locale = localStorage.getItem('scaniha-locale');
-  if (!locale) {
-    var lang = (navigator.language || 'en').slice(0, 2);
-    var supported = ['en', 'ar', 'fr'];
-    locale = supported.includes(lang) ? lang : 'en';
-  }
-  var dirs = { en: 'ltr', ar: 'rtl', fr: 'ltr' };
-  document.documentElement.lang = locale;
-  document.documentElement.dir = dirs[locale] || 'ltr';
+  document.documentElement.lang = 'fr';
+  document.documentElement.dir = 'ltr';
+  try { localStorage.setItem('scaniha-locale', 'fr'); } catch (e) {}
 })();
 `
 
@@ -83,7 +76,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html lang="fr" dir="ltr" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: LOCALE_SCRIPT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -95,10 +88,10 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "BreadcrumbList",
               "itemListElement": [
-                { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://scaniha.com" },
-                { "@type": "ListItem", "position": 2, "name": "Features", "item": "https://scaniha.com/features" },
-                { "@type": "ListItem", "position": 3, "name": "Pricing", "item": "https://scaniha.com/pricing" },
-                { "@type": "ListItem", "position": 4, "name": "About", "item": "https://scaniha.com/about" },
+                { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://scaniha.com" },
+                { "@type": "ListItem", "position": 2, "name": "Fonctionnalités", "item": "https://scaniha.com/features" },
+                { "@type": "ListItem", "position": 3, "name": "Tarifs", "item": "https://scaniha.com/pricing" },
+                { "@type": "ListItem", "position": 4, "name": "À propos", "item": "https://scaniha.com/about" },
               ]
             }),
           }}
@@ -112,14 +105,16 @@ export default function RootLayout({
               "name": "Scaniha",
               "url": "https://scaniha.com",
               "logo": "https://scaniha.com/logo.png",
-              "description": "QR Menu Builder for restaurants, cafes, and food businesses.",
+              "description": "Créateur de menu QR pour restaurants, cafés et commerces alimentaires.",
               "sameAs": [
                 "https://facebook.com/scaniha",
                 "https://twitter.com/scaniha",
                 "https://instagram.com/scaniha",
                 "https://linkedin.com/company/scaniha"
               ],
-              "founder": { "@type": "Person", "name": "Hamed Dhieb" },
+              "founder": { "@type": "Organization", "name": "Rakiza Group", "url": "https://rakiza.group" },
+              "parentOrganization": { "@type": "Organization", "name": "Rakiza Group", "url": "https://rakiza.group" },
+              "employee": { "@type": "Person", "name": "Hamed", "jobTitle": "PDG" },
               "address": { "@type": "PostalAddress", "addressCountry": "TN" },
             }),
           }}
@@ -132,7 +127,7 @@ export default function RootLayout({
               "@type": "Brand",
               "name": "Scaniha",
               "url": "https://scaniha.com",
-              "description": "QR Menu Builder for restaurants, cafes, and food businesses.",
+              "description": "Créateur de menu QR pour restaurants, cafés et commerces alimentaires.",
               "logo": "https://scaniha.com/logo.png",
             }),
           }}
@@ -143,10 +138,10 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Product",
-              "name": "Scaniha QR Menu Builder",
+              "name": "Scaniha - Créateur de menu QR",
               "applicationCategory": "BusinessApplication",
               "operatingSystem": "Web",
-              "description": "Create beautiful QR code menus for your restaurant, cafe, or food business.",
+              "description": "Créez de superbes menus QR code pour votre restaurant, café ou commerce alimentaire.",
               "url": "https://scaniha.com",
               "brand": { "@type": "Brand", "name": "Scaniha" },
               "offers": {
@@ -168,19 +163,13 @@ export default function RootLayout({
               "name": "Scaniha",
               "operatingSystem": "Web",
               "applicationCategory": "BusinessApplication",
-              "description": "Create beautiful QR code menus for your restaurant, cafe, or food business.",
+              "description": "Créez de superbes menus QR code pour votre restaurant, café ou commerce alimentaire.",
               "url": "https://scaniha.com",
               "offers": {
                 "@type": "Offer",
                 "price": "0",
                 "priceCurrency": "TND",
-                "description": "Free trial available. Paid plans from 150 TND.",
-              },
-              "aggregateRating": {
-                "@type": "AggregateRating",
-                "ratingValue": "4.8",
-                "ratingCount": "127",
-                "bestRating": "5",
+                "description": "Essai gratuit disponible. Forfaits payants à partir de 150 TND.",
               },
             }),
           }}
@@ -193,6 +182,7 @@ export default function RootLayout({
               "@type": "WebSite",
               "name": "Scaniha",
               "url": "https://scaniha.com",
+              "inLanguage": "fr",
               "potentialAction": {
                 "@type": "SearchAction",
                 "target": "https://scaniha.com/?q={search_term_string}",
@@ -210,50 +200,50 @@ export default function RootLayout({
               "mainEntity": [
                 {
                   "@type": "Question",
-                  "name": "What is Scaniha?",
+                  "name": "Qu'est-ce que Scaniha ?",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Scaniha is a digital QR menu builder for restaurants, cafes, and food businesses. Create beautiful menus, generate QR codes, and share with customers instantly."
+                    "text": "Scaniha est un créateur de menu QR numérique pour les restaurants, cafés et commerces alimentaires. Créez de superbes menus, générez des QR codes et partagez-les instantanément avec vos clients."
                   }
                 },
                 {
                   "@type": "Question",
-                  "name": "How do I create a QR menu?",
+                  "name": "Comment créer un menu QR ?",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Sign up for free, add your menu items and categories, customize your theme, and generate a QR code. Place the QR code on tables for customers to scan."
+                    "text": "Inscrivez-vous gratuitement, ajoutez vos articles et catégories, personnalisez votre thème et générez un QR code. Placez le QR code sur les tables pour que les clients le scannent."
                   }
                 },
                 {
                   "@type": "Question",
-                  "name": "Is Scaniha free to use?",
+                  "name": "Scaniha est-il gratuit ?",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Scaniha offers a 7-day free trial with no payment required. After the trial, choose from our 6-month, 1-year, or lifetime plans."
+                    "text": "Scaniha propose un essai gratuit de 7 jours sans paiement requis. Après l'essai, choisissez parmi nos forfaits de 6 mois, 1 an ou à vie."
                   }
                 },
                 {
                   "@type": "Question",
-                  "name": "Do customers need to download an app?",
+                  "name": "Les clients doivent-ils télécharger une application ?",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "No. Customers simply scan the QR code with their phone camera and view the menu instantly in their browser. No app download required."
+                    "text": "Non. Les clients scannent simplement le QR code avec l'appareil photo de leur téléphone et consultent le menu instantanément dans leur navigateur. Aucun téléchargement requis."
                   }
                 },
                 {
                   "@type": "Question",
-                  "name": "Can I update my menu in real-time?",
+                  "name": "Puis-je mettre à jour mon menu en temps réel ?",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes. All menu changes are reflected instantly. Update prices, add new items, or change categories in real-time without any delay."
+                    "text": "Oui. Toutes les modifications du menu sont répercutées instantanément. Mettez à jour les prix, ajoutez de nouveaux articles ou modifiez les catégories en temps réel, sans aucun délai."
                   }
                 },
                 {
                   "@type": "Question",
-                  "name": "What languages does Scaniha support?",
+                  "name": "Quelle langue Scaniha prend-il en charge ?",
                   "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Scaniha supports English, Arabic, and French for both the platform interface and digital menus."
+                    "text": "Scaniha est entièrement en français, pour l'interface de la plateforme comme pour les menus numériques."
                   }
                 }
               ]
@@ -262,9 +252,9 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning>
+        <NoDownloadGuard />
         <AppProvider>{children}</AppProvider>
       </body>
     </html>
   )
 }
-

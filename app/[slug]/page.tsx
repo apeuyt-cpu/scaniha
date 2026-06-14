@@ -1,8 +1,11 @@
 import { notFound } from 'next/navigation'
 import { getBusinessBySlug, getBusinessWithCategoriesAndItems } from '@/lib/db/business'
+import { menuImageUrl } from '@/lib/image-url'
+import { getBusinessSeo } from '@/lib/seo/business-seo'
 import { getTheme } from '@/lib/themes'
 import PublicMenu from '@/components/menu/PublicMenu'
-import WheelButton from '@/components/wheel/WheelButton'
+import PoweredByScaniha from '@/components/menu/PoweredByScaniha'
+import GameFab from '@/components/game/GameFab'
 import LogView from '@/components/LogView'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Metadata } from 'next'
@@ -62,22 +65,41 @@ export default async function PublicMenuPage({
 
   const theme = getTheme(business.theme_id, business.primary_color)
 
+  // The unified MenuDock no longer carries the roulette — instead, EVERY design
+  // (modern templates AND classic themes) gets the dedicated floating wheel
+  // button (GameFab) below. It self-detects an active game and renders nothing
+  // otherwise, so it's safe to always mount on non-paused menus.
+
   // Create a business object with modified status for display
   const businessForDisplay = {
     ...business,
-    status: isPaused ? 'paused' as const : business.status
+    status: isPaused ? 'paused' as const : business.status,
+    // Logo is shown small (≤140px) in the menu header — serve it resized.
+    logo_url: menuImageUrl(business.logo_url, 240),
   }
 
   // Generate structured data for SEO
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://scaniha.com'
   const menuUrl = `${baseUrl}/${business.slug}`
+  const seo = getBusinessSeo(business)
+
+  // Social profiles → schema.org sameAs (top-level business columns).
+  const sameAs = [business.facebook_url, business.instagram_url, business.twitter_url, business.website_url].filter(Boolean) as string[]
+  // Contact info lives in the active design's settings (address / phone).
+  const contact = (business.design_settings && typeof business.design_settings === 'object'
+    ? (business.design_settings as any)[business.theme_id]
+    : null) || {}
 
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'Restaurant',
     name: business.name,
+    description: seo.description,
     url: menuUrl,
-    ...(business.logo_url && { image: business.logo_url }),
+    ...(seo.shareImage && { image: seo.shareImage }),
+    ...(typeof contact.phone === 'string' && contact.phone.trim() && { telephone: contact.phone.trim() }),
+    ...(typeof contact.address === 'string' && contact.address.trim() && { address: contact.address.trim() }),
+    ...(sameAs.length > 0 && { sameAs }),
     ...(categories.length > 0 && {
       hasMenu: {
         '@type': 'Menu',
@@ -91,7 +113,7 @@ export default async function PublicMenuPage({
             offers: item.price ? {
               '@type': 'Offer',
               price: item.price,
-              priceCurrency: (business as any).currency || 'TND',
+              priceCurrency: 'TND',
             } : undefined,
           })),
         })),
@@ -103,80 +125,78 @@ export default async function PublicMenuPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        dangerouslySetInnerHTML={{
+          // Escape so owner-controlled fields can't break out of the <script>
+          // block (</script> injection) — stored XSS on every menu visitor.
+          __html: JSON.stringify(structuredData)
+            .replace(/</g, '\\u003c')
+            .replace(/>/g, '\\u003e')
+            .replace(/&/g, '\\u0026')
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029'),
+        }}
       />
       <PublicMenu
         business={businessForDisplay}
         categories={categories}
         theme={theme}
       />
-      {business.wheel_enabled && business.wheel_visible && !isPaused && (
-        <WheelButton businessId={business.id} />
-      )}
+      {!isPaused && <GameFab slug={business.slug} />}
+      {!isPaused && <PoweredByScaniha />}
       <LogView businessId={business.id} slug={business.slug} />
     </>
   )
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://scaniha.com'
   try {
     const { slug } = await params
     const business = await getBusinessBySlug(slug)
     if (!business) {
       return {
-        title: 'Menu Not Found',
+        metadataBase: new URL(baseUrl),
+        title: { absolute: 'Menu introuvable | Scaniha' },
+        description: "Ce menu est introuvable ou n'est plus disponible.",
+        robots: { index: false, follow: false },
       }
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://scaniha.com'
+    const seo = getBusinessSeo(business)
     const menuUrl = `${baseUrl}/${business.slug}`
-    const description = `View the digital menu for ${business.name}. Browse our delicious selection of food and beverages. Order online or scan our QR code menu.`
-    
-    // Generate relevant keywords based on business name
-    const businessKeywords = [
-      `${business.name} menu`, `${business.name} قائمة`, `menu ${business.name}`,
-      'QR menu', 'digital menu', 'online menu', 'restaurant menu', 'cafe menu',
-      'contactless menu', 'touchless menu', 'menu QR code', 'scaniha menu',
-      'قائمة رقمية', 'QR قائمة', 'منيو QR', 'قائمة المطعم'
-    ]
-    
+    const isLive = business.status === 'active' && (!business.expires_at || new Date(business.expires_at) > new Date())
+    const ogImages = seo.shareImage ? [{ url: seo.shareImage, width: 1200, height: 630, alt: business.name }] : []
+
     return {
-      title: `${business.name} - Digital Menu | Scaniha`,
-      description,
-      keywords: businessKeywords,
-      alternates: {
-        canonical: menuUrl,
-      },
+      metadataBase: new URL(baseUrl),
+      // absolute → bypass the root layout's "%s | Scaniha" template (seo.title
+      // already carries the brand for the default, or the owner's exact title).
+      title: { absolute: seo.title },
+      description: seo.description,
+      keywords: seo.keywords,
+      alternates: { canonical: menuUrl },
+      icons: business.logo_url
+        ? { icon: business.logo_url, apple: business.logo_url }
+        : { icon: '/logo.png', apple: '/logo.png' },
       openGraph: {
-        title: `${business.name} - Menu`,
-        description,
+        title: seo.ogTitle,
+        description: seo.description,
         url: menuUrl,
         siteName: business.name,
         type: 'website',
-        ...(business.logo_url && {
-          images: [
-            {
-              url: business.logo_url,
-              width: 1200,
-              height: 630,
-              alt: `${business.name} Logo`,
-            },
-          ],
-        }),
+        images: ogImages,
       },
       twitter: {
         card: 'summary_large_image',
-        title: `${business.name} - Menu`,
-        description,
-        ...(business.logo_url && {
-          images: [business.logo_url],
-        }),
+        title: seo.ogTitle,
+        description: seo.description,
+        images: seo.shareImage ? [seo.shareImage] : [],
       },
       robots: {
-        index: business.status === 'active' && (!business.expires_at || new Date(business.expires_at) > new Date()),
+        index: isLive,
         follow: true,
         googleBot: {
-          index: business.status === 'active' && (!business.expires_at || new Date(business.expires_at) > new Date()),
+          index: isLive,
           follow: true,
           'max-video-preview': -1,
           'max-image-preview': 'large',
@@ -186,8 +206,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     }
   } catch {
     return {
-      title: 'Menu',
-      description: 'View our menu',
+      metadataBase: new URL(baseUrl),
+      title: { absolute: 'Menu | Scaniha' },
+      description: 'Consultez notre menu numérique.',
     }
   }
 }

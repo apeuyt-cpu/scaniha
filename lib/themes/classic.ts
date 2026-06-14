@@ -1,6 +1,6 @@
 export const classic = {
   id: 'classic',
-  name: 'Classic Elegance',
+  name: 'Classique',
   colors: {
     background: '#FFFDF9',       // Warm off-white
     text: '#2C2C2C',             // Soft black

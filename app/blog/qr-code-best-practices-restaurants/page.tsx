@@ -2,37 +2,37 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'QR Code Best Practices for Restaurants | Maximize Scans | Scaniha',
-  description: 'Learn QR code best practices for restaurants. Where to place QR codes, how to promote them, and tips to maximize customer scans and engagement.',
-  openGraph: { title: 'QR Code Best Practices for Restaurants | Maximize Scans', description: 'Learn QR code best practices for restaurants.', url: 'https://scaniha.com/blog/qr-code-best-practices-restaurants', siteName: 'Scaniha', type: 'article' },
-  twitter: { card: 'summary_large_image', title: 'QR Code Best Practices for Restaurants', description: 'Learn QR code best practices for restaurants.' },
+  title: 'Bonnes pratiques du code QR pour les restaurants | Maximisez les scans | Scaniha',
+  description: 'Découvrez les bonnes pratiques du code QR pour les restaurants. Où placer les codes QR, comment les promouvoir et des conseils pour maximiser les scans et l’engagement client.',
+  openGraph: { title: 'Bonnes pratiques du code QR pour les restaurants | Maximisez les scans', description: 'Découvrez les bonnes pratiques du code QR pour les restaurants.', url: 'https://scaniha.com/blog/qr-code-best-practices-restaurants', siteName: 'Scaniha', type: 'article' },
+  twitter: { card: 'summary_large_image', title: 'Bonnes pratiques du code QR pour les restaurants', description: 'Découvrez les bonnes pratiques du code QR pour les restaurants.' },
   alternates: { canonical: 'https://scaniha.com/blog/qr-code-best-practices-restaurants' },
 }
 
 export default function Post() {
   return (
-    <div className="min-h-screen bg-white" dir="ltr">
+    <div className="min-h-screen bg-[#FEFEFE]" dir="ltr">
       <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <Link href="/blog" className="text-orange-600 hover:text-orange-700 font-medium mb-8 inline-block">&larr; Back to Blog</Link>
+        <Link href="/blog" className="text-orange-600 hover:text-orange-700 font-medium mb-8 inline-block">&larr; Retour au blog</Link>
         <article>
-          <h1 className="text-4xl font-extrabold text-zinc-900 mb-4">QR Code Best Practices for Restaurants — Maximize Scans</h1>
-          <time className="text-zinc-500 mb-8 block">February 5, 2026</time>
+          <h1 className="text-4xl font-extrabold text-zinc-900 mb-4">Bonnes pratiques du code QR pour les restaurants — Maximisez les scans</h1>
+          <time className="text-zinc-500 mb-8 block">5 février 2026</time>
           <div className="prose prose-lg max-w-none text-zinc-700 space-y-6">
-            <p>A QR code is only effective if customers scan it. Follow these best practices to maximize scans and engagement with your QR menu.</p>
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">1. Place QR Codes at Eye Level</h2>
-            <p>Position QR codes on table tents at eye level. Avoid placing them on edges or corners where customers may not notice them.</p>
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">2. Use Clear Call-to-Action Labels</h2>
-            <p>Add text near your QR code like &quot;Scan to view our menu&quot; or &quot;See our full menu.&quot; Customers need to know what happens when they scan.</p>
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">3. Ensure High Contrast</h2>
-            <p>QR codes need contrast to scan. Use dark codes on light backgrounds. Avoid placing QR codes on patterned or reflective surfaces.</p>
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">4. Test Your QR Codes</h2>
-            <p>Before printing, test your QR code with multiple phones. Ensure it redirects to your digital menu and loads quickly.</p>
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">5. Promote at the Entrance</h2>
-            <p>Place a QR code at your entrance so customers can browse the menu before they sit down. This reduces wait times and improves their experience.</p>
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">6. Use Multiple Touchpoints</h2>
-            <p>Don&apos;t rely on table codes alone. Add QR codes to windows, menus boards, receipts, and social media profiles.</p>
-            <div className="bg-orange-50 p-6 rounded-2xl mt-8"><Link href="/signup" className="inline-block px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Generate Your QR Code Free</Link></div>
-            <p>Related: <Link href="/blog/how-to-create-qr-menu-for-restaurant" className="text-orange-600">How to create a QR menu</Link> · <Link href="/qr-menu-for-restaurants" className="text-orange-600">QR menu for restaurants</Link></p>
+            <p>Un code QR n’est efficace que si les clients le scannent. Suivez ces bonnes pratiques pour maximiser les scans et l’engagement avec votre menu QR.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">1. Placez les codes QR à hauteur des yeux</h2>
+            <p>Positionnez les codes QR sur les chevalets de table à hauteur des yeux. Évitez de les placer sur les bords ou dans les coins, où les clients risquent de ne pas les remarquer.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">2. Utilisez des messages d’appel à l’action clairs</h2>
+            <p>Ajoutez un texte près de votre code QR, comme &quot;Scannez pour voir notre menu&quot; ou &quot;Découvrez notre menu complet&quot;. Les clients doivent savoir ce qui se passe lorsqu’ils scannent.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">3. Assurez un contraste élevé</h2>
+            <p>Les codes QR ont besoin de contraste pour être scannés. Utilisez des codes foncés sur des fonds clairs. Évitez de placer les codes QR sur des surfaces à motifs ou réfléchissantes.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">4. Testez vos codes QR</h2>
+            <p>Avant l’impression, testez votre code QR avec plusieurs téléphones. Assurez-vous qu’il redirige bien vers votre menu numérique et qu’il se charge rapidement.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">5. Faites la promotion à l’entrée</h2>
+            <p>Placez un code QR à l’entrée pour que les clients puissent consulter le menu avant de s’asseoir. Cela réduit les temps d’attente et améliore leur expérience.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">6. Multipliez les points de contact</h2>
+            <p>Ne vous limitez pas aux codes sur les tables. Ajoutez des codes QR sur les vitrines, les ardoises de menu, les tickets de caisse et vos profils de réseaux sociaux.</p>
+            <div className="bg-orange-50 p-6 rounded-2xl mt-8"><Link href="/signup" className="inline-block px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Générez votre code QR gratuitement</Link></div>
+            <p>À lire aussi : <Link href="/blog/how-to-create-qr-menu-for-restaurant" className="text-orange-600">Comment créer un menu QR</Link> · <Link href="/qr-menu-for-restaurants" className="text-orange-600">Menu QR pour les restaurants</Link></p>
           </div>
         </article>
       </div>

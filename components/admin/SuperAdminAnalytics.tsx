@@ -19,21 +19,33 @@ interface DailyDetail {
 export default function SuperAdminAnalytics() {
   const [stats, setStats] = useState<BusinessStat[]>([])
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortField, setSortField] = useState<'today' | 'week' | 'month' | 'total'>('month')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [selectedBusiness, setSelectedBusiness] = useState<{ name: string; slug: string } | null>(null)
   const [dailyDetail, setDailyDetail] = useState<DailyDetail[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
+  const [detailFailed, setDetailFailed] = useState(false)
+
+  const fetchStats = () => {
+    setLoading(true)
+    setFailed(false)
+    fetch('/api/super-admin/analytics')
+      .then(r => {
+        if (!r.ok) throw new Error('request failed')
+        return r.json()
+      })
+      .then(data => {
+        if (Array.isArray(data)) { setStats(data); setFailed(false) }
+        else throw new Error('unexpected response')
+      })
+      .catch(() => setFailed(true))
+      .finally(() => setLoading(false))
+  }
 
   useEffect(() => {
-    fetch('/api/super-admin/analytics')
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) setStats(data)
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    fetchStats()
   }, [])
 
   const sorted = [...stats]
@@ -55,12 +67,15 @@ export default function SuperAdminAnalytics() {
   const handleRowClick = async (business: BusinessStat) => {
     setSelectedBusiness(business)
     setDetailLoading(true)
+    setDetailFailed(false)
     try {
       const res = await fetch(`/api/admin/analytics?period=month&business_slug=${business.slug}`)
+      if (!res.ok) throw new Error('request failed')
       const data = await res.json()
       setDailyDetail(data.daily || [])
     } catch {
       setDailyDetail([])
+      setDetailFailed(true)
     } finally {
       setDetailLoading(false)
     }
@@ -73,7 +88,7 @@ export default function SuperAdminAnalytics() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl p-6 border border-zinc-200">
+      <div className="bg-[#FEFEFE] rounded-2xl p-6 border border-zinc-200">
         <div className="flex items-center justify-center py-12">
           <div className="w-8 h-8 border-2 border-zinc-300 border-t-orange-500 rounded-full animate-spin" />
         </div>
@@ -81,16 +96,34 @@ export default function SuperAdminAnalytics() {
     )
   }
 
+  if (failed) {
+    return (
+      <div className="rounded-2xl border border-zinc-200 bg-[#FEFEFE] px-6 py-12 text-center">
+        <p className="font-semibold text-zinc-900">Statistiques indisponibles</p>
+        <p className="mt-1 text-sm text-zinc-500">Le chargement a échoué. Vérifiez votre connexion et réessayez.</p>
+        <button
+          onClick={fetchStats}
+          className="mt-5 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M23 4v6h-6M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+          Réessayer
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <div className="bg-white rounded-2xl border border-zinc-200 overflow-hidden">
+    <div className="bg-[#FEFEFE] rounded-2xl border border-zinc-200 overflow-hidden">
       <div className="p-5 lg:p-6 border-b border-zinc-100">
         <div className="flex items-center gap-3 mb-4">
-          <span className="text-2xl">📊</span>
-          <h3 className="font-bold text-zinc-900 text-lg lg:text-xl">إحصائيات الزيارات — جميع الحسابات</h3>
+          <span className="text-2xl" aria-hidden="true">📊</span>
+          <h3 className="font-bold text-zinc-900 text-lg lg:text-xl">Statistiques de visites — Tous les comptes</h3>
         </div>
         <input
           type="text"
-          placeholder="بحث باسم المقهى..."
+          placeholder="Rechercher par nom d'établissement..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           className="w-full px-4 py-2.5 border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -105,12 +138,22 @@ export default function SuperAdminAnalytics() {
               onClick={() => setSelectedBusiness(null)}
               className="text-zinc-400 hover:text-zinc-600 text-sm"
             >
-              ✕ إغلاق
+              ✕ Fermer
             </button>
           </div>
           {detailLoading ? (
             <div className="flex justify-center py-4">
               <div className="w-6 h-6 border-2 border-zinc-300 border-t-orange-500 rounded-full animate-spin" />
+            </div>
+          ) : detailFailed ? (
+            <div className="py-4 text-center">
+              <p className="text-sm text-zinc-600">Le détail n&apos;a pas pu être chargé.</p>
+              <button
+                onClick={() => selectedBusiness && handleRowClick({ ...selectedBusiness, today: 0, week: 0, month: 0, total: 0 })}
+                className="mt-2 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
+              >
+                Réessayer
+              </button>
             </div>
           ) : dailyDetail.length > 0 ? (
             <div className="flex items-end gap-2 h-24" style={{ direction: 'ltr' }}>
@@ -122,13 +165,13 @@ export default function SuperAdminAnalytics() {
                     style={{ height: `${Math.max((day.count / Math.max(...dailyDetail.map(d => d.count), 1)) * 80, 4)}px` }}
                   />
                   <span className="text-[9px] text-zinc-400">
-                    {new Date(day.date + 'T00:00:00').toLocaleDateString('ar-TN', { weekday: 'short', day: 'numeric' })}
+                    {new Date(day.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-zinc-500 text-sm text-center py-4">لا توجد بيانات تفصيلية</p>
+            <p className="text-zinc-500 text-sm text-center py-4">Aucune donnée détaillée</p>
           )}
         </div>
       )}
@@ -137,18 +180,18 @@ export default function SuperAdminAnalytics() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-100">
-              <th className="text-right px-4 py-3 font-medium text-zinc-500 whitespace-nowrap">اسم المقهى</th>
+              <th className="text-left px-4 py-3 font-medium text-zinc-500 whitespace-nowrap">Nom de l'établissement</th>
               <th className="text-center px-4 py-3 font-medium text-zinc-500 cursor-pointer whitespace-nowrap" onClick={() => handleSort('today')}>
-                <SortIcon field="today" />اليوم
+                <SortIcon field="today" />Aujourd'hui
               </th>
               <th className="text-center px-4 py-3 font-medium text-zinc-500 cursor-pointer whitespace-nowrap" onClick={() => handleSort('week')}>
-                <SortIcon field="week" />هذا الأسبوع
+                <SortIcon field="week" />Cette semaine
               </th>
               <th className="text-center px-4 py-3 font-medium text-zinc-500 cursor-pointer whitespace-nowrap" onClick={() => handleSort('month')}>
-                <SortIcon field="month" />هذا الشهر
+                <SortIcon field="month" />Ce mois-ci
               </th>
               <th className="text-center px-4 py-3 font-medium text-zinc-500 cursor-pointer whitespace-nowrap" onClick={() => handleSort('total')}>
-                <SortIcon field="total" />المجموع
+                <SortIcon field="total" />Total
               </th>
             </tr>
           </thead>
@@ -173,7 +216,7 @@ export default function SuperAdminAnalytics() {
       </div>
 
       {sorted.length === 0 && (
-        <div className="text-center py-12 text-zinc-400 text-sm">لا توجد بيانات</div>
+        <div className="text-center py-12 text-zinc-400 text-sm">Aucune donnée</div>
       )}
     </div>
   )

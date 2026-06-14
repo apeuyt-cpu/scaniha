@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { compressImage } from "@/lib/image-optimize";
 
 interface UploadResult {
   success: boolean;
@@ -19,7 +20,7 @@ interface ImageUploaderProps {
   maxSizeMB?: number;
 }
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
 
 export default function ImageUploader({
   onUploadComplete,
@@ -45,10 +46,10 @@ export default function ImageUploader({
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return `Invalid file type. Allowed: JPG, PNG, WebP, GIF, SVG`;
+      return `Type de fichier non valide. Formats autorisés : JPG, PNG, WebP, GIF, AVIF`;
     }
     if (file.size > maxSizeMB * 1024 * 1024) {
-      return `File too large. Maximum size is ${maxSizeMB}MB.`;
+      return `Fichier trop volumineux. La taille maximale est de ${maxSizeMB} Mo.`;
     }
     return null;
   };
@@ -69,8 +70,9 @@ export default function ImageUploader({
     reader.readAsDataURL(file);
 
     try {
+      const optimized = await compressImage(file);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", optimized);
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -80,7 +82,7 @@ export default function ImageUploader({
       const result: UploadResult = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || "Upload failed");
+        throw new Error(result.error || "Échec du téléversement");
       }
 
       setUploadedUrl(result.secure_url || null);
@@ -92,7 +94,7 @@ export default function ImageUploader({
       );
       onUploadComplete?.(result);
     } catch (err: any) {
-      setError(err.message || "Something went wrong during upload.");
+      setError(err.message || "Une erreur est survenue lors du téléversement.");
       setPreview(null);
     } finally {
       setIsUploading(false);
@@ -147,8 +149,8 @@ export default function ImageUploader({
           flex flex-col items-center justify-center gap-4
           min-h-[200px]
           ${isDragging
-            ? "border-indigo-400 bg-indigo-50/80 scale-[1.02] shadow-lg shadow-indigo-100"
-            : "border-gray-200 bg-white hover:border-indigo-300 hover:bg-gray-50/50"
+            ? "border-orange-400 bg-orange-50/80 scale-[1.02] shadow-lg shadow-orange-100"
+            : "border-zinc-200 bg-[#FEFEFE] hover:border-orange-300 hover:bg-zinc-50/50"
           }
           ${isUploading ? "pointer-events-none opacity-70" : ""}
         `}
@@ -159,18 +161,18 @@ export default function ImageUploader({
             <div className={`
               w-16 h-16 rounded-2xl flex items-center justify-center
               transition-all duration-300
-              ${isDragging ? "bg-indigo-100 text-indigo-600" : "bg-gray-100 text-gray-400"}
+              ${isDragging ? "bg-orange-100 text-orange-600" : "bg-zinc-100 text-zinc-400"}
             `}>
               <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
               </svg>
             </div>
             <div className="text-center">
-              <p className="text-sm font-semibold text-gray-700">
-                {isDragging ? "Drop your image here" : "Click or drag to upload"}
+              <p className="text-sm font-semibold text-zinc-700">
+                {isDragging ? "Déposez votre image ici" : "Cliquez ou glissez pour téléverser"}
               </p>
-              <p className="text-xs text-gray-400 mt-1">
-                JPG, PNG, WebP, GIF or SVG · Max {maxSizeMB}MB
+              <p className="text-xs text-zinc-400 mt-1">
+                JPG, PNG, WebP, GIF ou SVG · Max {maxSizeMB} Mo
               </p>
             </div>
           </>
@@ -178,9 +180,9 @@ export default function ImageUploader({
 
         {/* Loading State */}
         {isUploading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 rounded-2xl z-10">
-            <div className="w-10 h-10 border-[3px] border-gray-200 border-t-indigo-500 rounded-full animate-spin" />
-            <p className="text-sm text-gray-500 mt-3 font-medium">Uploading…</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#FEFEFE]/90 rounded-2xl z-10">
+            <div className="w-10 h-10 border-[3px] border-zinc-200 border-t-orange-500 rounded-full animate-spin" />
+            <p className="text-sm text-zinc-500 mt-3 font-medium">Téléversement…</p>
           </div>
         )}
 
@@ -189,16 +191,16 @@ export default function ImageUploader({
           <div className="relative w-full">
             <img
               src={uploadedUrl || preview || ""}
-              alt="Uploaded preview"
+              alt="Aperçu de l'image téléversée"
               className="w-full max-h-64 object-contain rounded-xl"
             />
             {/* Success badge */}
             {uploadedUrl && (
-              <div className="absolute top-2 right-2 bg-emerald-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg">
+              <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                 </svg>
-                Uploaded
+                Téléversé
               </div>
             )}
           </div>
@@ -229,22 +231,22 @@ export default function ImageUploader({
       {uploadedUrl && (
         <div className="mt-4 space-y-3">
           {/* URL display */}
-          <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+          <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Image URL
+              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                URL de l'image
               </span>
               <button
                 onClick={handleCopyUrl}
-                className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold transition-colors flex items-center gap-1"
+                className="text-xs text-orange-600 hover:text-orange-700 font-semibold transition-colors flex items-center gap-1"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
                 </svg>
-                Copy
+                Copier
               </button>
             </div>
-            <p className="text-xs text-gray-600 break-all font-mono leading-relaxed">
+            <p className="text-xs text-zinc-600 break-all font-mono leading-relaxed">
               {uploadedUrl}
             </p>
           </div>
@@ -252,16 +254,16 @@ export default function ImageUploader({
           {/* Meta info row */}
           <div className="flex items-center gap-3">
             {publicId && (
-              <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-lg font-mono">
+              <span className="text-xs text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-lg font-mono">
                 {publicId}
               </span>
             )}
             {uploadInfo && (
               <>
-                <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-lg uppercase font-semibold">
+                <span className="text-xs text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-lg uppercase font-semibold">
                   {uploadInfo.format}
                 </span>
-                <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-lg font-medium">
+                <span className="text-xs text-zinc-400 bg-zinc-100 px-2.5 py-1 rounded-lg font-medium">
                   {formatBytes(uploadInfo.bytes)}
                 </span>
               </>
@@ -274,9 +276,9 @@ export default function ImageUploader({
               resetState();
               fileInputRef.current?.click();
             }}
-            className="w-full py-2.5 text-sm font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors duration-200"
+            className="w-full py-2.5 text-sm font-semibold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xl transition-colors duration-200"
           >
-            Upload Another Image
+            Téléverser une autre image
           </button>
         </div>
       )}

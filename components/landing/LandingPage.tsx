@@ -4,9 +4,20 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect, useRef } from 'react'
 import { useLocale, useTranslation } from '@/lib/i18n/LocaleContext'
-import { useCurrency } from '@/lib/i18n/CurrencyContext'
-import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
-import CurrencySelector from '@/components/ui/CurrencySelector'
+import PricingComparison from '@/components/pricing/PricingComparison'
+import ClientsSection from '@/components/landing/ClientsSection'
+import AnimatedShapes from '@/components/landing/AnimatedShapes'
+import logoIcon from '../../public/logo.png'
+import logoFull from '../../public/logo2.png'
+import heroDesktop from '../../public/hero/hero-desktop.webp'
+import feature1 from '../../public/features/feature-1.webp'
+import feature2 from '../../public/features/feature-2.webp'
+import feature3 from '../../public/features/feature-3.webp'
+import feature4 from '../../public/features/feature-4.webp'
+import engagementRoue from '../../public/engagement-roue.webp'
+import engagementPoints from '../../public/engagement-points.webp'
+import iconRoue from '../../public/engagement-icon-roue.png'
+import iconPoints from '../../public/engagement-icon-points.png'
 
 function useScrollReveal() {
   useEffect(() => {
@@ -33,7 +44,6 @@ function useScrollReveal() {
 
 export default function LandingPage() {
   const { t, locale, dir } = useLocale()
-  const { formatPrice, currencyCode, convertFromTnd } = useCurrency()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showStickyCta, setShowStickyCta] = useState(false)
   const heroRef = useRef<HTMLElement | null>(null)
@@ -51,55 +61,52 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="landing min-h-screen" dir={dir}>
+    <div className="landing min-h-screen bg-[#FEFEFE]" dir={dir}>
       {/* Header with Logo and Navigation */}
-      <header className="w-full py-4 px-4 sm:px-6 lg:px-8 border-b border-zinc-200/70 bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-50 w-full border-b border-zinc-100 bg-[#FEFEFE]/80 px-4 backdrop-blur-md sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
-            <Image
-              src="/logo.png"
-              alt="Scaniha"
-              width={160}
-              height={56}
-              className="object-contain"
-              priority
-              style={{ width: 'auto', height: 'auto' }}
-            />
+          <Link href="/" className="flex items-center" aria-label="Scaniha">
+            <Image src={logoIcon} alt="Scaniha" className="h-9 w-auto" priority />
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-4">
-            <LanguageSwitcher />
-            <CurrencySelector />
-            <Link href="/" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
+          <nav className="hidden items-center gap-8 lg:flex">
+            <Link href="/" className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900">
               {t('nav.home')}
             </Link>
-            <Link href="/features" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
+            <Link href="/features" className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900">
               {t('nav.features')}
             </Link>
-            <Link href="/pricing" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
+            <Link href="/pricing" className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900">
               {t('nav.pricing')}
             </Link>
-            <Link href="/blog" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
-              Blog
+            <Link href="/blog" className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900">
+              {t('nav.blog') || 'Blog'}
             </Link>
-            <Link href="/about" className="text-zinc-700 hover:text-orange-600 font-medium transition-colors">
-              {t('nav.about') || 'About'}
+            <Link href="/about" className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900">
+              {t('nav.about') || 'À propos'}
+            </Link>
+          </nav>
+
+          {/* Desktop CTAs */}
+          <div className="hidden items-center gap-1 lg:flex">
+            <Link href="/login" className="px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900">
+              {t('nav.login')}
             </Link>
             <Link
               href="/signup"
-              className="px-6 py-2 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors"
+              className="rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-700"
             >
               {t('nav.signup')}
             </Link>
-          </nav>
+          </div>
 
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="lg:hidden p-2 text-zinc-700 hover:text-orange-600 transition-colors"
-            aria-label="Toggle menu"
+            aria-label="Ouvrir le menu"
           >
             {mobileMenuOpen ? (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -115,565 +122,430 @@ export default function LandingPage() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-zinc-200 mt-4 pt-4 pb-4">
-            <nav className="flex flex-col gap-4 px-4">
-              <div className="flex items-center gap-2 mb-2">
-                <LanguageSwitcher />
-                <CurrencySelector />
-              </div>
-              <Link
-                href="/"
-                className="text-zinc-700 hover:text-orange-600 font-medium transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
+          <div className="border-t border-zinc-100 bg-[#FEFEFE] lg:hidden">
+            <nav className="mx-auto flex max-w-[1200px] flex-col px-4 py-3 sm:px-6">
+              <Link href="/" className="rounded-lg px-2 py-2.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-orange-600" onClick={() => setMobileMenuOpen(false)}>
                 {t('nav.home')}
               </Link>
-              <Link
-                href="/features"
-                className="text-zinc-700 hover:text-orange-600 font-medium transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
+              <Link href="/features" className="rounded-lg px-2 py-2.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-orange-600" onClick={() => setMobileMenuOpen(false)}>
                 {t('nav.features')}
               </Link>
-              <Link
-                href="/pricing"
-                className="text-zinc-700 hover:text-orange-600 font-medium transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
+              <Link href="/pricing" className="rounded-lg px-2 py-2.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-orange-600" onClick={() => setMobileMenuOpen(false)}>
                 {t('nav.pricing')}
               </Link>
-              <Link
-                href="/blog"
-                className="text-zinc-700 hover:text-orange-600 font-medium transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Blog
+              <Link href="/blog" className="rounded-lg px-2 py-2.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-orange-600" onClick={() => setMobileMenuOpen(false)}>
+                {t('nav.blog') || 'Blog'}
               </Link>
-              <Link
-                href="/about"
-                className="text-zinc-700 hover:text-orange-600 font-medium transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {t('nav.about') || 'About'}
+              <Link href="/about" className="rounded-lg px-2 py-2.5 text-base font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-orange-600" onClick={() => setMobileMenuOpen(false)}>
+                {t('nav.about') || 'À propos'}
               </Link>
-              <Link
-                href="/signup"
-                className="px-6 py-2 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors text-center"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {t('nav.signup')}
-              </Link>
+              <div className="mt-3 flex flex-col gap-2 border-t border-zinc-100 pt-4">
+                <Link href="/login" className="rounded-lg border border-zinc-300 px-4 py-2.5 text-center text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50" onClick={() => setMobileMenuOpen(false)}>
+                  {t('nav.login')}
+                </Link>
+                <Link href="/signup" className="rounded-lg bg-orange-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-orange-700" onClick={() => setMobileMenuOpen(false)}>
+                  {t('nav.signup')}
+                </Link>
+              </div>
             </nav>
           </div>
         )}
       </header>
 
-      {/* Modern Hero Section - Side by Side Layout */}
-      <section
-        ref={heroRef}
-        className="relative min-h-[90vh] flex items-center overflow-hidden bg-gradient-to-b from-[#FAFAF8] via-white to-[#FAFAF8]"
-      >
-        {/* Drifting gradient orbs */}
-        <div className="orb orb-1 w-[460px] h-[460px] -top-24 right-[-80px]" aria-hidden="true"></div>
-        <div className="orb orb-2 w-[380px] h-[380px] bottom-[-60px] left-[-60px]" aria-hidden="true"></div>
+      {/* Hero Section */}
+      <section ref={heroRef} className="relative overflow-hidden bg-gradient-to-b from-[#FEFEFE] via-[#FEFEFE] to-[#FEFEFE]">
+        {/* Decorations are desktop-only — mobile keeps a perfectly white hero */}
+        <div className="hidden lg:block">
+          <AnimatedShapes />
+        </div>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-32 left-[-15%] hidden h-[600px] w-[600px] rounded-full opacity-60 blur-[130px] lg:block"
+          style={{ background: 'radial-gradient(circle, rgba(244,123,32,0.18), transparent 70%)' }}
+        ></div>
 
-        <div className="relative max-w-[1200px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-          {/* Mobile Layout - Vertical Stack */}
-          <div className="flex flex-col lg:hidden gap-6 w-full">
-            {/* Badge */}
-              <div className="hero-up glass-pill inline-flex items-center gap-2 px-4 py-2 rounded-full w-fit" style={{ ['--hero-delay' as string]: '0ms' }}>
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span className="text-orange-700 text-sm font-bold">{t('pricing.freeTrial')}</span>
+        <div className="relative z-10 mx-auto max-w-[1240px] px-4 pb-10 pt-10 sm:px-6 lg:px-8 lg:pb-8 lg:pt-8">
+          {/* Text — centered, image stacked below */}
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="hero-up inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5" style={{ ['--hero-delay' as string]: '0ms' }}>
+              <span aria-hidden="true">🔥</span>
+              <span className="text-sm font-semibold text-orange-700">Tendance</span>
+            </div>
+
+            <h1 className="hero-up headline mt-6 text-4xl font-extrabold leading-[1.08] text-zinc-900 sm:text-5xl lg:text-6xl" style={{ ['--hero-delay' as string]: '120ms' }}>
+              Votre menu QR,<br />
+              <span className="text-orange-500">en un scan</span>
+            </h1>
+
+            <p className="hero-up mx-auto mt-6 max-w-md text-lg leading-relaxed text-zinc-600" style={{ ['--hero-delay' as string]: '240ms' }}>
+              Élégant, rapide, sans application — prêt en quelques minutes.
+            </p>
+
+            {/* CTA buttons — desktop */}
+            <div className="hero-up mt-8 hidden justify-center gap-3 lg:flex" style={{ ['--hero-delay' as string]: '340ms' }}>
+              <Link
+                href="/signup"
+                className="btn-shine rounded-xl bg-orange-500 px-7 py-3.5 text-center text-base font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
+              >
+                Commencer l&apos;essai gratuit
+              </Link>
+              <Link
+                href="/login"
+                className="btn-shine rounded-xl border border-zinc-300 bg-[#FEFEFE] px-7 py-3.5 text-center text-base font-bold text-zinc-900 hover:bg-zinc-50"
+              >
+                Connexion
+              </Link>
+            </div>
+          </div>
+
+          {/* Visual — under the text on every breakpoint */}
+          <div className="hero-up mt-10 lg:mt-8" style={{ ['--hero-delay' as string]: '200ms' }}>
+            <div className="relative mx-auto w-full max-w-[880px] lg:max-w-[640px]">
+              <div className="hero-aura" aria-hidden="true">
+                <div className="rays" />
+                <div className="glow" />
               </div>
+              <Image
+                src={heroDesktop}
+                alt="Le menu QR Scaniha sur smartphone et ses présentoirs QR de table"
+                sizes="(min-width: 1024px) 640px, 100vw"
+                priority
+                className="float-img relative z-10 mx-auto block h-auto w-full"
+              />
+            </div>
+            {/* CTA buttons — mobile (side by side, under the image) */}
+            <div className="mt-6 flex gap-3 lg:hidden">
+              <Link
+                href="/signup"
+                className="btn-shine flex-1 rounded-xl bg-orange-500 px-4 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
+              >
+                Essai gratuit
+              </Link>
+              <Link
+                href="/login"
+                className="btn-shine flex-1 rounded-xl border border-zinc-300 bg-[#FEFEFE] px-4 py-3.5 text-center text-sm font-bold text-zinc-900 hover:bg-zinc-50"
+              >
+                Connexion
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
-              {/* Main Headline */}
-              <h1 className="hero-up headline text-4xl sm:text-5xl font-extrabold text-zinc-900" style={{ ['--hero-delay' as string]: '120ms', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
-                {t('hero.title')}
-              </h1>
+      {/* Features - Fonctionnalités */}
+      <section className="bg-white pt-16 pb-28 sm:pt-20 sm:pb-36 lg:pt-24 lg:pb-44">
+        <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
+          <div className="reveal mx-auto mb-12 max-w-2xl text-center sm:mb-16">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-500">
+              Fonctionnalités
+            </p>
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl lg:text-5xl">
+              Conçu pour Tous Vos Besoins
+            </h2>
+          </div>
 
-              {/* Image - Between headline and subheadline on mobile */}
-              <div className="hero-up relative w-full" style={{ ['--hero-delay' as string]: '240ms' }}>
-                <div className="float-img relative w-full aspect-[16/9] rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5">
+          <div className="reveal grid grid-cols-1 items-start gap-14 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+            {[
+              {
+                src: feature1,
+                n: '01',
+                title: 'Menu QR instantané',
+                desc: 'Vos clients scannent et découvrent votre menu en une seconde — sans application.',
+              },
+              {
+                src: feature2,
+                n: '02',
+                title: 'Modifiez en temps réel',
+                desc: 'Changez plats, prix et photos à tout moment — visible immédiatement par vos clients.',
+              },
+              {
+                src: feature3,
+                n: '03',
+                title: 'Designs & statistiques',
+                desc: '8 designs élégants et des statistiques de consultation pour votre restaurant.',
+              },
+              {
+                src: feature4,
+                n: '04',
+                title: 'La roue de la chance',
+                desc: 'Vos clients jouent et gagnent toujours quelque chose — un café, une remise, un dessert.',
+              },
+            ].map((f) => (
+              <div key={f.n} className="mx-auto flex w-full max-w-md flex-col">
+                <div className="flex items-end justify-center lg:h-[240px]">
                   <Image
-                    src="/hero img.jpeg"
-                    alt="Scaniha"
-                    fill
-                    sizes="100vw"
-                    className="object-cover rounded-3xl"
-                    priority
-                    quality={90}
+                    src={f.src}
+                    alt={f.title}
+                    sizes="(min-width: 1024px) 300px, (min-width: 640px) 448px, 100vw"
+                    className="mx-auto h-auto max-h-full w-full lg:w-auto"
                   />
                 </div>
+                <div className="mt-4 flex items-center gap-3 px-2">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-base font-extrabold text-orange-600">
+                    {f.n}
+                  </span>
+                  <h3 className="text-xl font-extrabold tracking-tight text-zinc-900">{f.title}</h3>
+                </div>
+                <p className="mt-2 px-2 text-base leading-relaxed text-zinc-600">{f.desc}</p>
               </div>
-
-              {/* Subheadline */}
-              <p className="hero-up text-lg sm:text-xl text-zinc-600 leading-relaxed" style={{ ['--hero-delay' as string]: '320ms', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
-                {t('hero.subtitle')}
-              </p>
-
-              {/* CTA Buttons */}
-              <div className="hero-up flex flex-col sm:flex-row gap-4 pt-4" style={{ ['--hero-delay' as string]: '400ms' }}>
-                <Link
-                  href="/signup"
-                  className="btn-shine px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-lg shadow-lg shadow-orange-500/30 text-center"
-                >
-                  {t('hero.cta')}
-                </Link>
-                <Link
-                  href="/login"
-                  className="btn-shine px-8 py-4 bg-white text-zinc-900 rounded-xl font-semibold text-lg border-2 border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50 text-center"
-                >
-                  {t('nav.login')}
-                </Link>
-              </div>
-            </div>
-
-          {/* Desktop Layout - Side by Side */}
-          <div className="hidden lg:grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            {/* Text Content */}
-            <div className={`space-y-6 w-full ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
-              <div className="hero-up glass-pill inline-flex items-center gap-2 px-4 py-2 rounded-full" style={{ ['--hero-delay' as string]: '0ms' }}>
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span className="text-orange-700 text-sm font-bold">{t('pricing.freeTrial')}</span>
-              </div>
-
-              <h1 className="hero-up headline text-4xl sm:text-5xl lg:text-6xl font-extrabold text-zinc-900" style={{ ['--hero-delay' as string]: '120ms' }}>
-                {t('hero.title')}
-              </h1>
-
-              <p className="hero-up text-lg sm:text-xl lg:text-2xl text-zinc-600 leading-relaxed" style={{ ['--hero-delay' as string]: '240ms' }}>
-                {t('hero.subtitle')}
-              </p>
-
-              <div className="hero-up flex flex-col sm:flex-row gap-4 pt-4" style={{ ['--hero-delay' as string]: '340ms' }}>
-                <Link
-                  href="/signup"
-                  className="btn-shine px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-lg shadow-lg shadow-orange-500/30 text-center"
-                >
-                  {t('hero.cta')}
-                </Link>
-                <Link
-                  href="/login"
-                  className="btn-shine px-8 py-4 bg-white text-zinc-900 rounded-xl font-semibold text-lg border-2 border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50 text-center"
-                >
-                  {t('nav.login')}
-                </Link>
-              </div>
-            </div>
-
-            {/* Image Content - Left Side (RTL) */}
-            <div className="hero-up relative w-full" style={{ ['--hero-delay' as string]: '200ms' }}>
-              <div className="float-img relative w-full aspect-square max-w-lg mx-auto rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5">
-                <Image
-                  src="/hero img.jpeg"
-                  alt="Scaniha"
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 50vw"
-                  className="object-cover rounded-3xl"
-                  priority
-                  quality={90}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce hidden lg:block">
-          <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-          </svg>
-        </div>
-      </section>
-
-      {/* Brand Story Section */}
-      <section className="py-24 bg-gradient-to-b from-[#FAFAF8] to-white">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center reveal">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 mb-4">{t('hero.brandStoryTitle')}</h2>
-            <p className="text-lg text-zinc-600 leading-relaxed">{t('hero.brandStory')}</p>
-            <div className="flex gap-4 justify-center mt-8">
-              <Link href="/about" className="text-orange-600 font-semibold hover:text-orange-700">Learn more about Scaniha →</Link>
-              <Link href="/features" className="text-orange-600 font-semibold hover:text-orange-700">Explore features →</Link>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Value Props - Quick Benefits - 3 Steps */}
-      <section className="py-24 bg-gradient-to-b from-white to-[#FAFAF8]">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14 reveal">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 mb-4">
-              {t('features.title')}
+      {/* Engagement — game + loyalty */}
+      <section className="bg-[#FFF9F3] py-20 sm:py-24 lg:py-28">
+        <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
+          <div className="reveal mx-auto mb-12 max-w-2xl text-center">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-500">Nouveau</p>
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
+              Faites revenir vos clients
             </h2>
-            <p className="text-lg text-zinc-600">
-              {t('features.subtitle')}
+            <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-600">
+              Votre menu devient une expérience : un jeu où tout le monde gagne, et des points qui récompensent chaque visite.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-10">
-            {/* Step 1 - QR Menu Builder */}
-            <div className="reveal lp-card group relative overflow-hidden" style={{ ['--reveal-delay' as string]: '0ms' }}>
-              <div className="badge-pop absolute top-6 right-6 w-12 h-12 bg-gradient-to-br from-[#F47B20] to-[#F5B82E] rounded-full flex items-center justify-center text-white font-extrabold text-xl shadow-lg z-10">
-                1
-              </div>
-              <div className="relative h-64 bg-gradient-to-br from-orange-50 to-amber-50 overflow-hidden flex items-center justify-center">
-                <div className="icon-container w-24 h-24 rounded-2xl bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:shadow-lg transition-all duration-500 ease-out">
-                  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="url(#qrGradient)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="QR code icon for menu builder" role="img" className="drop-shadow-sm">
-                    <defs>
-                      <linearGradient id="qrGradient" x1="0" y1="0" x2="24" y2="24">
-                        <stop offset="0%" stopColor="#F47B20" />
-                        <stop offset="100%" stopColor="#F5B82E" />
-                      </linearGradient>
-                    </defs>
-                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                    <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                    <path d="M14 14h2v2h-2z" />
-                    <path d="M18 14h2v2h-2z" />
-                    <path d="M14 18h4v2h-4z" />
-                    <path d="M18 16h2v4h-2z" />
-                    <path d="M7 7h1v1H7z" />
-                    <path d="M16 7h1v1h-1z" />
-                    <path d="M7 16h1v1H7z" />
-                  </svg>
+          <div className="reveal grid gap-6 lg:grid-cols-2">
+            {/* Roue de la chance */}
+            <div className="overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
+              <Image
+                src={engagementRoue}
+                alt="La roue de la chance — Café offert, -10%, Dessert offert, Boisson offerte"
+                sizes="(min-width: 1024px) 600px, 100vw"
+                className="h-auto w-full object-cover"
+              />
+              <div className="p-7 lg:p-8">
+                <div className="flex items-center gap-3">
+                  <Image src={iconRoue} alt="" className="h-10 w-10 rounded-xl" />
+                  <h3 className="text-xl font-extrabold text-zinc-900">La roue de la chance</h3>
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent pointer-events-none" />
-              </div>
-              <div className="p-8" style={{ textAlign: dir === 'rtl' ? 'right' : 'left' }}>
-                <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">{t('features.qrBuilder.title')}</h3>
-                <p className="text-zinc-600 leading-relaxed text-base">{t('features.qrBuilder.desc')}</p>
+                <p className="mt-3 leading-relaxed text-zinc-600">
+                  Vos clients scannent, tournent la roue et <strong className="text-zinc-900">gagnent toujours quelque chose</strong> —
+                  un café offert, une remise, un dessert. Vous contrôlez les lots, leur fréquence et le stock.
+                </p>
+                <ul className="mt-4 space-y-2 text-sm text-zinc-600">
+                  <li><span className="font-bold text-orange-500">✓</span> Sans application — directement depuis le menu</li>
+                  <li><span className="font-bold text-orange-500">✓</span> Une partie par client et par jour</li>
+                  <li><span className="font-bold text-orange-500">✓</span> Code de retrait à montrer au personnel</li>
+                </ul>
               </div>
             </div>
 
-            {/* Step 2 - No App Required */}
-            <div className="reveal lp-card group relative overflow-hidden" style={{ ['--reveal-delay' as string]: '80ms' }}>
-              <div className="badge-pop absolute top-6 right-6 w-12 h-12 bg-gradient-to-br from-[#F47B20] to-[#F5B82E] rounded-full flex items-center justify-center text-white font-extrabold text-xl shadow-lg z-10">
-                2
-              </div>
-              <div className="relative h-64 bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden flex items-center justify-center">
-                <div className="icon-container w-24 h-24 rounded-2xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:shadow-lg transition-all duration-500 ease-out">
-                  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="url(#phoneGradient)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="smartphone with browser icon — no app download needed" role="img" className="drop-shadow-sm">
-                    <defs>
-                      <linearGradient id="phoneGradient" x1="0" y1="0" x2="24" y2="24">
-                        <stop offset="0%" stopColor="#10B981" />
-                        <stop offset="100%" stopColor="#34D399" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" />
-                    <path d="M2 12h20" />
-                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
+            {/* Points de fidélité */}
+            <div className="overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
+              <Image
+                src={engagementPoints}
+                alt="Les points de fidélité — solde de 120 points sur smartphone"
+                sizes="(min-width: 1024px) 600px, 100vw"
+                className="h-auto w-full object-cover"
+              />
+              <div className="p-7 lg:p-8">
+                <div className="flex items-center gap-3">
+                  <Image src={iconPoints} alt="" className="h-10 w-10 rounded-xl" />
+                  <h3 className="text-xl font-extrabold text-zinc-900">Les points de fidélité</h3>
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent pointer-events-none" />
-              </div>
-              <div className="p-8" style={{ textAlign: dir === 'rtl' ? 'right' : 'left' }}>
-                <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">{t('features.noApp.title')}</h3>
-                <p className="text-zinc-600 leading-relaxed text-base">{t('features.noApp.desc')}</p>
-              </div>
-            </div>
-
-            {/* Step 3 - Instant Updates */}
-            <div className="reveal lp-card group relative overflow-hidden" style={{ ['--reveal-delay' as string]: '160ms' }}>
-              <div className="badge-pop absolute top-6 right-6 w-12 h-12 bg-gradient-to-br from-[#F47B20] to-[#F5B82E] rounded-full flex items-center justify-center text-white font-extrabold text-xl shadow-lg z-10">
-                3
-              </div>
-              <div className="relative h-64 bg-gradient-to-br from-purple-50 to-pink-50 overflow-hidden flex items-center justify-center">
-                <div className="icon-container w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:shadow-lg transition-all duration-500 ease-out">
-                  <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="url(#syncGradient)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-label="sync or refresh icon for real-time menu updates" role="img" className="drop-shadow-sm">
-                    <defs>
-                      <linearGradient id="syncGradient" x1="0" y1="0" x2="24" y2="24">
-                        <stop offset="0%" stopColor="#8B5CF6" />
-                        <stop offset="100%" stopColor="#EC4899" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                    <path d="M3 3v5h5" />
-                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                    <path d="M21 21v-5h-5" />
-                  </svg>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent pointer-events-none" />
-              </div>
-              <div className="p-8" style={{ textAlign: dir === 'rtl' ? 'right' : 'left' }}>
-                <h3 className="text-2xl font-extrabold text-zinc-900 mb-3">{t('features.instantUpdate.title')}</h3>
-                <p className="text-zinc-600 leading-relaxed text-base">{t('features.instantUpdate.desc')}</p>
+                <p className="mt-3 leading-relaxed text-zinc-600">
+                  Chaque achat rapporte des points, chaque partie de roue aussi. Vos clients les échangent contre des
+                  <strong className="text-zinc-900"> récompenses que vous définissez</strong> — et reviennent pour en gagner plus.
+                </p>
+                <ul className="mt-4 space-y-2 text-sm text-zinc-600">
+                  <li><span className="font-bold text-orange-500">✓</span> Simple : le client donne son numéro en caisse</li>
+                  <li><span className="font-bold text-orange-500">✓</span> Vous fixez les points par dinar et les récompenses</li>
+                  <li><span className="font-bold text-orange-500">✓</span> Solde et historique consultables par le client</li>
+                </ul>
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Dual-QR stand showcase — menu + Wi-Fi */}
+      <section className="bg-white py-20 sm:py-24 lg:py-28">
+        <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
+          <div className="reveal grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            {/* Stand mockup */}
+            <div className="flex justify-center">
+              <div className="relative">
+                {/* tent card */}
+                <div className="relative w-72 rounded-2xl bg-gradient-to-b from-[#FFFDFB] to-[#FBF4EC] p-6 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.25)] ring-1 ring-zinc-200 sm:w-80">
+                  <p className="text-center text-sm font-extrabold tracking-wide text-zinc-900">{`Bienvenue chez vous ☕`}</p>
+                  <div className="mt-5 grid grid-cols-2 gap-4">
+                    <div className="rounded-xl bg-white p-3 text-center ring-1 ring-zinc-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/qr-demo-menu.png" alt="QR du menu de démonstration" className="mx-auto h-20 w-20" />
+                      <p className="mt-2 text-xs font-bold text-zinc-900">🍽️ Notre menu</p>
+                      <p className="text-[10px] text-zinc-400">Scannez pour découvrir</p>
+                    </div>
+                    <div className="rounded-xl bg-white p-3 text-center ring-1 ring-zinc-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/qr-demo-wifi.png" alt="QR Wi-Fi de démonstration" className="mx-auto h-20 w-20" />
+                      <p className="mt-2 text-xs font-bold text-zinc-900">📶 Wi-Fi gratuit</p>
+                      <p className="text-[10px] text-zinc-400">Scannez pour vous connecter</p>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-500">
+                    Scaniha
+                  </p>
+                </div>
+                {/* stand base */}
+                <div className="mx-auto -mt-1 h-3 w-40 rounded-b-2xl bg-zinc-800/90 shadow-lg" />
+                <div className="mx-auto h-2 w-52 rounded-full bg-zinc-200/80 blur-[2px]" />
+              </div>
+            </div>
+
+            {/* Copy */}
+            <div className="text-center lg:text-left">
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-500">Sur chaque table</p>
+              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
+                Un support, <span className="text-orange-500">deux QR codes</span>
+              </h2>
+              <p className="mx-auto mt-4 max-w-md text-lg leading-relaxed text-zinc-600 lg:mx-0">
+                Le menu d&apos;un côté, le Wi-Fi de l&apos;autre. Vos clients se connectent et commandent en deux scans —
+                fini le « c&apos;est quoi le mot de passe ? ».
+              </p>
+              <ul className="mx-auto mt-6 max-w-md space-y-3 text-left lg:mx-0">
+                <li className="flex items-start gap-3 text-zinc-700">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">1</span>
+                  <span><strong className="text-zinc-900">QR menu</strong> — généré automatiquement avec votre compte.</span>
+                </li>
+                <li className="flex items-start gap-3 text-zinc-700">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">2</span>
+                  <span><strong className="text-zinc-900">QR Wi-Fi</strong> — créez-le en 10 secondes depuis votre tableau de bord, le mot de passe reste chez vous.</span>
+                </li>
+                <li className="flex items-start gap-3 text-zinc-700">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">3</span>
+                  <span><strong className="text-zinc-900">Support en bois ou acrylique</strong> — un par table, commandé avec votre abonnement.</span>
+                </li>
+              </ul>
+              <Link
+                href="/signup"
+                className="btn-shine mt-8 inline-block rounded-xl bg-orange-500 px-7 py-3.5 text-base font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
+              >
+                Équiper mes tables →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Our Clients - Trusted by */}
+      <ClientsSection />
 
       {/* Pricing - Prominent & Clear */}
-      <section className="py-24 bg-white">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative overflow-hidden py-24 sm:py-28 lg:py-32 bg-gradient-to-b from-[#FEFEFE] via-[#FEFEFE] to-[#FEFEFE]">
+        <AnimatedShapes />
+        <div className="relative z-10 max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14 reveal">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-900 mb-4">
               {t('pricing.title')}
             </h2>
-            <p className="text-lg text-zinc-600">
+            <p className="text-lg text-zinc-500">
               {t('pricing.subtitle')}
             </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-14 items-center">
-            {/* Plan 1 - 6 Months */}
-            <div className="reveal lp-card md:scale-95 md:opacity-90 p-8" style={{ ['--reveal-delay' as string]: '0ms' }}>
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-extrabold text-zinc-900 mb-2">{t('pricing.plan6months')}</h3>
-                <div className="flex items-baseline justify-center gap-2 mb-2">
-                  <span className="text-5xl font-extrabold text-zinc-900">{formatPrice(convertFromTnd(150))}</span>
-                </div>
-                <p className="text-sm text-zinc-500">{t('pricing.per6months')}</p>
-              </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center gap-2">
-                  <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-zinc-700">{t('pricing.features.items')}</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-zinc-700">{t('pricing.features.categories')}</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-zinc-700">{t('pricing.features.themes')}</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-green-500 text-xl">✓</span>
-                  <span className="text-zinc-700">{t('pricing.features.support')}</span>
-                </li>
-              </ul>
-              <Link
-                href="/signup?plan=6months"
-                className="btn-shine block w-full text-center px-6 py-4 bg-zinc-900 text-white rounded-xl font-semibold hover:bg-zinc-800"
-              >
-                {t('pricing.ctaSelect')} →
-              </Link>
-            </div>
-
-            {/* Plan 2 - Popular */}
-            <div className="reveal pulse-glow relative bg-gradient-to-br from-[#F47B20] to-[#F5B82E] text-white rounded-2xl p-8 md:scale-105 z-10 border border-white/20" style={{ ['--reveal-delay' as string]: '80ms' }}>
-              <div className="text-center mb-2">
-                <span className="inline-block bg-white text-orange-600 px-4 py-1 rounded-full text-sm font-extrabold mb-4 shadow">
-                  {t('pricing.mostPopular')}
-                </span>
-              </div>
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-extrabold mb-2">{t('pricing.plan1year')}</h3>
-                <div className="flex items-baseline justify-center gap-2 mb-2">
-                  <span className="text-5xl font-extrabold">{formatPrice(convertFromTnd(250))}</span>
-                </div>
-                <p className="text-sm text-white/90">{t('pricing.perYear')}</p>
-                <p className="text-sm mt-2 text-yellow-100 font-semibold">{t('pricing.save', { amount: formatPrice(convertFromTnd(50)) })}</p>
-              </div>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-center gap-2">
-                  <span className="text-white text-xl">✓</span>
-                  <span>{t('pricing.features.items')}</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-white text-xl">✓</span>
-                  <span>{t('pricing.features.support')}</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-white text-xl">✓</span>
-                  <span>{t('pricing.features.updates')}</span>
-                </li>
-              </ul>
-              <Link
-                href="/signup?plan=1year"
-                className="btn-shine block w-full text-center px-6 py-4 bg-white text-orange-600 rounded-xl font-extrabold hover:bg-zinc-50"
-              >
-                {t('pricing.ctaSelect')} →
-              </Link>
-            </div>
-
-            {/* Plan 3 - Lifetime */}
-            <div className="reveal relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a0a2e] via-zinc-900 to-[#2a1a00] text-white p-8 border border-amber-500/40 shadow-[0_0_40px_rgba(251,191,36,0.10)] md:scale-95 md:opacity-95" style={{ ['--reveal-delay' as string]: '160ms' }}>
-              <div className="pointer-events-none absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-amber-400/20 via-transparent to-amber-400/5 opacity-60" />
-              <div className="relative">
-                <div className="text-center mb-2">
-                  <span className="inline-block bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 px-5 py-1.5 rounded-full text-sm font-extrabold mb-4 shadow-lg shadow-amber-500/30">
-                    ✦ {t('pricing.bestValue')} ✦
-                  </span>
-                </div>
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-extrabold mb-2">{t('pricing.planLifetime')}</h3>
-                  <div className="flex items-baseline justify-center gap-2 mb-2">
-                    <span className="text-5xl font-extrabold text-amber-300">{formatPrice(convertFromTnd(600))}</span>
-                  </div>
-                  <p className="text-sm text-zinc-400">{t('pricing.once')}</p>
-                  <p className="text-sm mt-2 text-amber-400 font-bold bg-amber-400/10 px-3 py-1 rounded-full inline-block border border-amber-500/20">💰 {t('pricing.save', { amount: formatPrice(convertFromTnd(300)) })}</p>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  <li className="flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
-                    <span>{t('pricing.features.items')}</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
-                    <span>{t('pricing.features.support')}</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
-                    <span>{t('pricing.features.updates')}</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 text-zinc-900 text-sm font-bold shrink-0">✓</span>
-                    <span>{t('pricing.features.analytics')}</span>
-                  </li>
-                </ul>
-                <Link
-                  href="/signup?plan=lifetime"
-                  className="btn-shine relative block w-full text-center px-6 py-4 bg-gradient-to-l from-amber-400 to-yellow-300 text-zinc-900 rounded-xl font-extrabold text-lg hover:from-amber-300 hover:to-yellow-200 shadow-lg shadow-amber-500/25 transition-all hover:-translate-y-0.5"
-                >
-                  {t('pricing.ctaSelect')} →
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Methods */}
-          <div className="text-center mb-8 reveal">
-            <p className="text-xl font-bold text-zinc-900 mb-6">{t('checkout.paymentMethods')}</p>
-            <div className="marquee">
-              <div className="marquee-track py-2">
-                {[0, 1].map((dup) => (
-                  <div key={dup} className="flex items-center gap-8 shrink-0" aria-hidden={dup === 1}>
-                    <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-xl border border-zinc-200 shadow-md hover:shadow-lg transition-shadow">
-                      <Image
-                        src="https://805342.fs1.hubspotusercontent-na1.net/hubfs/805342/flouci_logo_new.png"
-                        alt="Flouci"
-                        width={120}
-                        height={45}
-                        className="object-contain h-12"
-                      />
-                    </div>
-                    <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-xl border border-zinc-200 shadow-md hover:shadow-lg transition-shadow">
-                      <Image
-                        src="https://www.thd.tn/wp-content/uploads/2019/12/1200x630wa-1000x600.png"
-                        alt="D17"
-                        width={120}
-                        height={45}
-                        className="object-contain h-12"
-                      />
-                      <span className="text-zinc-900 font-bold text-lg">D17</span>
-                    </div>
-                    <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-xl border border-zinc-200 shadow-md hover:shadow-lg transition-shadow">
-                      <svg className="w-12 h-12 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
-                      <span className="text-zinc-900 font-bold text-lg">{t('checkout.bankTransfer')}</span>
-                    </div>
-                    <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-xl border border-zinc-200 shadow-md hover:shadow-lg transition-shadow">
-                      <svg className="w-10 h-10" viewBox="0 0 40 40" fill="none">
-                        <rect width="40" height="40" rx="8" fill="#7C3AED" />
-                        <path d="M12 20L18 14L24 20L18 26L12 20Z" fill="white" opacity="0.9" />
-                        <path d="M18 14L24 20L18 26" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <span className="text-zinc-900 font-bold text-lg">{t('checkout.onlinePayment')}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="text-center reveal">
-            <p className="text-zinc-600 mb-4">
-              {t('pricing.freeTrial')} - {t('pricing.noPayment')}
+            <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-1.5 text-sm font-medium text-zinc-600">
+              <span className="text-orange-500" aria-hidden="true">✓</span>
+              {t('pricing.freeTrial')} · {t('pricing.noPayment')}
             </p>
-            <Link
-              href="/signup"
-              className="text-orange-600 font-semibold hover:text-orange-700 underline"
-            >
-              {t('pricing.freeTrial')} →
-            </Link>
+          </div>
+
+          <div className="reveal">
+            <PricingComparison />
           </div>
         </div>
       </section>
 
       {/* Final CTA - Simple & Direct */}
-      <section className="py-24 bg-gradient-to-br from-orange-50 via-amber-50 to-orange-50">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center reveal">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 mb-6">
-            {t('pricing.freeTrial')}
-          </h2>
-          <p className="text-lg text-zinc-600 mb-8">
-            {t('pricing.freeTrialDesc')}<br />
-            <strong className="text-zinc-900">{t('pricing.noPayment')}</strong>
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/signup"
-              className="btn-shine px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl shadow-orange-500/30"
+      <section className="py-24 sm:py-28 lg:py-32 bg-[#FEFEFE]">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 reveal">
+          <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#F47B20] to-[#F5B82E] px-6 py-16 text-center shadow-2xl shadow-orange-500/25 sm:px-12">
+            {/* Faint QR watermark for texture */}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 100 100"
+              className="pointer-events-none absolute -right-10 top-1/2 h-[125%] w-auto -translate-y-1/2 text-white opacity-[0.08]"
+              fill="currentColor"
             >
-              {t('hero.cta')} →
-            </Link>
-            <Link
-              href="/login"
-              className="btn-shine px-10 py-5 bg-white text-zinc-900 rounded-xl font-bold text-xl hover:bg-zinc-50 border-2 border-zinc-200"
-            >
-              {t('nav.login')}
-            </Link>
+              <path d="M8 8h28v28H8V8zm6 6v16h16V14H14zm4 4h8v8h-8v-8zM64 8h28v28H64V8zm6 6v16h16V14H70zm4 4h8v8h-8v-8zM8 64h28v28H8V64zm6 6v16h16V70H14zm4 4h8v8h-8v-8zM44 8h8v8h-8V8zm8 8h8v8h-8v-8zm-8 8h8v8h-8v-8zm8 8h8v8h-8v-8zm-8 8h8v8h-8v-8zM8 44h8v8H8v-8zm16 0h8v8h-8v-8zm16 0h8v8h-8v-8zm24 0h8v8h-8v-8zm16 0h8v8h-8v-8zm8 8h8v8h-8v-8zm-16 0h8v8h-8v-8zm-8 8h8v8h-8v-8zm16 0h8v8h-8v-8zm8 8h8v8h-8v-8zm-16 0h8v8h-8v-8zm-8 8h8v8h-8v-8zm16 8h8v8h-8v-8zm8-8h8v8h-8v-8zm8 8h8v8h-8v-8zm-40-8h8v8h-8v-8zm0 16h8v8h-8v-8z" />
+            </svg>
+            <h2 className="relative text-3xl font-extrabold text-white sm:text-5xl">
+              Essai gratuit de 7 jours
+            </h2>
+            <p className="relative mx-auto mt-4 max-w-xl text-lg text-white/90 sm:text-xl">
+              Commencez votre essai gratuit aujourd&apos;hui. Aucun paiement requis.
+            </p>
+            <div className="relative mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link
+                href="/signup"
+                className="btn-shine w-full rounded-xl bg-[#FEFEFE] px-8 py-4 text-base font-extrabold text-orange-600 shadow-lg hover:bg-white sm:w-auto"
+              >
+                Démarrer l&apos;essai gratuit →
+              </Link>
+              <Link
+                href="/login"
+                className="w-full rounded-xl border border-white/50 px-8 py-4 text-base font-bold text-white transition-colors hover:bg-white/10 sm:w-auto"
+              >
+                Connexion
+              </Link>
+            </div>
+            <p className="relative mt-7 text-sm font-medium text-white/90">
+              Rejoint par des restaurants et cafés en Tunisie 🇹🇳
+            </p>
           </div>
-          <p className="text-sm text-zinc-500 mt-6">
-            {t('pricing.freeTrial')} • {t('pricing.noPayment')}
-          </p>
         </div>
       </section>
 
-      {/* Simple Footer */}
+      {/* Simple Footer (kept dark — the footer logo is a light lockup) */}
       <footer className="bg-zinc-900 text-zinc-400 py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="text-white font-bold mb-3">{t('app.name')}</h3>
-              <p className="text-sm">{t('app.tagline')}</p>
+              {/* logo2 is the light lockup (white lettering) — made for this dark footer */}
+              <Image src={logoFull} alt="Scaniha — QR Menu Tool" className="h-20 w-auto" />
+              <p className="mt-4 text-sm">{t('app.tagline')}</p>
+              <p className="mt-2 text-sm text-zinc-500">Menus QR élégants pour restaurants et cafés.</p>
             </div>
             <div>
               <h3 className="text-white font-bold mb-3">{t('nav.features')}</h3>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/features" className="hover:text-white transition-colors">All Features</Link></li>
-                <li><Link href="/qr-menu-for-restaurants" className="hover:text-white transition-colors">QR Menu for Restaurants</Link></li>
-                <li><Link href="/digital-menu-builder" className="hover:text-white transition-colors">Digital Menu Builder</Link></li>
-                <li><Link href="/free-qr-menu" className="hover:text-white transition-colors">Free QR Menu</Link></li>
+                <li><Link href="/features" className="hover:text-white transition-colors">Toutes les fonctionnalités</Link></li>
+                <li><Link href="/qr-menu-for-restaurants" className="hover:text-white transition-colors">Menu QR pour restaurants</Link></li>
+                <li><Link href="/digital-menu-builder" className="hover:text-white transition-colors">Créateur de menu numérique</Link></li>
+                <li><Link href="/free-qr-menu" className="hover:text-white transition-colors">Menu QR gratuit</Link></li>
               </ul>
             </div>
             <div>
-              <h3 className="text-white font-bold mb-3">Company</h3>
+              <h3 className="text-white font-bold mb-3">Entreprise</h3>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/about" className="hover:text-white transition-colors">About Scaniha</Link></li>
-                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
+                <li><Link href="/about" className="hover:text-white transition-colors">À propos de Scaniha</Link></li>
+                <li><Link href="/pricing" className="hover:text-white transition-colors">Tarifs</Link></li>
                 <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
                 <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
-                <li><Link href="/security" className="hover:text-white transition-colors">Security</Link></li>
+                <li><Link href="/security" className="hover:text-white transition-colors">Sécurité</Link></li>
               </ul>
             </div>
             <div>
-              <h3 className="text-white font-bold mb-3">{t('nav.language')}</h3>
-              <div className="flex gap-4 mb-4">
-                <LanguageSwitcher />
-                <CurrencySelector />
-              </div>
+              <h3 className="text-white font-bold mb-3">Commencer</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/signup" className="hover:text-white transition-colors">Créer un compte gratuit</Link></li>
+                <li><Link href="/login" className="hover:text-white transition-colors">Connexion</Link></li>
+                <li><Link href="/contact" className="hover:text-white transition-colors">Nous contacter</Link></li>
+              </ul>
             </div>
           </div>
           <div className="border-t border-zinc-800 pt-6 text-center text-sm">
-            <p className="mb-2">© 2024 {t('app.name')}. All rights reserved.</p>
+            <p className="mb-2">© {new Date().getFullYear()} {t('app.name')}. Tous droits réservés.</p>
           </div>
         </div>
       </footer>
 
       {/* Sticky mobile CTA */}
-      <div className={`sticky-cta lg:hidden fixed bottom-0 inset-x-0 z-50 p-3 bg-white/90 backdrop-blur-md border-t border-zinc-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] ${showStickyCta ? 'show' : ''}`}>
+      <div className={`sticky-cta lg:hidden fixed bottom-0 inset-x-0 z-50 p-3 bg-[#FEFEFE]/90 backdrop-blur-md border-t border-zinc-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] ${showStickyCta ? 'show' : ''}`}>
         <Link
           href="/signup"
           className="btn-shine block w-full text-center px-6 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-lg shadow-lg shadow-orange-500/30"
         >
-          {t('hero.cta')}
+          Commencer l&apos;essai gratuit
         </Link>
       </div>
     </div>

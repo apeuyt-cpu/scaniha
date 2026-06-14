@@ -12,47 +12,85 @@ const PUBLIC_ROUTES = ['/login', '/signup', '/']
  * Check if a path is a public route
  */
 function isPublicRoute(pathname: string): boolean {
-  // Allow login and signup
-  if (pathname.startsWith('/login') || pathname.startsWith('/signup')) {
-    return true
-  }
-  
-  // Allow root path
-  if (pathname === '/') {
-    return true
-  }
-  
-  // Allow public menu routes (slug routes)
+  if (pathname.startsWith('/login') || pathname.startsWith('/signup')) return true
+  if (pathname === '/') return true
+  // Public menu routes (slug routes)
   if (pathname.match(/^\/[^\/]+$/) && !pathname.startsWith('/admin') && !pathname.startsWith('/super-admin')) {
     return true
   }
-  
   return false
 }
 
 /**
- * Get user role from profile
+ * Distinguish a TRANSIENT infrastructure/network error (Supabase unreachable,
+ * fetch failed, timeout, 5xx) from a DEFINITIVE auth failure (no/invalid
+ * session). We must never log a valid session out over a transient hiccup —
+ * that is the "sometimes I get kicked to /login" bug.
+ */
+function isRetryable(error: any): boolean {
+  if (!error) return false
+  const name = String(error.name || '')
+  const msg = String(error.message || '').toLowerCase()
+  const status = error.status
+  // Definitive "no / invalid session" → never retry, treat as unauthenticated.
+  if (name.includes('SessionMissing') || msg.includes('session missing') || msg.includes('not authenticated')) return false
+  if (status === 400 || status === 401 || status === 403) return false
+  // Transient infra / network → retry, then fail open.
+  if (name.includes('Retryable') || name === 'TypeError') return true
+  if (
+    msg.includes('fetch failed') || msg.includes('network') || msg.includes('timeout') ||
+    msg.includes('econnreset') || msg.includes('socket') || msg.includes('und_err') ||
+    msg.includes('enotfound') || msg.includes('eai_again')
+  ) return true
+  if (status == null || status === 0 || status >= 500) return true
+  return false
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/**
+ * Validate the session, retrying transient network failures.
+ * Returns `transient: true` when we could not reach the auth service (so the
+ * caller should fail OPEN instead of redirecting a valid session to /login).
+ */
+async function getUserWithRetry(
+  supabase: ReturnType<typeof createSupabaseServerClient>
+): Promise<{ user: { id: string } | null; transient: boolean }> {
+  let lastError: any = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data, error } = await supabase.auth.getUser()
+    if (data?.user && !error) return { user: data.user, transient: false }
+    lastError = error
+    if (error && !isRetryable(error)) return { user: null, transient: false }
+    if (attempt < 2) await sleep(150 * (attempt + 1))
+  }
+  return { user: null, transient: isRetryable(lastError) }
+}
+
+/**
+ * Fetch the user's role, retrying transient failures.
+ * `errored: true` means we couldn't determine the role (transient) — the caller
+ * should fail OPEN for an already-authenticated user rather than kicking to login.
  */
 async function getUserRole(
   supabase: ReturnType<typeof createSupabaseServerClient>,
   userId: string
-): Promise<UserRole> {
-  try {
-    const { data: profile } = await supabase
+): Promise<{ role: UserRole; errored: boolean }> {
+  let lastError: any = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('role')
       .eq('user_id', userId)
       .maybeSingle()
-    
-    return (profile?.role as UserRole) || null
-  } catch (error) {
-    return null
+    if (!error) return { role: (profile?.role as UserRole) || null, errored: false }
+    lastError = error
+    if (!isRetryable(error)) return { role: null, errored: false }
+    if (attempt < 2) await sleep(150 * (attempt + 1))
   }
+  return { role: null, errored: isRetryable(lastError) }
 }
 
-/**
- * Get the correct dashboard URL for a role
- */
 function getDashboardUrl(role: UserRole): string {
   switch (role) {
     case 'super_admin':
@@ -66,13 +104,8 @@ function getDashboardUrl(role: UserRole): string {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  
-  // Create Supabase client for middleware
-  let response = NextResponse.next({
-    request: {
-      headers: req.headers,
-    },
-  })
+
+  let response = NextResponse.next({ request: { headers: req.headers } })
 
   const supabase = createSupabaseServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -83,156 +116,73 @@ export async function middleware(req: NextRequest) {
           return req.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          req.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
+          req.cookies.set({ name, value, ...options })
+          response = NextResponse.next({ request: { headers: req.headers } })
+          response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: CookieOptions) {
-          req.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
+          req.cookies.set({ name, value: '', ...options })
+          response = NextResponse.next({ request: { headers: req.headers } })
+          response.cookies.set({ name, value: '', ...options })
         },
       },
     }
   )
 
-  // Check authentication - this will automatically refresh the session if needed
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  // Validates the session and refreshes the cookie when needed (with retry on
+  // transient network errors so a flaky connection never logs the user out).
+  const { user, transient } = await getUserWithRetry(supabase)
 
-  // Debug logging
-  if (pathname === '/admin' || pathname === '/login') {
-    console.log('[Middleware]', pathname, '- User:', user?.id || 'none', 'Error:', authError?.message || 'none')
+  const redirectTo = (path: string, status = 307) => {
+    const url = req.nextUrl.clone()
+    url.pathname = path
+    const r = NextResponse.redirect(url, status)
+    response.cookies.getAll().forEach((c) => r.cookies.set(c.name, c.value))
+    return r
   }
 
-  // If user is authenticated and trying to access login/signup, redirect to their dashboard
-  if (user && !authError) {
-    if (pathname === '/login' || pathname === '/signup') {
-      try {
-        const userRole = await getUserRole(supabase, user.id)
-        const dashboardUrl = getDashboardUrl(userRole)
-        
-        console.log('[Middleware] Redirecting authenticated user from', pathname, 'to', dashboardUrl)
-        const redirectUrl = req.nextUrl.clone()
-        redirectUrl.pathname = dashboardUrl
-        // Use 302 (temporary redirect) instead of 307 to allow browser to handle cookies properly
-        const redirectResponse = NextResponse.redirect(redirectUrl, 302)
-        // Copy cookies from the response to preserve session
-        response.cookies.getAll().forEach(cookie => {
-          redirectResponse.cookies.set(cookie.name, cookie.value)
-        })
-        return redirectResponse
-      } catch (error) {
-        console.error('[Middleware] Error getting user role:', error)
-        // If we can't get role but user is authenticated, redirect to admin as default
-        const redirectUrl = req.nextUrl.clone()
-        redirectUrl.pathname = '/admin'
-        const redirectResponse = NextResponse.redirect(redirectUrl, 302)
-        response.cookies.getAll().forEach(cookie => {
-          redirectResponse.cookies.set(cookie.name, cookie.value)
-        })
-        return redirectResponse
+  // Authenticated user landing on login/signup → send to their dashboard.
+  if (user && (pathname === '/login' || pathname === '/signup')) {
+    const { role, errored } = await getUserRole(supabase, user.id)
+    // If we can't resolve the role right now, just let them sit on the page
+    // rather than risk a redirect loop.
+    if (!errored) {
+      const dashboardUrl = getDashboardUrl(role)
+      if (dashboardUrl !== pathname && dashboardUrl !== '/login') {
+        return redirectTo(dashboardUrl, 302)
       }
     }
+    return response
   }
-  
-  // Allow public routes (but only if user is not authenticated)
+
+  // Public routes are always allowed.
   if (isPublicRoute(pathname)) {
-    // If user is authenticated, don't allow access to login/signup (handled above)
-    // But allow other public routes
     return response
   }
 
-  // For protected routes, check authentication
-  if (authError || !user) {
-    // Only redirect to login if we're not already on login/signup
-    if (pathname !== '/login' && pathname !== '/signup') {
-      console.log('[Middleware] Redirecting unauthenticated user from', pathname, 'to /login')
-      const redirectUrl = req.nextUrl.clone()
-      redirectUrl.pathname = '/login'
-      const redirectResponse = NextResponse.redirect(redirectUrl)
-      response.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie.name, cookie.value)
-      })
-      return redirectResponse
-    }
-    // If already on login/signup and not authenticated, allow access
-    return response
+  // Protected route, no valid user.
+  if (!user) {
+    // Transient infra error (Supabase unreachable) — DO NOT log a valid session
+    // out. Let the request through; the page's own server guard re-checks once
+    // Supabase is reachable, and surfaces a retry instead of a forced logout.
+    if (transient) return response
+    return redirectTo('/login')
   }
 
-  // Get user role
-  const userRole = await getUserRole(supabase, user.id)
+  // Authenticated — resolve role (retrying transient failures).
+  const { role, errored } = await getUserRole(supabase, user.id)
+  // Couldn't determine the role due to a transient error → fail OPEN for an
+  // already-authenticated user. The page guard will enforce the role properly.
+  if (errored) return response
 
-  // Protect /admin routes - only allow owners
-  if (pathname.startsWith('/admin')) {
-    if (userRole !== 'owner') {
-      const redirectUrl = req.nextUrl.clone()
-      
-      // Redirect super_admin to their dashboard
-      if (userRole === 'super_admin') {
-        redirectUrl.pathname = '/super-admin'
-        const redirectResponse = NextResponse.redirect(redirectUrl, 307)
-        response.cookies.getAll().forEach(cookie => {
-          redirectResponse.cookies.set(cookie.name, cookie.value)
-        })
-        return redirectResponse
-      }
-      
-      // Redirect others to login
-      redirectUrl.pathname = '/login'
-      const redirectResponse = NextResponse.redirect(redirectUrl, 307)
-      response.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie.name, cookie.value)
-      })
-      return redirectResponse
-    }
+  // Protect /admin — owners only.
+  if (pathname.startsWith('/admin') && role !== 'owner') {
+    return redirectTo(role === 'super_admin' ? '/super-admin' : '/login')
   }
 
-  // Protect /super-admin routes - only allow super_admin
-  // CRITICAL: Block owners from accessing super-admin
-  if (pathname.startsWith('/super-admin')) {
-    if (userRole === 'owner') {
-      const redirectUrl = req.nextUrl.clone()
-      redirectUrl.pathname = '/admin'
-      const redirectResponse = NextResponse.redirect(redirectUrl, 307)
-      response.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie.name, cookie.value)
-      })
-      return redirectResponse
-    }
-    
-    if (userRole !== 'super_admin') {
-      const redirectUrl = req.nextUrl.clone()
-      redirectUrl.pathname = '/login'
-      const redirectResponse = NextResponse.redirect(redirectUrl, 307)
-      response.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie.name, cookie.value)
-      })
-      return redirectResponse
-    }
+  // Protect /super-admin — super_admin only (block owners).
+  if (pathname.startsWith('/super-admin') && role !== 'super_admin') {
+    return redirectTo(role === 'owner' ? '/admin' : '/login')
   }
 
   return response

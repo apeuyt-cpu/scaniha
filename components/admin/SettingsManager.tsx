@@ -1,14 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import LogoUpload from '@/components/business/LogoUpload'
-import SocialMediaManager from '@/components/admin/SocialMediaManager'
-import MenuColorPicker from '@/components/admin/MenuColorPicker'
-import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
-import CurrencySelector from '@/components/ui/CurrencySelector'
+import SeoSettings from '@/components/admin/SeoSettings'
 import { createClient } from '@/lib/supabase/client'
 import { useLocale } from '@/lib/i18n/LocaleContext'
-import { useCurrency } from '@/lib/i18n/CurrencyContext'
 
 interface Business {
   id: string
@@ -16,144 +11,90 @@ interface Business {
   slug: string
   logo_url: string | null
   primary_color?: string | null
+  theme_id?: string | null
+  design_settings?: any
 }
 
-export default function SettingsManager({ 
-  business, 
-  onUpdate 
-}: { 
-  business: Business
-  onUpdate: () => void
-}) {
+export default function SettingsManager({ business, onUpdate }: { business: Business; onUpdate: () => void }) {
   const { t, dir } = useLocale()
-  const { formatPrice } = useCurrency()
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(business.name)
-  const [loading, setLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
   const supabase = createClient()
 
-  const handleSave = async () => {
-    setLoading(true)
-    try {
-      const { error } = await (supabase
-        .from('businesses') as any)
-        .update({ name })
-        .eq('id', business.id)
+  const menuUrl = typeof window !== 'undefined' ? `${window.location.origin}/${business.slug}` : `/${business.slug}`
 
-      if (error) throw error
-      setEditing(false)
-      onUpdate()
-    } catch (err: any) {
-      alert(err.message || 'فشل التحديث')
-    } finally {
-      setLoading(false)
-    }
+  const copyLink = () => {
+    navigator.clipboard.writeText(menuUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
-  const menuUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/${business.slug}`
-    : `/${business.slug}`
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut()
+    } catch {}
+    window.location.href = '/login'
+  }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden" dir={dir}>
-      <div className="p-5 lg:p-6 border-b border-zinc-200">
-        <h3 className="text-xl lg:text-2xl font-bold text-zinc-900">{t('settings.title')}</h3>
-        <p className="text-sm lg:text-base text-zinc-600 mt-1">{t('dashboard.businessInfo')}</p>
-      </div>
-      <div className="p-5 lg:p-6 space-y-6">
-        {/* Language & Currency */}
-        <div>
-          <label className="block text-sm lg:text-base font-medium text-zinc-700 mb-2">{t('settings.language')} & {t('settings.currency')}</label>
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher />
-            <CurrencySelector />
+    <div className="space-y-5" dir={dir}>
+      {/* Lien du menu — account info */}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h2 className="text-base font-bold text-zinc-900">Lien du menu</h2>
+        <p className="mt-0.5 text-sm text-zinc-500">Le lien public de votre menu en ligne.</p>
+        <div className="mt-4">
+          <label className="mb-2 block text-sm font-medium text-zinc-700">{t('settings.menuLink')}</label>
+          <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3">
+            <code className="min-w-0 flex-1 truncate text-sm text-zinc-600" dir="ltr">{menuUrl}</code>
+            <button onClick={copyLink} className={`shrink-0 text-sm font-semibold transition ${copied ? 'text-green-600' : 'text-orange-600 hover:text-orange-700'}`}>
+              {copied ? 'Copié ✓' : t('settings.copy')}
+            </button>
           </div>
+          <p className="mt-1.5 text-xs text-zinc-400">Le logo, le nom, les réseaux et le style du menu se règlent dans « Design ».</p>
         </div>
+      </section>
 
-        {/* Logo */}
-        <div>
-          <label className="block text-sm lg:text-base font-medium text-zinc-700 mb-2">{t('settings.logo')}</label>
-          <LogoUpload 
-            businessId={business.id} 
-            currentLogoUrl={business.logo_url}
-            onLogoUpdated={onUpdate}
-          />
-        </div>
+      {/* SEO & partage */}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <SeoSettings
+          businessId={business.id}
+          businessName={business.name}
+          logoUrl={business.logo_url}
+          themeId={business.theme_id}
+          designSettings={business.design_settings}
+          onUpdate={onUpdate}
+        />
+      </section>
 
-        {/* Business Name */}
-        <div>
-          <label className="block text-sm lg:text-base font-medium text-zinc-700 mb-2">{t('settings.businessName')}</label>
-          {editing ? (
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-zinc-900 text-sm lg:text-base"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSave}
-                  disabled={loading}
-                  className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm lg:text-base hover:bg-zinc-800 disabled:opacity-50"
-                >
-                  {loading ? t('common.loading') : t('settings.save')}
-                </button>
-                <button
-                  onClick={() => {
-                    setName(business.name)
-                    setEditing(false)
-                  }}
-                  className="px-4 py-2 bg-zinc-200 text-zinc-700 rounded-lg text-sm lg:text-base hover:bg-zinc-300"
-                >
-                  {t('settings.cancel')}
-                </button>
-              </div>
+      {/* Préférences */}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h2 className="text-base font-bold text-zinc-900">Préférences</h2>
+        <p className="mt-0.5 text-sm text-zinc-500">Langue, devise et session.</p>
+        <div className="mt-4 divide-y divide-zinc-100">
+          <InfoRow label="Langue" value="Français" />
+          <InfoRow label="Devise" value="Dinar tunisien (TND)" />
+          <div className="flex items-center justify-between gap-3 pt-3">
+            <div>
+              <p className="text-sm font-medium text-zinc-800">Session</p>
+              <p className="text-xs text-zinc-400">Déconnectez-vous de votre compte sur cet appareil.</p>
             </div>
-          ) : (
-            <div className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
-              <span className="text-sm lg:text-base text-zinc-900">{business.name}</span>
-              <button
-                onClick={() => setEditing(true)}
-                className="text-orange-600 hover:text-orange-700 text-sm lg:text-base font-medium"
-              >
-                {t('settings.edit')}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Menu URL */}
-        <div>
-          <label className="block text-sm lg:text-base font-medium text-zinc-700 mb-2">{t('settings.menuLink')}</label>
-          <div className="flex items-center gap-2 p-3 bg-zinc-50 rounded-lg">
-            <code className="flex-1 text-xs lg:text-sm text-zinc-600 truncate" dir="ltr">{menuUrl}</code>
             <button
-              onClick={() => {
-                navigator.clipboard.writeText(menuUrl)
-                alert(t('settings.copied'))
-              }}
-              className="px-3 py-1.5 bg-zinc-200 text-zinc-700 rounded-lg text-xs lg:text-sm hover:bg-zinc-300"
+              onClick={signOut}
+              className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
             >
-              {t('settings.copy')}
+              Se déconnecter
             </button>
           </div>
         </div>
+      </section>
+    </div>
+  )
+}
 
-        {/* Menu Color */}
-        <div>
-          <MenuColorPicker
-            businessId={business.id}
-            currentColor={business.primary_color || null}
-            onColorUpdated={onUpdate}
-          />
-        </div>
-      </div>
-      
-      {/* Social Media */}
-      <div className="border-t border-zinc-200 p-5 lg:p-6">
-        <SocialMediaManager businessId={business.id} />
-      </div>
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between py-3">
+      <span className="text-sm text-zinc-500">{label}</span>
+      <span className="text-sm font-medium text-zinc-900">{value}</span>
     </div>
   )
 }

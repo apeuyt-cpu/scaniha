@@ -1,34 +1,67 @@
-import { requireOwner } from '@/lib/auth'
-import { getBusinessByOwner } from '@/lib/db/business'
-import LogoUpload from '@/components/business/LogoUpload'
-import BusinessSettings from '@/components/business/BusinessSettings'
+'use client'
 
-export default async function SettingsPage() {
-  const { user } = await requireOwner()
-  const business = await getBusinessByOwner(user.id)
+import { useState, useEffect } from 'react'
+import SettingsManager from '@/components/admin/SettingsManager'
+import PageShell from '@/components/admin/ui/PageShell'
+
+interface Business {
+  id: string
+  name: string
+  slug: string
+  logo_url: string | null
+  primary_color: string | null
+  wheel_enabled: boolean
+  wheel_visible: boolean
+}
+
+export default function SettingsPage() {
+  const [business, setBusiness] = useState<Business | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const fetchBusiness = async () => {
+    try {
+      const res = await fetch('/api/admin/business')
+      if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+        setBusiness(await res.json())
+      } else if (res.status === 401 || res.status === 403) {
+        window.location.href = '/login'
+      }
+    } catch (err) {
+      console.error('Error fetching business:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchBusiness()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+      </div>
+    )
+  }
 
   if (!business) {
-    return <div>Business not found</div>
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-zinc-500">Aucun établissement trouvé</p>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Business Settings</h1>
-        <p className="mt-2 text-gray-600">
-          Manage your business information and branding.
-        </p>
+    <PageShell
+      title="Réglages"
+      subtitle="Gérez les informations et l'identité de votre établissement."
+      width="3xl"
+    >
+      <div className="space-y-5">
+        <SettingsManager business={business} onUpdate={fetchBusiness} />
       </div>
-
-      <div className="space-y-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold mb-6">Logo</h2>
-          <LogoUpload businessId={business.id} currentLogoUrl={business.logo_url} />
-        </div>
-
-        <BusinessSettings business={business} />
-      </div>
-    </div>
+    </PageShell>
   )
 }
-

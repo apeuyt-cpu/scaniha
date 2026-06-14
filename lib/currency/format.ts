@@ -3,14 +3,14 @@ import type { Locale } from '@/lib/i18n/config'
 
 export function formatPrice(
   amount: number | null | undefined,
-  currencyCode: string = 'USD',
-  locale: Locale = 'en'
+  currencyCode: string = 'TND',
+  locale: Locale = 'fr'
 ): string {
   if (amount === null || amount === undefined) return ''
 
   try {
-    const localeMap: Record<Locale, string> = { en: 'en-US', ar: 'ar-SA', fr: 'fr-FR' }
-    const localeStr = localeMap[locale] || 'en-US'
+    const localeMap: Record<Locale, string> = { fr: 'fr-TN' }
+    const localeStr = localeMap[locale] || 'fr-TN'
 
     const formatter = new Intl.NumberFormat(localeStr, {
       style: 'currency',
@@ -27,7 +27,7 @@ export function formatPrice(
   }
 }
 
-export function formatPriceInput(amount: number | null | undefined, currencyCode: string = 'USD'): string {
+export function formatPriceInput(amount: number | null | undefined, currencyCode: string = 'TND'): string {
   if (amount === null || amount === undefined) return ''
   const decimals = isZeroDecimalCurrency(currencyCode) ? 0 : 2
   return amount.toFixed(decimals)

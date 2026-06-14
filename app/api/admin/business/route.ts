@@ -13,13 +13,13 @@ export async function GET() {
     const business = await getBusinessByOwner(user.id)
 
     if (!business) {
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }
-    
+
     // Verify the business actually belongs to this user (extra security check)
     if (business.owner_id !== user.id) {
       return NextResponse.json(
-        { error: 'Unauthorized: Business does not belong to this user' },
+        { error: 'Accès refusé : cet établissement ne vous appartient pas.' },
         { status: 403 }
       )
     }
@@ -32,10 +32,8 @@ export async function GET() {
     if (error?.digest?.startsWith('NEXT_REDIRECT')) {
       throw error
     }
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('[admin/business] GET error:', error?.message)
+    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
   }
 }
 
@@ -52,10 +50,10 @@ export async function PATCH(request: Request) {
       .single()
 
     if (!business) {
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }
 
-    const allowedFields = ['wheel_visible', 'name', 'primary_color']
+    const allowedFields = ['name', 'primary_color']
     const updates: Record<string, any> = {}
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
@@ -64,7 +62,7 @@ export async function PATCH(request: Request) {
     }
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+      return NextResponse.json({ error: 'Aucun champ valide à mettre à jour.' }, { status: 400 })
     }
 
     const { error } = await (supabase.from('businesses') as any)
@@ -72,7 +70,11 @@ export async function PATCH(request: Request) {
       .eq('id', business.id)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('[admin/business] PATCH update error:', error.message)
+      return NextResponse.json(
+        { error: "Échec de la mise à jour de l'établissement." },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({ success: true, updates })
@@ -80,10 +82,8 @@ export async function PATCH(request: Request) {
     if (error?.digest?.startsWith('NEXT_REDIRECT')) {
       throw error
     }
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('[admin/business] PATCH error:', error?.message)
+    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
   }
 }
 
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 
     if (!businessName || !businessName.trim()) {
       return NextResponse.json(
-        { error: 'اسم النشاط التجاري مطلوب' },
+        { error: "Le nom de l'établissement est requis." },
         { status: 400 }
       )
     }
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
     // Prevent using reserved slugs
     if (slug === 'super-admin' || slug === 'admin' || slug === 'login' || slug === 'signup') {
       return NextResponse.json(
-        { error: 'هذا الاسم محجوز ولا يمكن استخدامه. يرجى اختيار اسم آخر.' },
+        { error: 'Ce nom est réservé et ne peut pas être utilisé. Veuillez en choisir un autre.' },
         { status: 400 }
       )
     }
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
 
     if (existingBusinessName) {
       return NextResponse.json(
-        { error: 'اسم النشاط التجاري مستخدم بالفعل. يرجى اختيار اسم آخر.' },
+        { error: "Ce nom d'établissement est déjà utilisé. Veuillez en choisir un autre." },
         { status: 400 }
       )
     }
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
 
     if (existingSlug) {
       return NextResponse.json(
-        { error: 'اسم النشاط التجاري يُنشئ رابط مستخدم بالفعل. يرجى اختيار اسم آخر.' },
+        { error: "Ce nom d'établissement génère un lien déjà utilisé. Veuillez en choisir un autre." },
         { status: 400 }
       )
     }
@@ -159,12 +159,13 @@ export async function POST(request: Request) {
     if (businessError) {
       if (businessError.code === '23505') {
         return NextResponse.json(
-          { error: 'اسم النشاط التجاري مستخدم بالفعل. يرجى اختيار اسم آخر.' },
+          { error: "Ce nom d'établissement est déjà utilisé. Veuillez en choisir un autre." },
           { status: 400 }
         )
       }
+      console.error('[admin/business] POST insert error:', businessError.message)
       return NextResponse.json(
-        { error: businessError.message || 'فشل إنشاء النشاط التجاري' },
+        { error: "Échec de la création de l'établissement." },
         { status: 500 }
       )
     }
@@ -175,9 +176,7 @@ export async function POST(request: Request) {
     if (error?.digest?.startsWith('NEXT_REDIRECT')) {
       throw error
     }
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('[admin/business] POST error:', error?.message)
+    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
   }
 }

@@ -1,6 +1,6 @@
 export const dark = {
   id: 'dark',
-  name: 'Midnight Luxe',
+  name: 'Sombre',
   colors: {
     background: '#0A0A0A',        // Deep black
     text: '#FAFAFA',              // Crisp white

@@ -2,49 +2,49 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'How to Create a QR Menu for Your Restaurant | Step-by-Step Guide | Scaniha',
-  description: 'Learn how to create a QR menu for your restaurant step by step. From signing up to printing QR codes, this complete guide walks you through everything.',
-  openGraph: { title: 'How to Create a QR Menu for Your Restaurant | Step-by-Step Guide', description: 'Learn how to create a QR menu for your restaurant step by step.', url: 'https://scaniha.com/blog/how-to-create-qr-menu-for-restaurant', siteName: 'Scaniha', type: 'article' },
-  twitter: { card: 'summary_large_image', title: 'How to Create a QR Menu for Your Restaurant', description: 'Learn how to create a QR menu for your restaurant step by step.' },
+  title: 'Comment créer un menu QR pour votre restaurant | Guide étape par étape | Scaniha',
+  description: 'Apprenez à créer un menu QR pour votre restaurant étape par étape. De l’inscription à l’impression des codes QR, ce guide complet vous accompagne à chaque étape.',
+  openGraph: { title: 'Comment créer un menu QR pour votre restaurant | Guide étape par étape', description: 'Apprenez à créer un menu QR pour votre restaurant étape par étape.', url: 'https://scaniha.com/blog/how-to-create-qr-menu-for-restaurant', siteName: 'Scaniha', type: 'article' },
+  twitter: { card: 'summary_large_image', title: 'Comment créer un menu QR pour votre restaurant', description: 'Apprenez à créer un menu QR pour votre restaurant étape par étape.' },
   alternates: { canonical: 'https://scaniha.com/blog/how-to-create-qr-menu-for-restaurant' },
 }
 
 export default function Post() {
   return (
-    <div className="min-h-screen bg-white" dir="ltr">
+    <div className="min-h-screen bg-[#FEFEFE]" dir="ltr">
       <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <Link href="/blog" className="text-orange-600 hover:text-orange-700 font-medium mb-8 inline-block">&larr; Back to Blog</Link>
+        <Link href="/blog" className="text-orange-600 hover:text-orange-700 font-medium mb-8 inline-block">&larr; Retour au blog</Link>
         <article>
-          <h1 className="text-4xl font-extrabold text-zinc-900 mb-4">How to Create a QR Menu for Your Restaurant — Step-by-Step Guide</h1>
-          <time className="text-zinc-500 mb-8 block">January 15, 2026</time>
+          <h1 className="text-4xl font-extrabold text-zinc-900 mb-4">Comment créer un menu QR pour votre restaurant — Guide étape par étape</h1>
+          <time className="text-zinc-500 mb-8 block">15 janvier 2026</time>
 
           <div className="prose prose-lg max-w-none text-zinc-700 space-y-6">
-            <p>Creating a QR menu for your restaurant is one of the smartest investments you can make. It saves money on printing, reduces contact, and lets you update prices instantly. Here is exactly how to do it with Scaniha.</p>
+            <p>Créer un menu QR pour votre restaurant est l’un des investissements les plus judicieux que vous puissiez faire. Il vous fait économiser sur l’impression, réduit les contacts et vous permet de mettre à jour vos prix instantanément. Voici exactement comment procéder avec Scaniha.</p>
 
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Step 1: Sign Up for Scaniha</h2>
-            <p>Go to <Link href="/signup" className="text-orange-600">scaniha.com/signup</Link> and create your free account. No credit card is required for the 7-day trial. Enter your email, choose a password, and your business name.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Étape 1 : Inscrivez-vous sur Scaniha</h2>
+            <p>Rendez-vous sur <Link href="/signup" className="text-orange-600">scaniha.com/signup</Link> et créez votre compte gratuit. Aucune carte bancaire n’est requise pour l’essai de 7 jours. Saisissez votre e-mail, choisissez un mot de passe et indiquez le nom de votre établissement.</p>
 
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Step 2: Add Your Menu Items</h2>
-            <p>Use Scaniha&apos;s menu builder to add categories (Appetizers, Main Courses, Desserts, Drinks) and items under each category. For each item, add a name, price, description, and optional photo. You can import items from an Excel spreadsheet too.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Étape 2 : Ajoutez les articles de votre menu</h2>
+            <p>Utilisez le créateur de menu de Scaniha pour ajouter des catégories (Entrées, Plats principaux, Desserts, Boissons) et des articles sous chaque catégorie. Pour chaque article, ajoutez un nom, un prix, une description et une photo facultative. Vous pouvez également importer vos articles depuis un fichier Excel.</p>
 
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Step 3: Customize Your Theme</h2>
-            <p>Choose from premium themes and customize colors to match your restaurant branding. Set a primary color that matches your restaurant logo and decor.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Étape 3 : Personnalisez votre thème</h2>
+            <p>Choisissez parmi des thèmes premium et personnalisez les couleurs pour les harmoniser avec l’identité visuelle de votre restaurant. Définissez une couleur principale assortie au logo et à la décoration de votre établissement.</p>
 
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Step 4: Generate Your QR Code</h2>
-            <p>Scaniha automatically generates a unique QR code for your menu. Download it as a high-resolution image ready for printing. You can also share the menu link on social media or your website.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Étape 4 : Générez votre code QR</h2>
+            <p>Scaniha génère automatiquement un code QR unique pour votre menu. Téléchargez-le sous forme d’image haute résolution prête à imprimer. Vous pouvez aussi partager le lien du menu sur les réseaux sociaux ou sur votre site web.</p>
 
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Step 5: Print and Display</h2>
-            <p>Print your QR code on table tents, placemats, window stickers, or flyers. Customers scan the code with any smartphone camera and view your menu instantly in their browser.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Étape 5 : Imprimez et affichez</h2>
+            <p>Imprimez votre code QR sur des chevalets de table, des sets de table, des autocollants de vitrine ou des flyers. Les clients scannent le code avec l’appareil photo de n’importe quel smartphone et consultent votre menu instantanément dans leur navigateur.</p>
 
-            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Step 6: Update in Real-Time</h2>
-            <p>Whenever you need to change prices, add new items, or remove sold-out dishes, update it in Scaniha. Changes appear instantly — no reprinting needed.</p>
+            <h2 className="text-2xl font-bold text-zinc-900 mt-8">Étape 6 : Mettez à jour en temps réel</h2>
+            <p>Chaque fois que vous devez modifier des prix, ajouter de nouveaux articles ou retirer des plats épuisés, mettez à jour votre menu dans Scaniha. Les changements apparaissent instantanément — aucune réimpression nécessaire.</p>
 
             <div className="bg-orange-50 p-6 rounded-2xl mt-8">
-              <p className="text-lg font-semibold text-zinc-900">Ready to create your QR menu?</p>
-              <Link href="/signup" className="inline-block mt-4 px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Start Free Trial</Link>
+              <p className="text-lg font-semibold text-zinc-900">Prêt à créer votre menu QR ?</p>
+              <Link href="/signup" className="inline-block mt-4 px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Démarrer l’essai gratuit</Link>
             </div>
 
-            <p className="mt-8">Related: <Link href="/blog/benefits-of-digital-menus" className="text-orange-600">Benefits of digital menus for restaurants</Link> · <Link href="/blog/qr-code-best-practices-restaurants" className="text-orange-600">QR code best practices</Link></p>
+            <p className="mt-8">À lire aussi : <Link href="/blog/benefits-of-digital-menus" className="text-orange-600">Les avantages des menus numériques pour les restaurants</Link> · <Link href="/blog/qr-code-best-practices-restaurants" className="text-orange-600">Les bonnes pratiques du code QR</Link></p>
           </div>
         </article>
       </div>

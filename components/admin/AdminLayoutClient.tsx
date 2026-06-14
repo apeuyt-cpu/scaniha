@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import AdminSidebar from '@/components/admin/AdminSidebar'
 import DynamicFavicon from '@/components/admin/DynamicFavicon'
+import { ToastProvider } from '@/components/admin/ui/Toast'
 import type { Database } from '@/lib/supabase/database.types'
 import { useLocale } from '@/lib/i18n/LocaleContext'
 
@@ -59,8 +59,8 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
 
   if (!business) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-zinc-100" dir={dir}>
-        <div className="bg-white rounded-xl shadow-sm p-8 max-w-md mx-auto border border-zinc-200">
+      <div className="admin-page flex min-h-screen items-center justify-center bg-zinc-50 p-4" dir={dir}>
+        <div className="mx-auto w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
           <h1 className="text-2xl font-bold text-zinc-900 mb-2 text-center">{t('dashboard.noMenu')}</h1>
           <p className="text-zinc-600 text-center mb-6">{t('dashboard.createBusiness')}</p>
           
@@ -76,7 +76,7 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
                   required
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
-                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent bg-white"
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base outline-none transition placeholder:text-zinc-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-500/30"
                   placeholder={t('dashboard.businessNamePlaceholder')}
                   disabled={loading}
                   autoFocus
@@ -89,12 +89,12 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
                 </div>
               )}
 
-              <div className="bg-gradient-to-l from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+              <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
                 <div className="flex items-start gap-3">
-                  <div className="text-2xl">🎁</div>
+                  <div className="text-2xl" aria-hidden="true">🎁</div>
                   <div>
-                    <p className="text-sm font-semibold text-blue-900">{t('pricing.freeTrial')}</p>
-                    <p className="text-xs text-blue-700 mt-0.5">{t('pricing.freeTrialDesc')}</p>
+                    <p className="text-sm font-semibold text-orange-900">{t('pricing.freeTrial')}</p>
+                    <p className="mt-0.5 text-xs text-orange-700">{t('pricing.freeTrialDesc')}</p>
                   </div>
                 </div>
               </div>
@@ -102,7 +102,7 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 bg-zinc-900 text-white rounded-xl text-base font-medium hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 transition-colors"
+                className="min-h-[44px] w-full rounded-xl bg-orange-500 px-4 py-3 text-base font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50"
               >
                 {loading ? t('dashboard.creating') : t('dashboard.createBusinessBtn')}
               </button>
@@ -110,7 +110,7 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
           ) : (
             <button
               onClick={() => setShowCreateForm(true)}
-              className="w-full py-3 px-4 bg-zinc-900 text-white rounded-xl text-base font-medium hover:bg-zinc-800 transition-colors"
+              className="min-h-[44px] w-full rounded-xl bg-orange-500 px-4 py-3 text-base font-semibold text-white transition hover:bg-orange-600"
             >
               {t('dashboard.createBusinessBtn')}
             </button>
@@ -120,13 +120,14 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
     )
   }
 
+  // Home-hub model: no persistent sidebar/bottom-nav. Navigation lives on the
+  // Home hub (/admin); sub-pages get a slim top bar via PageShell.
   return (
-    <div className="flex min-h-screen bg-zinc-100" dir={dir}>
-      <DynamicFavicon logoUrl={business.logo_url} businessName={business.name} />
-      <AdminSidebar />
-      <main className="flex-1 overflow-auto">
+    <ToastProvider>
+      <div className="min-h-screen bg-zinc-50" dir={dir}>
+        <DynamicFavicon logoUrl={business.logo_url} businessName={business.name} />
         {children}
-      </main>
-    </div>
+      </div>
+    </ToastProvider>
   )
 }

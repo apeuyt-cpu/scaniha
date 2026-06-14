@@ -168,7 +168,7 @@ export const ISO_CURRENCIES: CurrencyInfo[] = [
 ]
 
 export function getCurrencyInfo(code: string): CurrencyInfo {
-  return ISO_CURRENCIES.find(c => c.code === code) || ISO_CURRENCIES.find(c => c.code === 'USD')!
+  return ISO_CURRENCIES.find(c => c.code === code) || ISO_CURRENCIES.find(c => c.code === 'TND')!
 }
 
 export function isZeroDecimalCurrency(code: string): boolean {

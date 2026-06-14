@@ -53,6 +53,7 @@ export interface Database {
           primary_color: string | null
           wheel_enabled: boolean
           wheel_visible: boolean
+          design_settings: Json | null
           created_at: string
         }
         Insert: {
@@ -72,6 +73,7 @@ export interface Database {
           primary_color?: string | null
           wheel_enabled?: boolean
           wheel_visible?: boolean
+          design_settings?: Json | null
           created_at?: string
         }
         Update: {
@@ -91,6 +93,7 @@ export interface Database {
           primary_color?: string | null
           wheel_enabled?: boolean
           wheel_visible?: boolean
+          design_settings?: Json | null
           created_at?: string
         }
       }

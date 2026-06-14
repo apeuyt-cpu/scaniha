@@ -56,12 +56,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.3,
     },
     {
-      url: `${baseUrl}/gallery`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.4,
-    },
-    {
       url: `${baseUrl}/blog`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
@@ -143,7 +137,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const businessPages: MetadataRoute.Sitemap = businesses.map((business) => ({
     url: `${baseUrl}/${business.slug}`,
-    lastModified: business.updated_at ? new Date(business.updated_at) : new Date(),
+    lastModified: business.created_at ? new Date(business.created_at) : new Date(),
     changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))

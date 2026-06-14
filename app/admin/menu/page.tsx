@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import MenuManager from '@/components/admin/MenuManager'
+import PageShell from '@/components/admin/ui/PageShell'
 
 export default function MenuPage() {
   const [businessId, setBusinessId] = useState<string | null>(null)
@@ -69,31 +69,19 @@ export default function MenuPage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <p className="text-zinc-500">لم يتم العثور على نشاط تجاري</p>
+          <p className="text-zinc-500">Aucun établissement trouvé</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="menu-page p-4 lg:p-8 max-w-5xl mx-auto" dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/admin"
-            className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-white border border-zinc-200 flex items-center justify-center text-zinc-400 hover:text-zinc-600 hover:border-zinc-300 transition-colors text-lg"
-          >
-            →
-          </Link>
-          <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-zinc-900">منشئ القائمة</h1>
-            <p className="text-sm lg:text-base text-zinc-500">إدارة الفئات والعناصر</p>
-          </div>
-        </div>
-      </div>
-
+    <PageShell
+      title="Menu"
+      subtitle="Gérez vos catégories, plats et prix."
+      width="6xl"
+    >
       <MenuManager businessId={businessId} />
-    </div>
+    </PageShell>
   )
 }

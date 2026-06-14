@@ -66,7 +66,7 @@ export async function GET(request) {
   } catch (error) {
     console.error("Images API Error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to fetch images." },
+      { success: false, error: error.message || "Échec du chargement des images." },
       { status: 500 }
     );
   }

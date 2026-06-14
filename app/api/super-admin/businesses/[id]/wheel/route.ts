@@ -11,8 +11,8 @@ export async function PATCH(
   try {
     await requireSuperAdmin()
   } catch (e: any) {
-    if (e.message === 'NEXT_REDIRECT') throw e
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (e?.digest?.startsWith?.('NEXT_REDIRECT') || e?.message === 'NEXT_REDIRECT') throw e
+    return NextResponse.json({ error: 'Non autorisé.' }, { status: 401 })
   }
 
   const { wheel_enabled } = await req.json()
@@ -24,7 +24,8 @@ export async function PATCH(
     .eq('id', id)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('Wheel toggle DB error:', error)
+    return NextResponse.json({ error: 'Échec de la mise à jour de la roue.' }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

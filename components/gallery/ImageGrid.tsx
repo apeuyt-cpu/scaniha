@@ -32,7 +32,7 @@ function formatBytes(bytes: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  return new Date(dateStr).toLocaleDateString("fr-FR", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -103,7 +103,7 @@ export default function ImageGrid({
         setHasMore(false);
       }
     } catch (err) {
-      console.error("Failed to load more images:", err);
+      console.error("Échec du chargement d'images supplémentaires :", err);
     } finally {
       setLoading(false);
     }
@@ -129,7 +129,7 @@ export default function ImageGrid({
       setOffset(data.images?.length || 0);
       setHasMore((data.images?.length || 0) < data.total);
     } catch (err) {
-      console.error("Failed to filter:", err);
+      console.error("Échec du filtrage :", err);
     } finally {
       setLoading(false);
     }
@@ -173,11 +173,11 @@ export default function ImageGrid({
               ${
                 !selectedFolder
                   ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25"
-                  : "bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10"
+                  : "bg-[#FEFEFE]/10 text-gray-300 hover:bg-[#FEFEFE]/20 border border-white/10"
               }
             `}
           >
-            All Images
+            Toutes les images
           </button>
           {folders.map((folder) => (
             <button
@@ -188,7 +188,7 @@ export default function ImageGrid({
                 ${
                   selectedFolder === folder
                     ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25"
-                    : "bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10"
+                    : "bg-[#FEFEFE]/10 text-gray-300 hover:bg-[#FEFEFE]/20 border border-white/10"
                 }
               `}
             >
@@ -203,10 +203,10 @@ export default function ImageGrid({
         <div className="text-center py-20">
           <div className="text-6xl mb-4">🖼️</div>
           <h3 className="text-xl font-semibold text-gray-300 mb-2">
-            No images synced yet
+            Aucune image synchronisée pour le moment
           </h3>
           <p className="text-gray-500">
-            Run a sync to fetch images from Cloudinary into Supabase.
+            Lancez une synchronisation pour récupérer les images de Cloudinary vers Supabase.
           </p>
         </div>
       ) : (
@@ -219,7 +219,7 @@ export default function ImageGrid({
               onClick={() => setLightboxImage(img)}
               className="
                 break-inside-avoid group cursor-pointer
-                bg-white/5 rounded-2xl overflow-hidden
+                bg-[#FEFEFE]/5 rounded-2xl overflow-hidden
                 border border-white/10 hover:border-violet-500/50
                 transition-all duration-500 ease-out
                 hover:shadow-2xl hover:shadow-violet-500/10
@@ -262,12 +262,12 @@ export default function ImageGrid({
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       {img.format && (
-                        <span className="text-[10px] uppercase px-2 py-0.5 bg-white/20 rounded-full font-semibold backdrop-blur-sm">
+                        <span className="text-[10px] uppercase px-2 py-0.5 bg-[#FEFEFE]/20 rounded-full font-semibold backdrop-blur-sm">
                           {img.format}
                         </span>
                       )}
                       {img.bytes && (
-                        <span className="text-[10px] px-2 py-0.5 bg-white/20 rounded-full font-medium backdrop-blur-sm">
+                        <span className="text-[10px] px-2 py-0.5 bg-[#FEFEFE]/20 rounded-full font-medium backdrop-blur-sm">
                           {formatBytes(img.bytes)}
                         </span>
                       )}
@@ -337,10 +337,10 @@ export default function ImageGrid({
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                   />
                 </svg>
-                Loading…
+                Chargement…
               </span>
             ) : (
-              "Load More Images"
+              "Charger plus"
             )}
           </button>
         </div>
@@ -355,7 +355,7 @@ export default function ImageGrid({
           {/* Close Button */}
           <button
             onClick={() => setLightboxImage(null)}
-            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors z-10"
+            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-[#FEFEFE]/10 hover:bg-[#FEFEFE]/20 text-white flex items-center justify-center transition-colors z-10"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -386,7 +386,7 @@ export default function ImageGrid({
                       e.stopPropagation();
                       setLightboxImage(images[idx - 1]);
                     }}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors z-10"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-[#FEFEFE]/10 hover:bg-[#FEFEFE]/20 text-white flex items-center justify-center transition-colors z-10"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -399,7 +399,7 @@ export default function ImageGrid({
                       e.stopPropagation();
                       setLightboxImage(images[idx + 1]);
                     }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors z-10"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-[#FEFEFE]/10 hover:bg-[#FEFEFE]/20 text-white flex items-center justify-center transition-colors z-10"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -423,7 +423,7 @@ export default function ImageGrid({
 
             {/* Info bar */}
             <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
-              <span className="px-3 py-1.5 bg-white/10 text-gray-300 rounded-lg font-mono text-xs">
+              <span className="px-3 py-1.5 bg-[#FEFEFE]/10 text-gray-300 rounded-lg font-mono text-xs">
                 {lightboxImage.public_id}
               </span>
               {lightboxImage.format && (
@@ -432,16 +432,16 @@ export default function ImageGrid({
                 </span>
               )}
               {lightboxImage.width && lightboxImage.height && (
-                <span className="px-3 py-1.5 bg-white/10 text-gray-300 rounded-lg text-xs">
+                <span className="px-3 py-1.5 bg-[#FEFEFE]/10 text-gray-300 rounded-lg text-xs">
                   {lightboxImage.width} × {lightboxImage.height}
                 </span>
               )}
               {lightboxImage.bytes && (
-                <span className="px-3 py-1.5 bg-white/10 text-gray-300 rounded-lg text-xs">
+                <span className="px-3 py-1.5 bg-[#FEFEFE]/10 text-gray-300 rounded-lg text-xs">
                   {formatBytes(lightboxImage.bytes)}
                 </span>
               )}
-              <span className="px-3 py-1.5 bg-white/10 text-gray-400 rounded-lg text-xs">
+              <span className="px-3 py-1.5 bg-[#FEFEFE]/10 text-gray-400 rounded-lg text-xs">
                 {formatDate(lightboxImage.created_at)}
               </span>
             </div>

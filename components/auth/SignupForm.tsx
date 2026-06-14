@@ -1,33 +1,80 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/utils/slug'
 import { useLocale } from '@/lib/i18n/LocaleContext'
-import { useCurrency } from '@/lib/i18n/CurrencyContext'
-import CurrencySelector from '@/components/ui/CurrencySelector'
+
+const MIN_PASSWORD_LENGTH = 8
+
+// Plan prices shown exactly as the pricing cards render them (integer TND, no decimals).
+const PLAN_PRICES: Record<string, string> = {
+  lifetime: '600 TND',
+  '1year': '250 TND',
+  '6months': '150 TND',
+}
 
 export default function SignupForm({ plan }: { plan?: string }) {
   const { t, dir } = useLocale()
-  const { formatPrice, convertFromTnd, currencyCode } = useCurrency()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [businessName, setBusinessName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
+
+  // Field order drives where focus moves on validation failure (accessibility).
+  const fieldOrder = ['email', 'password', 'confirmPassword', 'phoneNumber', 'businessName'] as const
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  const focusFirstError = (errs: Record<string, string>) => {
+    const first = fieldOrder.find((f) => errs[f])
+    if (first) inputRefs.current[first]?.focus()
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  const validate = () => {
+    const errs: Record<string, string> = {}
+    if (!email.trim()) {
+      errs.email = 'Veuillez saisir votre adresse email.'
+    } else if (!emailRegex.test(email.trim())) {
+      errs.email = 'Veuillez saisir une adresse email valide.'
+    }
+    if (!password) {
+      errs.password = 'Veuillez choisir un mot de passe.'
+    } else if (password.length < MIN_PASSWORD_LENGTH) {
+      errs.password = `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`
+    }
+    if (!confirmPassword) {
+      errs.confirmPassword = 'Veuillez confirmer votre mot de passe.'
+    } else if (password && confirmPassword !== password) {
+      errs.confirmPassword = 'Les deux mots de passe ne correspondent pas.'
+    }
+    if (!phoneNumber.trim()) {
+      errs.phoneNumber = 'Veuillez saisir votre numéro de téléphone.'
+    }
+    if (!businessName.trim()) {
+      errs.businessName = 'Veuillez saisir le nom de votre établissement.'
+    }
+    return errs
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setLoading(true)
 
-    if (!email || !password || !phoneNumber || !businessName) {
-      setError(t('auth.required'))
-      setLoading(false)
+    const errs = validate()
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs)
+      focusFirstError(errs)
       return
     }
+    setFieldErrors({})
+    setLoading(true)
 
     const slug = generateSlug(businessName)
 
@@ -38,7 +85,8 @@ export default function SignupForm({ plan }: { plan?: string }) {
       .maybeSingle()
 
     if (existingEmail) {
-      setError(t('auth.errorGeneric'))
+      setFieldErrors({ email: 'Cette adresse email est déjà utilisée. Connectez-vous ou utilisez une autre adresse.' })
+      inputRefs.current.email?.focus()
       setLoading(false)
       return
     }
@@ -50,7 +98,8 @@ export default function SignupForm({ plan }: { plan?: string }) {
       .maybeSingle()
 
     if (existingBusinessName) {
-      setError(t('auth.errorGeneric'))
+      setFieldErrors({ businessName: 'Ce nom d\'établissement est déjà pris. Veuillez en choisir un autre.' })
+      inputRefs.current.businessName?.focus()
       setLoading(false)
       return
     }
@@ -62,7 +111,8 @@ export default function SignupForm({ plan }: { plan?: string }) {
       .maybeSingle()
 
     if (existingSlug) {
-      setError(t('auth.errorGeneric'))
+      setFieldErrors({ businessName: 'Ce nom d\'établissement génère une adresse déjà utilisée. Veuillez en choisir un autre.' })
+      inputRefs.current.businessName?.focus()
       setLoading(false)
       return
     }
@@ -75,16 +125,32 @@ export default function SignupForm({ plan }: { plan?: string }) {
       })
 
       if (authError || !authData.user) {
-        setError(authError?.message || t('auth.errorGeneric'))
+        if (authError) console.error('Signup auth error:', authError.message)
+        const msg = (authError?.message || '').toLowerCase()
+        if (msg.includes('already registered') || msg.includes('already been registered') || msg.includes('user already')) {
+          setFieldErrors({ email: 'Cette adresse email est déjà utilisée. Connectez-vous ou utilisez une autre adresse.' })
+          inputRefs.current.email?.focus()
+        } else if (msg.includes('password') && (msg.includes('weak') || msg.includes('should be') || msg.includes('at least') || msg.includes('characters'))) {
+          setFieldErrors({ password: `Mot de passe trop faible. Utilisez au moins ${MIN_PASSWORD_LENGTH} caractères.` })
+          inputRefs.current.password?.focus()
+        } else if (msg.includes('invalid') && msg.includes('email')) {
+          setFieldErrors({ email: 'Veuillez saisir une adresse email valide.' })
+          inputRefs.current.email?.focus()
+        } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
+          setError('Problème de connexion réseau. Vérifiez votre connexion internet et réessayez.')
+        } else {
+          setError('Une erreur est survenue lors de la création du compte. Veuillez réessayer.')
+        }
         setLoading(false)
         return
       }
 
       const userId = authData.user.id
 
+      // Supabase creates the profile row via a database trigger. Poll briefly
+      // for it to exist, then fall back to inserting it ourselves if it doesn't.
       let profileExists = false
       for (let i = 0; i < 10; i++) {
-        await new Promise(resolve => setTimeout(resolve, 300))
         const { data: profile } = await (supabase
           .from('profiles') as any)
           .select('user_id')
@@ -95,6 +161,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
           profileExists = true
           break
         }
+        await new Promise(resolve => setTimeout(resolve, 300))
       }
 
       if (!profileExists) {
@@ -108,7 +175,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
           })
 
         if (profileError) {
-          setError(t('auth.errorGeneric'))
+          setError('Votre compte a été créé mais une erreur est survenue lors de la configuration. Veuillez vous connecter ou contacter le support.')
           setLoading(false)
           return
         }
@@ -137,33 +204,19 @@ export default function SignupForm({ plan }: { plan?: string }) {
             slug: slug,
             expires_at: null,
             status: 'pending',
-            currency: currencyCode,
+            currency: 'TND',
           })
           .select()
           .single()
 
         if (businessError) {
-          setError(businessError.message || t('auth.errorGeneric'))
+          console.error('Business creation error:', businessError.message)
+          setError('Une erreur est survenue lors de la création de votre établissement. Veuillez réessayer.')
           setLoading(false)
           return
         }
 
-        // Redirect to Dodo checkout
-        try {
-          const res = await fetch('/api/checkout', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ planId: plan, email }),
-          })
-          const data = await res.json()
-          if (data.url) {
-            window.location.href = data.url
-            return
-          }
-        } catch (e) {
-          console.error('Checkout redirect failed:', e)
-        }
-
+        // Manual payment: the owner submits their bank-transfer receipt from the dashboard.
         window.location.href = '/admin'
       } else {
         // No plan: create with 7-day free trial
@@ -178,13 +231,14 @@ export default function SignupForm({ plan }: { plan?: string }) {
             slug: slug,
             expires_at: expirationDate.toISOString(),
             status: 'active',
-            currency: currencyCode,
+            currency: 'TND',
           })
           .select()
           .single()
 
         if (businessError) {
-          setError(businessError.message || t('auth.errorGeneric'))
+          console.error('Business creation error:', businessError.message)
+          setError('Une erreur est survenue lors de la création de votre établissement. Veuillez réessayer.')
           setLoading(false)
           return
         }
@@ -192,20 +246,35 @@ export default function SignupForm({ plan }: { plan?: string }) {
         window.location.href = '/admin'
       }
     } catch (err: any) {
-      setError(err.message || t('auth.errorGeneric'))
+      console.error('Signup unexpected error:', err?.message)
+      const msg = (err?.message || '').toLowerCase()
+      if (msg.includes('network') || msg.includes('fetch')) {
+        setError('Problème de connexion réseau. Vérifiez votre connexion internet et réessayez.')
+      } else {
+        setError('Une erreur inattendue est survenue. Veuillez réessayer.')
+      }
       setLoading(false)
     }
   }
 
+  const inputBase =
+    'w-full px-4 py-3 border rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-[#FEFEFE] text-zinc-900 placeholder-zinc-400'
+  const inputClass = (field: string) =>
+    `${inputBase} ${fieldErrors[field] ? 'border-red-400' : 'border-zinc-300'}`
+
   return (
-    <form className="space-y-5" onSubmit={handleSubmit} dir={dir}>
+    <form className="space-y-5" onSubmit={handleSubmit} dir={dir} noValidate>
       {plan && (
         <div className="bg-gradient-to-l from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-4">
           <div className="flex items-start gap-3">
-            <div className="text-2xl">📋</div>
+            <svg className="h-6 w-6 shrink-0 text-orange-500" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="5" y="4" width="14" height="17" rx="2" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M9 4.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 4.5V6H9V4.5Z" fill="currentColor" />
+              <path d="M9 11h6M9 15h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
             <div>
-              <p className="text-sm font-semibold text-orange-900">{t('auth.selectPlan')}: {formatPrice(convertFromTnd(plan === 'lifetime' ? 600 : plan === '1year' ? 250 : 150))}</p>
-              <p className="text-xs text-orange-700 mt-0.5">{t('checkout.redirecting')}</p>
+              <p className="text-sm font-semibold text-orange-900">{t('auth.selectPlan')}: {PLAN_PRICES[plan] ?? PLAN_PRICES['6months']}</p>
+              <p className="text-xs text-orange-700 mt-0.5">Paiement par virement bancaire — vous enverrez votre reçu depuis votre tableau de bord.</p>
             </div>
           </div>
         </div>
@@ -220,14 +289,19 @@ export default function SignupForm({ plan }: { plan?: string }) {
             id="email"
             name="email"
             type="email"
+            inputMode="email"
             autoComplete="email"
             required
-            className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent bg-white"
+            ref={(el) => { inputRefs.current.email = el }}
+            aria-invalid={!!fieldErrors.email}
+            aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+            className={inputClass('email')}
             placeholder="example@email.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: '' })) }}
             dir="ltr"
           />
+          {fieldErrors.email && <p id="email-error" className="mt-1.5 text-sm text-red-600">{fieldErrors.email}</p>}
         </div>
 
         <div>
@@ -240,11 +314,38 @@ export default function SignupForm({ plan }: { plan?: string }) {
             type="password"
             autoComplete="new-password"
             required
-            className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent bg-white"
+            ref={(el) => { inputRefs.current.password = el }}
+            aria-invalid={!!fieldErrors.password}
+            aria-describedby={fieldErrors.password ? 'password-error' : 'password-hint'}
+            className={inputClass('password')}
             placeholder="••••••••"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(prev => ({ ...prev, password: '' })) }}
           />
+          {fieldErrors.password
+            ? <p id="password-error" className="mt-1.5 text-sm text-red-600">{fieldErrors.password}</p>
+            : <p id="password-hint" className="mt-1.5 text-xs text-zinc-500">Au moins {MIN_PASSWORD_LENGTH} caractères.</p>}
+        </div>
+
+        <div>
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-zinc-700 mb-2">
+            Confirmer le mot de passe
+          </label>
+          <input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            required
+            ref={(el) => { inputRefs.current.confirmPassword = el }}
+            aria-invalid={!!fieldErrors.confirmPassword}
+            aria-describedby={fieldErrors.confirmPassword ? 'confirmPassword-error' : undefined}
+            className={inputClass('confirmPassword')}
+            placeholder="••••••••"
+            value={confirmPassword}
+            onChange={(e) => { setConfirmPassword(e.target.value); if (fieldErrors.confirmPassword) setFieldErrors(prev => ({ ...prev, confirmPassword: '' })) }}
+          />
+          {fieldErrors.confirmPassword && <p id="confirmPassword-error" className="mt-1.5 text-sm text-red-600">{fieldErrors.confirmPassword}</p>}
         </div>
 
         <div>
@@ -255,46 +356,52 @@ export default function SignupForm({ plan }: { plan?: string }) {
             id="phone"
             name="phone"
             type="tel"
+            inputMode="tel"
+            autoComplete="tel"
             required
-            className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent bg-white"
+            ref={(el) => { inputRefs.current.phoneNumber = el }}
+            aria-invalid={!!fieldErrors.phoneNumber}
+            aria-describedby={fieldErrors.phoneNumber ? 'phone-error' : undefined}
+            className={inputClass('phoneNumber')}
             placeholder={t('auth.phonePlaceholder')}
             value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
+            onChange={(e) => { setPhoneNumber(e.target.value); if (fieldErrors.phoneNumber) setFieldErrors(prev => ({ ...prev, phoneNumber: '' })) }}
             dir="ltr"
           />
+          {fieldErrors.phoneNumber && <p id="phone-error" className="mt-1.5 text-sm text-red-600">{fieldErrors.phoneNumber}</p>}
         </div>
 
         <div>
           <label htmlFor="business" className="block text-sm font-medium text-zinc-700 mb-2">
-            {t('auth.businessName')}
+            {t('auth.establishmentName')}
           </label>
           <input
             id="business"
             name="business"
             type="text"
             required
-            className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent bg-white"
-            placeholder={t('dashboard.businessNamePlaceholder')}
+            ref={(el) => { inputRefs.current.businessName = el }}
+            aria-invalid={!!fieldErrors.businessName}
+            aria-describedby={fieldErrors.businessName ? 'business-error' : undefined}
+            className={inputClass('businessName')}
+            placeholder={t('auth.establishmentNamePlaceholder')}
             value={businessName}
-            onChange={(e) => setBusinessName(e.target.value)}
+            onChange={(e) => { setBusinessName(e.target.value); if (fieldErrors.businessName) setFieldErrors(prev => ({ ...prev, businessName: '' })) }}
           />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-2">
-            {t('auth.menuCurrency')}
-          </label>
-          <p className="text-xs text-zinc-500 mb-2">{t('auth.menuCurrencyDesc')}</p>
-          <CurrencySelector showLabel={true} />
+          {fieldErrors.businessName && <p id="business-error" className="mt-1.5 text-sm text-red-600">{fieldErrors.businessName}</p>}
         </div>
       </div>
 
       {!plan && (
         <div className="bg-gradient-to-l from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
           <div className="flex items-start gap-3">
-            <div className="text-2xl">🎁</div>
+            <svg className="h-6 w-6 shrink-0 text-blue-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3.5" y="8.5" width="17" height="5" rx="1" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M5 13.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6.5M12 8.5V21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M12 8.5S10.5 4 8 4a2 2 0 1 0 0 4.5h4Zm0 0S13.5 4 16 4a2 2 0 1 1 0 4.5h-4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            </svg>
             <div>
-              <p className="text-sm font-semibold text-blue-900">{t('pricing.freeTrial')}</p>
+              <p className="text-sm font-semibold text-blue-700">{t('pricing.freeTrial')}</p>
               <p className="text-xs text-blue-700 mt-0.5">{t('pricing.freeTrialDesc')}</p>
             </div>
           </div>
@@ -302,7 +409,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
       )}
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm text-center">
+        <div role="alert" aria-live="assertive" className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm text-center">
           {error}
         </div>
       )}
@@ -311,9 +418,9 @@ export default function SignupForm({ plan }: { plan?: string }) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 px-4 bg-zinc-900 text-white rounded-xl text-base font-medium hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 disabled:opacity-50 transition-colors"
+          className="w-full py-3 px-4 bg-orange-600 text-white rounded-xl text-base font-medium hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-orange-500 disabled:opacity-50 transition-colors"
         >
-          {loading ? t('auth.signingUp') : plan ? t('auth.createAccount') : t('auth.createAccount')}
+          {loading ? t('auth.signingUp') : t('auth.createAccount')}
         </button>
       </div>
     </form>

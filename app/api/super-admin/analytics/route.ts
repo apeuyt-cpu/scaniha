@@ -8,8 +8,8 @@ export async function GET() {
   try {
     await requireSuperAdmin()
   } catch (e: any) {
-    if (e.message === 'NEXT_REDIRECT') throw e
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (e?.digest?.startsWith?.('NEXT_REDIRECT') || e?.message === 'NEXT_REDIRECT') throw e
+    return NextResponse.json({ error: 'Non autorisé.' }, { status: 401 })
   }
 
   const supabase = await createServiceRoleClient()
@@ -26,7 +26,8 @@ export async function GET() {
       .order('name')
 
     if (fallbackError) {
-      return NextResponse.json({ error: fallbackError.message }, { status: 500 })
+      console.error('Super-admin analytics fallback error:', fallbackError)
+      return NextResponse.json({ error: 'Échec du chargement des statistiques.' }, { status: 500 })
     }
 
     const stats = (fallback || []).map((b: any) => {

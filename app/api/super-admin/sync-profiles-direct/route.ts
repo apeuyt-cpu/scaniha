@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     
     if (!serviceRoleKey || !supabaseUrl) {
       return NextResponse.json(
-        { error: 'Service role key or Supabase URL not configured' },
+        { error: 'Configuration du serveur incomplète.' },
         { status: 500 }
       )
     }
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     
     if (businessesError) {
       return NextResponse.json(
-        { error: `Failed to fetch businesses: ${businessesError.message}` },
+        { error: 'Échec de la récupération des établissements.' },
         { status: 500 }
       )
     }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (ownerIds.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'No businesses found',
+        message: 'Aucun établissement trouvé.',
         synced: 0,
         created: 0,
         errors: []
@@ -159,18 +159,16 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (apiError: any) {
+      console.error('Sync profiles (direct) auth API error:', apiError)
       return NextResponse.json(
-        { 
-          error: `Failed to fetch users: ${apiError.message}`,
-          hint: 'Make sure SUPABASE_SERVICE_ROLE_KEY has admin permissions'
-        },
+        { error: 'Échec de la récupération des utilisateurs.' },
         { status: 500 }
       )
     }
     
     return NextResponse.json({
       success: true,
-      message: `Synced ${synced} profiles, created ${created} new profiles`,
+      message: `${synced} profil(s) synchronisé(s), ${created} créé(s).`,
       synced,
       created,
       total: ownerIds.length,
@@ -179,8 +177,8 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Sync profiles error:', error)
     return NextResponse.json(
-      { error: error.message || 'Unauthorized' },
-      { status: error.message?.includes('Unauthorized') ? 401 : 500 }
+      { error: 'Non autorisé.' },
+      { status: error?.message?.includes('Unauthorized') ? 401 : 500 }
     )
   }
 }

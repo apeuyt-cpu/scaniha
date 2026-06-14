@@ -6,70 +6,53 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Sign Up | Scaniha - QR Menu Builder',
-  description: 'Create your free Scaniha account and start building beautiful digital QR menus for your restaurant, cafe, or food business in minutes.',
+  title: 'Inscription | Scaniha - Créateur de menus QR',
+  description: 'Créez votre compte Scaniha gratuit et commencez à concevoir de superbes menus numériques QR pour votre restaurant, café ou commerce alimentaire en quelques minutes.',
   openGraph: {
-    title: 'Sign Up | Scaniha - QR Menu Builder',
-    description: 'Create your free digital QR menu for your restaurant or cafe.',
+    title: 'Inscription | Scaniha - Créateur de menus QR',
+    description: 'Créez gratuitement votre menu numérique QR pour votre restaurant ou café.',
     url: 'https://scaniha.com/signup',
     siteName: 'Scaniha',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Sign Up | Scaniha - QR Menu Builder',
-    description: 'Create your free digital QR menu for your restaurant or cafe.',
+    title: 'Inscription | Scaniha - Créateur de menus QR',
+    description: 'Créez gratuitement votre menu numérique QR pour votre restaurant ou café.',
   },
 }
 
-export default function SignupPage({ searchParams }: { searchParams?: { plan?: string } }) {
-  const plan = searchParams?.plan
+export default async function SignupPage({ searchParams }: { searchParams?: Promise<{ plan?: string }> }) {
+  const plan = (await searchParams)?.plan
 
   return (
-    <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-4" dir="rtl">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-lg border border-zinc-200 p-8">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-900 mb-6 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span className="text-sm font-medium">العودة للصفحة الرئيسية</span>
-          </Link>
+    <div className="flex min-h-screen flex-col bg-[#FEFEFE] px-6 py-10" dir="ltr">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center">
+        {/* Logo */}
+        <Link href="/" className="mx-auto mb-8 block w-fit">
+          <Image src="/logo.png" alt="Scaniha" width={140} height={46} className="h-11 w-auto" priority />
+        </Link>
 
-          <div className="text-center mb-8">
-            <div className="mx-auto mb-6 flex items-center justify-center">
-              <Image
-                src="/logo.png"
-                alt="Scaniha"
-                width={180}
-                height={60}
-                className="object-contain"
-                priority
-                fetchPriority="high"
-              />
-            </div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-zinc-900 mb-2">
-              إنشاء حساب جديد
-            </h1>
-            <p className="text-zinc-500 text-sm">
-              ابدأ رحلتك مع Scaniha
-            </p>
-          </div>
+        {/* Heading */}
+        <div className="text-center">
+          <h1 className="text-2xl font-extrabold text-zinc-900">Créez votre compte</h1>
+          <p className="mt-1.5 text-sm text-zinc-500">
+            Essai gratuit de 7 jours — aucune carte requise.
+          </p>
+        </div>
 
+        {/* Form */}
+        <div className="mt-8">
           <SignupForm plan={plan} />
         </div>
 
-        <div className="text-center mt-6">
-          <a 
-            href="/login" 
-            className="text-sm text-zinc-600 hover:text-zinc-900 font-medium"
-          >
-            لديك حساب بالفعل؟ <span className="text-zinc-900 font-semibold">سجل الدخول</span>
-          </a>
-        </div>
+        {/* Footer link */}
+        <p className="mt-6 text-center text-sm text-zinc-500">
+          Vous avez déjà un compte&nbsp;?{' '}
+          <Link href="/login" className="font-semibold text-orange-600 hover:text-orange-700">
+            Connectez-vous
+          </Link>
+        </p>
       </div>
     </div>
   )

@@ -55,3 +55,16 @@ storage_migration_results.json
 *.md
 !README.md
 
+# Local staging dump of provided designs / deprecated wheel feature.
+# Not built or served (outside app/ and public/). Ignored so it can never be
+# committed by accident. Delete manually once no longer needed.
+/TTT/
+
+# Runtime dev-server log
+dev-server.log
+
+# Design source files (PSD) + local verification screenshots — not app assets
+*.psd
+/landing-shots/
+/menu-designs-review/
+

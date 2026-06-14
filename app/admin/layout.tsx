@@ -9,9 +9,8 @@ export async function generateMetadata(): Promise<Metadata> {
     const business = await getBusinessByOwner(user.id)
     
     if (business?.logo_url) {
-// robots: { index: false, follow: false },
       return {
-        title: `${business.name} - لوحة التحكم`,
+        title: `${business.name} — Tableau de bord`,
         robots: { index: false, follow: false },
         icons: {
           icon: business.logo_url,
@@ -19,13 +18,13 @@ export async function generateMetadata(): Promise<Metadata> {
         },
       }
     }
-    
+
     return {
-      title: 'لوحة التحكم',
+      title: 'Tableau de bord',
       robots: { index: false, follow: false },
       icons: {
-        icon: '/logo-icon.png',
-        apple: '/logo-icon.png',
+        icon: '/logo.png',
+        apple: '/logo.png',
       },
     }
   } catch (error: any) {
@@ -34,11 +33,11 @@ export async function generateMetadata(): Promise<Metadata> {
       throw error
     }
     return {
-      title: 'لوحة التحكم',
+      title: 'Tableau de bord',
       robots: { index: false, follow: false },
       icons: {
-        icon: '/logo-icon.png',
-        apple: '/logo-icon.png',
+        icon: '/logo.png',
+        apple: '/logo.png',
       },
     }
   }

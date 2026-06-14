@@ -7,6 +7,30 @@ type Profile = Database['public']['Tables']['profiles']['Row']
 type UserRole = 'owner' | 'super_admin'
 type SupabaseClientType = Awaited<ReturnType<typeof createServerClient>>
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/**
+ * TRANSIENT infra/network error (Supabase unreachable, fetch failed, timeout,
+ * 5xx) vs a DEFINITIVE auth failure (no/invalid session). We retry the former
+ * and NEVER log a valid session out over it.
+ */
+function isRetryableAuthError(error: any): boolean {
+  if (!error) return false
+  const name = String(error.name || '')
+  const msg = String(error.message || '').toLowerCase()
+  const status = error.status
+  if (name.includes('SessionMissing') || msg.includes('session missing') || msg.includes('not authenticated')) return false
+  if (status === 400 || status === 401 || status === 403) return false
+  if (name.includes('Retryable') || name === 'TypeError') return true
+  if (
+    msg.includes('fetch failed') || msg.includes('network') || msg.includes('timeout') ||
+    msg.includes('econnreset') || msg.includes('socket') || msg.includes('und_err') ||
+    msg.includes('enotfound') || msg.includes('eai_again')
+  ) return true
+  if (status == null || status === 0 || status >= 500) return true
+  return false
+}
+
 interface AuthResult {
   user: { id: string; email?: string }
   supabase: SupabaseClientType
@@ -19,13 +43,23 @@ interface AuthResult {
  */
 export async function getAuthUser() {
   const supabase = await createServerClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  
-  if (error || !user) {
-    redirect('/login')
+
+  let lastError: any = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (user && !error) return { user, supabase }
+    lastError = error
+    // Definitive "no/invalid session" → stop and send to login.
+    if (error && !isRetryableAuthError(error)) break
+    if (attempt < 2) await sleep(200 * (attempt + 1))
   }
-  
-  return { user, supabase }
+
+  // Transient infra failure → surface an error (the error boundary offers a
+  // retry) instead of logging a valid session out to /login.
+  if (lastError && isRetryableAuthError(lastError)) {
+    throw new Error('AUTH_SERVICE_UNAVAILABLE')
+  }
+  redirect('/login')
 }
 
 /**
@@ -33,23 +67,29 @@ export async function getAuthUser() {
  * Redirects to login if profile not found
  */
 export async function getUserProfile(userId: string, supabase: SupabaseClientType) {
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', userId)
-    .maybeSingle()
-  
-  if (error) {
-    console.error('[AUTH] Profile fetch error:', error)
-    redirect('/login')
+  let lastError: any = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (!error) {
+      if (profile) return profile
+      // Authenticated but no profile row — a genuine data issue; login can't fix it.
+      console.error(`[AUTH] Profile not found for user ${userId}`)
+      redirect('/login')
+    }
+
+    lastError = error
+    if (!isRetryableAuthError(error)) break
+    if (attempt < 2) await sleep(200 * (attempt + 1))
   }
-  
-  if (!profile) {
-    console.error(`[AUTH] Profile not found for user ${userId}`)
-    redirect('/login')
-  }
-  
-  return profile
+
+  // Transient DB error → surface for retry; never bounce a valid session to /login.
+  console.error('[AUTH] Profile fetch error:', lastError)
+  throw new Error('PROFILE_SERVICE_UNAVAILABLE')
 }
 
 /**

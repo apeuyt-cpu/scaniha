@@ -26,12 +26,23 @@ body {
     rgb(var(--background-start-rgb));
 }
 
-/* Arabic font for admin pages */
+/* Admin UI — clean modern Latin stack (French-only product) */
 .admin-page,
 .admin-sidebar,
 .menu-page,
 .super-admin-page {
-  font-family: 'Cairo', 'DM Sans', system-ui, sans-serif;
+  font-family: 'DM Sans', 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.admin-page h1,
+.admin-page h2,
+.admin-page h3,
+.super-admin-page h1,
+.super-admin-page h2,
+.super-admin-page h3 {
+  letter-spacing: -0.018em;
 }
 
 /* Minimal theme styles */
@@ -107,6 +118,15 @@ body {
   border-radius: 2px;
 }
 
+/* Hide scrollbars on horizontal carousels / tab bars (all browsers). */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .mobile-scroll::-webkit-scrollbar {
     display: none;
@@ -121,13 +141,13 @@ body {
   --orange-deep: #D8631A;
   --charcoal: #1A1A1A;
   --amber: #F5B82E;
-  --bg: #FAFAF8;
+  --bg: #FEFEFE;
   --ring: rgba(244, 123, 32, 0.35);
   --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
   --card-shadow-lg: 0 18px 48px rgba(26, 26, 26, 0.12);
   font-family: 'Tajawal', 'Cairo', system-ui, sans-serif;
   background: var(--bg);
-  color: var(--charcoal);
+  color: #1A1A1A;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -349,8 +369,25 @@ body {
   transform: translateY(0);
 }
 
+/* ---- Animated background shapes ---- */
+@keyframes drift1 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(28px, -36px); }
+}
+@keyframes drift2 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-26px, 28px) rotate(18deg); }
+}
+@keyframes drift3 {
+  0%, 100% { transform: translate(0, 0) rotate(45deg); }
+  50% { transform: translate(22px, 26px) rotate(62deg); }
+}
+
 /* ---- Reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
+  .anim-shape {
+    animation: none !important;
+  }
   .landing .orb,
   .landing .float-img,
   .landing .pulse-glow,
@@ -369,4 +406,57 @@ body {
   .landing .check-draw {
     stroke-dashoffset: 0 !important;
   }
+}
+
+/* ── Image protection — deter casual saving (see NoDownloadGuard.tsx) ──
+   Drag-to-save is blocked everywhere (harmless on marketing pages), but
+   text/image SELECTION and the iOS long-press menu must NOT be globally
+   disabled: that would block normal interaction (copy, select, long-press)
+   on the marketing/funnel pages and hurt conversion. NoDownloadGuard.tsx
+   already blocks right-click + drag only on the menu/admin pages. */
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+}
+
+/* ── Hero image: glowing rotating rays + breathing glow ── */
+.hero-aura {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 155%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+}
+.hero-aura .rays {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: repeating-conic-gradient(from 0deg, rgba(244, 123, 32, 0.16) 0deg 4deg, transparent 4deg 20deg);
+  filter: blur(5px);
+  -webkit-mask: radial-gradient(closest-side, transparent 24%, rgba(0,0,0,0.85) 46%, transparent 74%);
+  mask: radial-gradient(closest-side, transparent 24%, rgba(0,0,0,0.85) 46%, transparent 74%);
+  animation: heroRaysSpin 26s linear infinite;
+}
+.hero-aura .glow {
+  position: absolute;
+  inset: 6%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(244, 123, 32, 0.34), rgba(245, 184, 46, 0.15) 48%, transparent 78%);
+  filter: blur(64px);
+  animation: heroGlowPulse 4.5s ease-in-out infinite;
+}
+@keyframes heroRaysSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes heroGlowPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-aura .rays, .hero-aura .glow { animation: none !important; }
 }

@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import DynamicFavicon from '@/components/admin/DynamicFavicon'
-import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
-import CurrencySelector from '@/components/ui/CurrencySelector'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Theme } from '@/lib/themes'
+import Design1 from '@/components/menu/designs/Design1'
+import Design2 from '@/components/menu/designs/Design2'
+import Design6 from '@/components/menu/designs/Design6'
+import Design11 from '@/components/menu/designs/Design11'
+import Design12 from '@/components/menu/designs/Design12'
+import { MenuDock } from '@/components/menu/designs/MenuDock'
+import { FoodIcon } from '@/components/menu/designs/icons'
 
 type Business = Database['public']['Tables']['businesses']['Row']
 type Category = Database['public']['Tables']['categories']['Row'] & {
@@ -71,6 +76,13 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [visibleCategories, isMinimal])
+
+  // New menu design templates
+  if (theme.id === 'design1') return <Design1 business={business} categories={visibleCategories} />
+  if (theme.id === 'design2') return <Design2 business={business} categories={visibleCategories} />
+  if (theme.id === 'design6') return <Design6 business={business} categories={visibleCategories} />
+  if (theme.id === 'design11') return <Design11 business={business} categories={visibleCategories} />
+  if (theme.id === 'design12') return <Design12 business={business} categories={visibleCategories} />
 
   // Minimal theme - unique layout
   if (isMinimal) {
@@ -233,7 +245,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
 
       <div
         className="menu-container menu-surface min-h-screen"
-        dir="rtl"
+        dir="ltr"
         style={{
           backgroundColor: theme.colors.background,
           color: theme.colors.text,
@@ -243,28 +255,28 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
         {isPaused ? (
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center max-w-md mx-auto px-6 py-12">
-              <div 
-                className="inline-block p-6 rounded-full mb-6"
+              <div
+                className="inline-flex items-center justify-center p-6 rounded-full mb-6"
                 style={{ backgroundColor: theme.colors.border }}
               >
-                <span className="text-5xl">⏸️</span>
+                <PauseGlyph color={theme.colors.primary} />
               </div>
-              <h1 
+              <h1
                 className="text-2xl font-bold mb-3"
-                style={{ 
+                style={{
                   fontFamily: "'Cairo', " + theme.font.heading,
                   color: theme.colors.text,
                 }}
               >
-                القائمة غير متاحة مؤقتاً
+                Menu temporairement indisponible
               </h1>
-              <p 
+              <p
                 className="text-base"
                 style={{ color: theme.colors.muted }}
               >
-                نعتذر عن الإزعاج. القائمة غير متاحة في الوقت الحالي.
+                Nous nous excusons pour la gêne occasionnée. Le menu n'est pas disponible pour le moment.
               </p>
-              <p 
+              <p
                 className="text-sm mt-4"
                 style={{ color: theme.colors.muted }}
               >
@@ -284,7 +296,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
           />
           
           <div className="relative mx-auto grid max-w-6xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="text-center lg:text-right">
+            <div className="text-center lg:text-left">
             <div className="mb-6 flex items-center justify-center gap-3 lg:justify-start">
               {business.logo_url && (
                 <span
@@ -309,7 +321,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                   backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.74)',
                 }}
               >
-                {totalVisibleItems} Ø¹Ù†Ø§ØµØ±
+                {totalVisibleItems} articles
               </span>
             </div>
             
@@ -341,7 +353,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                   className="text-xs tracking-[0.2em] uppercase font-medium"
                   style={{ color: theme.colors.muted }}
                 >
-                  القائمة
+                  Menu
                 </span>
               )}
               <span 
@@ -550,7 +562,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                                 }}
                                 dir="ltr"
                               >
-                                {Number(item.price).toFixed(2)} {(business as any).currency || 'TND'}
+                                {Number(item.price).toFixed(2)} TND
                               </span>
                             </div>
                           )}
@@ -564,11 +576,11 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
 
           {visibleCategories.length === 0 && (
             <div className="text-center py-20">
-              <div 
-                className={`inline-block p-6 rounded-full mb-6 ${isDark ? 'shimmer-border' : ''}`}
+              <div
+                className={`inline-flex items-center justify-center p-6 rounded-full mb-6 ${isDark ? 'shimmer-border' : ''}`}
                 style={{ backgroundColor: theme.colors.secondary }}
               >
-                <span className="text-4xl">✦</span>
+                <FoodIcon kind="utensils" className="h-9 w-9" style={{ color: theme.colors.primary }} strokeWidth={1.5} />
               </div>
               <h2 
                 className={`text-xl font-medium mb-2 ${isDark ? 'gold-glow' : ''}`}
@@ -577,10 +589,10 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                   color: isDark ? theme.colors.primary : theme.colors.text,
                 }}
               >
-                القائمة قريباً
+                Menu à venir
               </h2>
               <p className="text-sm" style={{ color: theme.colors.muted }}>
-                نحن نحضر شيئاً استثنائياً
+                Nous préparons quelque chose d'exceptionnel
               </p>
             </div>
           )}
@@ -597,104 +609,22 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
             />
           )}
           <div className="relative">
-            {/* Social Media Links */}
-            {(business.facebook_url || business.instagram_url || business.twitter_url || business.whatsapp_number || business.website_url) && (
-              <div className="flex items-center justify-center gap-4 mb-6">
-                {business.facebook_url && (
-                  <a
-                    href={business.facebook_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                    style={{
-                      backgroundColor: isDark ? 'rgba(59, 89, 152, 0.2)' : 'rgba(59, 89, 152, 0.1)',
-                      color: isDark ? '#3b5998' : '#3b5998',
-                    }}
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                    </svg>
-                  </a>
-                )}
-                {business.instagram_url && (
-                  <a
-                    href={business.instagram_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                    style={{
-                      backgroundColor: isDark ? 'rgba(225, 48, 108, 0.2)' : 'rgba(225, 48, 108, 0.1)',
-                      color: isDark ? '#e1306c' : '#e1306c',
-                    }}
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                    </svg>
-                  </a>
-                )}
-                {business.twitter_url && (
-                  <a
-                    href={business.twitter_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                    style={{
-                      backgroundColor: isDark ? 'rgba(29, 161, 242, 0.2)' : 'rgba(29, 161, 242, 0.1)',
-                      color: isDark ? '#1da1f2' : '#1da1f2',
-                    }}
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                    </svg>
-                  </a>
-                )}
-                {business.whatsapp_number && (
-                  <a
-                    href={`https://wa.me/${business.whatsapp_number.replace(/[^0-9]/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                    style={{
-                      backgroundColor: isDark ? 'rgba(37, 211, 102, 0.2)' : 'rgba(37, 211, 102, 0.1)',
-                      color: isDark ? '#25d366' : '#25d366',
-                    }}
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                    </svg>
-                  </a>
-                )}
-                {business.website_url && (
-                  <a
-                    href={business.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                    style={{
-                      backgroundColor: isDark ? 'rgba(212, 175, 55, 0.2)' : theme.colors.secondary,
-                      color: isDark ? theme.colors.primary : theme.colors.text,
-                    }}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                    </svg>
-                  </a>
-                )}
-              </div>
-            )}
-            
-            <p className="text-xs tracking-[0.15em] uppercase mb-2" style={{ color: theme.colors.muted }}>
+            {/* Socials + game + loyalty live in the unified MenuDock below. */}
+            <p className="text-xs tracking-[0.15em] uppercase" style={{ color: theme.colors.muted }}>
               {business.name}
             </p>
-            <div className="flex items-center justify-center gap-4 mt-4">
-              <LanguageSwitcher />
-              <CurrencySelector />
-            </div>
           </div>
         </footer>
           </>
         )}
       </div>
+      {!isPaused && (
+        <MenuDock
+          business={business}
+          categories={visibleCategories as any}
+          accent={theme.colors.primary}
+        />
+      )}
     </>
   )
 }
@@ -726,7 +656,7 @@ function MinimalLayout({
   return (
     <div
       className="minimal-container flex flex-col"
-      dir="rtl"
+      dir="ltr"
       style={{
         backgroundColor: theme.colors.background,
         color: theme.colors.text,
@@ -737,26 +667,26 @@ function MinimalLayout({
         {isPaused ? (
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center max-w-md mx-auto px-6 py-12">
-              <div 
-                className="inline-block p-6 rounded-full mb-6"
+              <div
+                className="inline-flex items-center justify-center p-6 rounded-full mb-6"
                 style={{ backgroundColor: theme.colors.border }}
               >
-                <span className="text-5xl">⏸️</span>
+                <PauseGlyph color={theme.colors.primary} />
               </div>
-              <h1 
+              <h1
                 className="text-2xl font-bold mb-3"
-                style={{ 
+                style={{
                   fontFamily: "'Cairo', " + theme.font.heading,
                   color: theme.colors.text,
                 }}
               >
-                القائمة غير متاحة مؤقتاً
+                Menu temporairement indisponible
               </h1>
-              <p 
+              <p
                 className="text-base"
                 style={{ color: theme.colors.muted }}
               >
-                نعتذر عن الإزعاج. القائمة غير متاحة في الوقت الحالي.
+                Nous nous excusons pour la gêne occasionnée. Le menu n'est pas disponible pour le moment.
               </p>
               <p 
                 className="text-sm mt-4"
@@ -790,7 +720,7 @@ function MinimalLayout({
                       {business.name}
                     </h1>
                     <p className="text-xs sm:text-sm" style={{ color: theme.colors.muted }}>
-                      القائمة
+                      Menu
                     </p>
                   </div>
                 </div>
@@ -804,7 +734,7 @@ function MinimalLayout({
                     border: `1px solid ${theme.colors.border}`,
                   }}
                 >
-                  {categories.reduce((acc, cat) => acc + cat.items.filter(i => i.available).length, 0)} عناصر
+                  {categories.reduce((acc, cat) => acc + cat.items.filter(i => i.available).length, 0)} articles
                 </div>
               </div>
             </header>
@@ -813,8 +743,8 @@ function MinimalLayout({
             <div className="flex-1 flex flex-col md:flex-row">
           
             {/* Category Sidebar */}
-            <aside 
-              className="border-b md:border-b-0 md:border-l md:w-52 flex-shrink-0"
+            <aside
+              className="border-b md:border-b-0 md:border-r md:w-52 flex-shrink-0"
               style={{ borderColor: theme.colors.border }}
             >
             {/* Mobile: Horizontal scroll */}
@@ -847,14 +777,14 @@ function MinimalLayout({
                 className="text-xs font-medium uppercase tracking-wider mb-4 px-3"
                 style={{ color: theme.colors.muted }}
               >
-                الفئات
+                Catégories
               </p>
               <div className="space-y-1">
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id)}
-                    className={`category-tab w-full text-right px-3 py-2.5 rounded-lg text-sm font-medium ${activeCategory === cat.id ? 'active' : ''}`}
+                    className={`category-tab w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium ${activeCategory === cat.id ? 'active' : ''}`}
                     style={{
                       backgroundColor: activeCategory === cat.id 
                         ? theme.colors.secondary 
@@ -892,8 +822,8 @@ function MinimalLayout({
                         className="absolute inset-0"
                         style={{ background: 'linear-gradient(to left, rgba(0,0,0,0.4), transparent)' }}
                       />
-                      <h2 
-                        className="absolute bottom-4 right-4 text-2xl font-semibold text-white"
+                      <h2
+                        className="absolute bottom-4 left-4 text-2xl font-semibold text-white"
                         style={{ fontFamily: "'Cairo', " + theme.font.heading }}
                       >
                         {categories.find(c => c.id === activeCategory)?.name}
@@ -910,7 +840,7 @@ function MinimalLayout({
                         {categories.find(c => c.id === activeCategory)?.name}
                       </h2>
                       <span className="text-sm" style={{ color: theme.colors.muted }}>
-                        {activeItems.length} عناصر
+                        {activeItems.length} articles
                       </span>
                     </div>
                   )}
@@ -1003,12 +933,12 @@ function MinimalLayout({
                         </div>
                         
                         {item.price && (
-                          <span 
+                          <span
                             className="font-bold text-base whitespace-nowrap"
-                            style={{ color: theme.colors.accent }}
+                            style={{ color: theme.colors.text }}
                             dir="ltr"
                           >
-                            {Number(item.price).toFixed(2)} {(business as any).currency || 'TND'}
+                            {Number(item.price).toFixed(2)} TND
                           </span>
                         )}
                       </div>
@@ -1020,14 +950,14 @@ function MinimalLayout({
               {/* Empty State */}
               {activeItems.length === 0 && (
                 <div className="text-center py-16">
-                  <div 
-                    className="inline-block p-4 rounded-full mb-4"
+                  <div
+                    className="inline-flex items-center justify-center p-4 rounded-full mb-4"
                     style={{ backgroundColor: theme.colors.border }}
                   >
-                    <span className="text-2xl">📋</span>
+                    <FoodIcon kind="utensils" className="h-7 w-7" style={{ color: theme.colors.primary }} strokeWidth={1.5} />
                   </div>
                   <p style={{ color: theme.colors.muted }}>
-                    لا توجد عناصر في هذه الفئة
+                    Aucun article dans cette catégorie
                   </p>
                 </div>
               )}
@@ -1035,106 +965,35 @@ function MinimalLayout({
             </main>
             </div>
 
-            {/* Minimal Footer */}
-            <footer 
+            {/* Minimal Footer — socials + game + loyalty live in MenuDock. */}
+            <footer
               className="border-t py-4 px-4 text-center"
               style={{ borderColor: theme.colors.border }}
             >
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <LanguageSwitcher />
-                <CurrencySelector />
-              </div>
-              {/* Social Media Links */}
-              {(business.facebook_url || business.instagram_url || business.twitter_url || business.whatsapp_number || business.website_url) && (
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  {business.facebook_url && (
-                    <a
-                      href={business.facebook_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                      style={{
-                        backgroundColor: 'rgba(59, 89, 152, 0.1)',
-                        color: '#3b5998',
-                      }}
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                      </svg>
-                    </a>
-                  )}
-                  {business.instagram_url && (
-                    <a
-                      href={business.instagram_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                      style={{
-                        backgroundColor: 'rgba(225, 48, 108, 0.1)',
-                        color: '#e1306c',
-                      }}
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                      </svg>
-                    </a>
-                  )}
-                  {business.twitter_url && (
-                    <a
-                      href={business.twitter_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                      style={{
-                        backgroundColor: 'rgba(29, 161, 242, 0.1)',
-                        color: '#1da1f2',
-                      }}
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                      </svg>
-                    </a>
-                  )}
-                  {business.whatsapp_number && (
-                    <a
-                      href={`https://wa.me/${business.whatsapp_number.replace(/[^0-9]/g, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                      style={{
-                        backgroundColor: 'rgba(37, 211, 102, 0.1)',
-                        color: '#25d366',
-                      }}
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                      </svg>
-                    </a>
-                  )}
-                  {business.website_url && (
-                    <a
-                      href={business.website_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                      style={{
-                        backgroundColor: theme.colors.secondary,
-                        color: theme.colors.text,
-                      }}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                      </svg>
-                    </a>
-                  )}
-                </div>
-              )}
               <p className="text-xs" style={{ color: theme.colors.muted }}>
                 © {business.name}
               </p>
             </footer>
           </div>
         )}
+        {!isPaused && (
+          <MenuDock
+            business={business}
+            categories={categories as any}
+            accent={theme.colors.primary}
+          />
+        )}
       </div>
   )
 }
+
+/** On-brand "paused" glyph (two bars) — replaces the ⏸️ emoji. */
+function PauseGlyph({ color }: { color: string }) {
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill={color} stroke="none" aria-hidden="true">
+      <rect x="6" y="5" width="4" height="14" rx="1.5" />
+      <rect x="14" y="5" width="4" height="14" rx="1.5" />
+    </svg>
+  )
+}
+

@@ -14,7 +14,7 @@ export async function PATCH(
     
     if (!email && !phone_number) {
       return NextResponse.json(
-        { error: 'Email or phone number is required' },
+        { error: 'Un e-mail ou un numéro de téléphone est requis.' },
         { status: 400 }
       )
     }
@@ -30,7 +30,7 @@ export async function PATCH(
     
     if (businessError || !business) {
       return NextResponse.json(
-        { error: 'Business not found' },
+        { error: 'Établissement introuvable.' },
         { status: 404 }
       )
     }
@@ -56,15 +56,16 @@ export async function PATCH(
         .eq('user_id', ownerId)
       
       if (updateError) {
+        console.error('Update profile DB error:', updateError)
         return NextResponse.json(
-          { error: `Failed to update profile: ${updateError.message}` },
+          { error: 'Échec de la mise à jour du profil.' },
           { status: 500 }
         )
       }
-      
+
       return NextResponse.json({
         success: true,
-        message: 'Profile updated successfully',
+        message: 'Profil mis à jour.',
         profile: {
           email: email || existingProfile.email,
           phone_number: phone_number || existingProfile.phone_number
@@ -83,15 +84,16 @@ export async function PATCH(
         })
       
       if (insertError) {
+        console.error('Create profile DB error:', insertError)
         return NextResponse.json(
-          { error: `Failed to create profile: ${insertError.message}` },
+          { error: 'Échec de la création du profil.' },
           { status: 500 }
         )
       }
-      
+
       return NextResponse.json({
         success: true,
-        message: 'Profile created successfully',
+        message: 'Profil créé.',
         profile: {
           email: email || '',
           phone_number: phone_number || ''
@@ -99,10 +101,11 @@ export async function PATCH(
       })
     }
   } catch (error: any) {
+    if (error?.digest?.startsWith?.('NEXT_REDIRECT') || error?.message === 'NEXT_REDIRECT') throw error
     console.error('Update profile error:', error)
     return NextResponse.json(
-      { error: error.message || 'Unauthorized' },
-      { status: error.message?.includes('Unauthorized') ? 401 : 500 }
+      { error: 'Non autorisé.' },
+      { status: error?.message?.includes('Unauthorized') ? 401 : 500 }
     )
   }
 }

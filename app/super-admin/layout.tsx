@@ -1,32 +1,38 @@
 import { requireSuperAdmin } from '@/lib/auth'
-import SuperAdminNav from '@/components/super-admin/SuperAdminNav'
-import { redirect } from 'next/navigation'
+import { createServiceRoleClient } from '@/lib/supabase/server'
+import SuperAdminShell from '@/components/super-admin/SuperAdminShell'
+import { ToastProvider } from '@/components/super-admin/Toast'
 import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Admin | Scaniha',
+  title: 'Administrateur | Scaniha',
   robots: { index: false, follow: false },
 }
 
-export default async function SuperAdminLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  // requireSuperAdmin will redirect if user is not super_admin
-  // It automatically blocks owners and redirects them to /admin
-  // This happens before any rendering, so no sensitive data is exposed
-  await requireSuperAdmin()
+export default async function SuperAdminLayout({ children }: { children: React.ReactNode }) {
+  // requireSuperAdmin redirects owners → /admin and unauthenticated → /login.
+  const { user } = await requireSuperAdmin()
 
-  // Only render if user is confirmed super_admin
+  // Pending-payments count for the Paiements tab badge (fail-safe).
+  let pendingCount = 0
+  try {
+    const admin = await createServiceRoleClient()
+    const { count } = await (admin.from('payment_requests') as any)
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending')
+    pendingCount = count || 0
+  } catch {
+    pendingCount = 0
+  }
+
   return (
-    <div className="min-h-screen bg-zinc-100">
-      <SuperAdminNav />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
-    </div>
+    <ToastProvider>
+      <div className="min-h-screen bg-zinc-50" dir="ltr">
+        <SuperAdminShell email={user?.email ?? null} pendingCount={pendingCount} />
+        <main className="mx-auto max-w-5xl p-5 lg:p-8">{children}</main>
+      </div>
+    </ToastProvider>
   )
 }

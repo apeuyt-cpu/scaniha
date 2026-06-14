@@ -1,29 +1,27 @@
 import { requireOwner } from '@/lib/auth'
 import { getBusinessByOwner } from '@/lib/db/business'
-import { getAllThemes } from '@/lib/db/themes'
-import ThemeSelector from '@/components/theme/ThemeSelector'
+import DesignStudio from '@/components/admin/DesignStudio'
+import PageShell from '@/components/admin/ui/PageShell'
 
 export default async function ThemePage() {
   const { user } = await requireOwner()
   const business = await getBusinessByOwner(user.id)
-  
+
   if (!business) {
-    return <div>Business not found</div>
+    return (
+      <PageShell title="Design" width="5xl">
+        <p className="text-zinc-500">Établissement introuvable</p>
+      </PageShell>
+    )
   }
-  
-  const themes = await getAllThemes()
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Choose Theme</h1>
-        <p className="mt-2 text-gray-600">
-          Select a theme for your public menu. Changes apply immediately.
-        </p>
-      </div>
-
-      <ThemeSelector businessId={business.id} currentThemeId={business.theme_id} themes={themes} />
-    </div>
+    <PageShell
+      title="Design"
+      subtitle="Votre marque et l'apparence de votre menu."
+      width="5xl"
+    >
+      <DesignStudio business={business} />
+    </PageShell>
   )
 }
-

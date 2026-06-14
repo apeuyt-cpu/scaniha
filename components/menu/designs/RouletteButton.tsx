@@ -56,57 +56,74 @@ export default function RouletteButton({
   // No live game → render nothing (the search bar simply takes the full width).
   if (!active || !slug) return null
 
-  const wheel = Math.round(size * 0.54)
+  // Labeled → a compact CTA pill ("Gagnez 🎁" + a spinning-wheel chip); otherwise
+  // a bare wheel button. Either way everything is laid out INLINE — nothing floats
+  // above the button — so the caption can never be clipped by a sticky bar or a
+  // rounded/overflow-hidden card again.
+  const labeled = !!label
+  const chip = labeled ? Math.round(size * 0.8) : size
+  const wheel = Math.round(chip * 0.56)
+
+  const Wheel = (
+    <svg viewBox="0 0 40 40" width={wheel} height={wheel} aria-hidden="true" className="rb-spin">
+      <circle cx="20" cy="20" r="17" fill="none" stroke="#fff" strokeWidth="1.3" opacity="0.5" />
+      <circle cx="20" cy="20" r="14.5" fill="none" stroke="#fff" strokeWidth="2.3" />
+      <g stroke="#fff" strokeWidth="1.5" strokeLinecap="round">
+        <line x1="20" y1="20" x2="20" y2="6.5" />
+        <line x1="20" y1="20" x2="31.7" y2="13.25" />
+        <line x1="20" y1="20" x2="31.7" y2="26.75" />
+        <line x1="20" y1="20" x2="20" y2="33.5" />
+        <line x1="20" y1="20" x2="8.3" y2="26.75" />
+        <line x1="20" y1="20" x2="8.3" y2="13.25" />
+      </g>
+      <circle cx="20" cy="20" r="3.1" fill="#fff" />
+    </svg>
+  )
 
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size, fontFamily: font }}>
+    <>
       <style jsx>{`
         @keyframes rb-spin { to { transform: rotate(360deg) } }
-        @keyframes rb-bob { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-2.5px) } }
         @keyframes rb-glow {
-          0%, 100% { box-shadow: 0 8px 18px -10px ${accent}80 }
-          50% { box-shadow: 0 12px 26px -8px ${accent}d9 }
+          0%, 100% { box-shadow: 0 8px 18px -10px ${accent}66 }
+          50% { box-shadow: 0 14px 30px -8px ${accent}cc }
         }
-        .rb-spin { animation: rb-spin 8s linear infinite; transform-origin: 50% 50% }
-        .rb-bob { animation: rb-bob 2.4s ease-in-out infinite }
-        .rb-glow { animation: rb-glow 2.6s ease-in-out infinite }
+        .rb-spin { animation: rb-spin 9s linear infinite; transform-origin: 50% 50% }
+        .rb-glow { animation: rb-glow 2.8s ease-in-out infinite }
         @media (prefers-reduced-motion: reduce) {
-          .rb-spin, .rb-bob, .rb-glow { animation: none !important }
+          .rb-spin, .rb-glow { animation: none !important }
         }
       `}</style>
 
-      {/* Conversion caption — compact pill that bobs above the icon */}
-      {label ? (
-        <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2">
-          <span
-            className="rb-bob block whitespace-nowrap rounded-full bg-white px-2 py-[3px] text-[10px] font-extrabold leading-none shadow-[0_6px_16px_-6px_rgba(0,0,0,0.4)] ring-1 ring-black/5"
-            style={{ color: accent }}
-          >
+      {labeled ? (
+        <Link
+          href={`/${slug}/jeu`}
+          aria-label="Tentez votre chance — jouez à la roulette"
+          title="Tentez votre chance"
+          className={`inline-flex shrink-0 items-center gap-2 bg-white pl-4 pr-[5px] shadow-[0_8px_22px_-12px_rgba(0,0,0,0.45)] ring-1 ring-black/[0.06] transition hover:-translate-y-0.5 active:scale-95 ${rounded} ${className}`}
+          style={{ height: size, fontFamily: font }}
+        >
+          <span className="whitespace-nowrap text-[12.5px] font-extrabold leading-none" style={{ color: accent }}>
             {label}
           </span>
-        </span>
-      ) : null}
-
-      <Link
-        href={`/${slug}/jeu`}
-        aria-label="Tentez votre chance — jouez à la roulette"
-        title="Tentez votre chance"
-        className={`rb-glow flex h-full w-full items-center justify-center text-white transition active:scale-95 ${rounded} ${className}`}
-        style={{ backgroundImage: gradient }}
-      >
-        <svg viewBox="0 0 40 40" width={wheel} height={wheel} aria-hidden="true" className="rb-spin">
-          <circle cx="20" cy="20" r="16" fill="none" stroke="#fff" strokeWidth="2.4" />
-          <g stroke="#fff" strokeWidth="1.6" strokeLinecap="round">
-            <line x1="20" y1="20" x2="20" y2="5" />
-            <line x1="20" y1="20" x2="33" y2="12.5" />
-            <line x1="20" y1="20" x2="33" y2="27.5" />
-            <line x1="20" y1="20" x2="20" y2="35" />
-            <line x1="20" y1="20" x2="7" y2="27.5" />
-            <line x1="20" y1="20" x2="7" y2="12.5" />
-          </g>
-          <circle cx="20" cy="20" r="3.4" fill="#fff" />
-        </svg>
-      </Link>
-    </div>
+          <span
+            className="rb-glow relative flex shrink-0 items-center justify-center rounded-full text-white"
+            style={{ width: chip, height: chip, backgroundImage: gradient }}
+          >
+            {Wheel}
+          </span>
+        </Link>
+      ) : (
+        <Link
+          href={`/${slug}/jeu`}
+          aria-label="Tentez votre chance — jouez à la roulette"
+          title="Tentez votre chance"
+          className={`rb-glow relative flex shrink-0 items-center justify-center text-white transition active:scale-95 ${rounded} ${className}`}
+          style={{ width: size, height: size, backgroundImage: gradient, fontFamily: font }}
+        >
+          {Wheel}
+        </Link>
+      )}
+    </>
   )
 }

@@ -45,11 +45,12 @@ export default function PlayGatesGate({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done, gates])
 
-  // Auto-confirm link gates when the player comes back to the tab/app after opening.
-  // No "J'ai fait" step — returning to the page counts as done.
+  // Auto-confirm link gates when the player comes back to the tab/app after
+  // opening the link. No "J'ai fait" step — returning to the page counts as done.
+  // A window `focus` is itself a "came back" signal, so it confirms outright;
+  // `visibilitychange` only confirms once the tab is actually visible again.
   useEffect(() => {
-    const confirmOpened = () => {
-      if (document.visibilityState !== 'visible') return
+    const confirm = () => {
       setDone((d) => {
         let changed = false
         const next = { ...d }
@@ -63,11 +64,12 @@ export default function PlayGatesGate({
         return changed ? next : d
       })
     }
-    document.addEventListener('visibilitychange', confirmOpened)
-    window.addEventListener('focus', confirmOpened)
+    const onVisible = () => { if (document.visibilityState === 'visible') confirm() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', confirm)
     return () => {
-      document.removeEventListener('visibilitychange', confirmOpened)
-      window.removeEventListener('focus', confirmOpened)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', confirm)
     }
   }, [gates, opened, slug])
 

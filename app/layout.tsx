@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import AppProvider from '@/components/AppProvider'
 import NoDownloadGuard from '@/components/NoDownloadGuard'
@@ -60,6 +60,15 @@ export const metadata: Metadata = {
       fr: 'https://scaniha.com',
     },
   },
+}
+
+// Lock the scale so mobile Safari/Chrome never auto-zooms when an input smaller
+// than 16px gains focus (the qty box, search bars, the caisse amount, etc.).
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 }
 
 const LOCALE_SCRIPT = `

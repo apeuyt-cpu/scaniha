@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { loadGameConfig, playGame } from '@/lib/db/game'
+import { loadGameConfig, playGame, loadPresence } from '@/lib/db/game'
 import { dinerSession } from '@/lib/db/account'
+import { getClientIp, checkPresence } from '@/lib/presence'
 
 /**
  * Public game endpoints for a business (by slug).
@@ -42,6 +43,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const deviceId: string | null = typeof body.deviceId === 'string' && body.deviceId ? body.deviceId.slice(0, 64) : null
   if (!deviceId) {
     return NextResponse.json({ success: false, error: 'Appareil non identifié.' }, { status: 400 })
+  }
+
+  // Presence gate: only let people physically in the café spin (Wi-Fi IP and/or
+  // GPS geofence). The check is server-side; coords (if any) come from the body.
+  const presence = await loadPresence(slug)
+  if (presence.enabled) {
+    const lat = typeof body.lat === 'number' ? body.lat : null
+    const lng = typeof body.lng === 'number' ? body.lng : null
+    const pres = checkPresence(presence, { ip: getClientIp(req), lat, lng })
+    if (!pres.ok) {
+      const error =
+        pres.reason === 'need_location'
+          ? 'Activez la localisation pour jouer ici.'
+          : pres.reason === 'location'
+            ? 'Vous êtes trop loin du restaurant pour jouer.'
+            : presence.message.trim() || 'Connectez-vous au Wi-Fi du restaurant pour jouer.'
+      return NextResponse.json(
+        { success: false, presenceBlocked: true, reason: pres.reason, needLocation: pres.reason === 'need_location', error },
+        { status: 403 }
+      )
+    }
   }
 
   const result = await playGame(slug, deviceId, phone)

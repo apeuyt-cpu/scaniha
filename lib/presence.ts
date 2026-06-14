@@ -117,7 +117,10 @@ export function checkPresence(
     haversineMeters(ctx.lat as number, ctx.lng as number, cfg.geo.lat, cfg.geo.lng) <= cfg.geo.radiusM
   const ipOk = ipAllowed(ctx.ip, cfg.ips)
 
-  if (cfg.mode === 'ip') return ipOk ? { ok: true } : { ok: false, reason: 'network' }
+  if (cfg.mode === 'ip') {
+    if (cfg.ips.length === 0) return { ok: true } // enabled but no allowlist yet → don't lock everyone out
+    return ipOk ? { ok: true } : { ok: false, reason: 'network' }
+  }
 
   if (cfg.mode === 'geo') {
     if (!cfg.geo) return { ok: true } // geo mode but no location set → don't lock everyone out
@@ -126,6 +129,7 @@ export function checkPresence(
   }
 
   // 'both' → pass if either matches.
+  if (cfg.ips.length === 0 && !cfg.geo) return { ok: true } // nothing configured yet
   if (ipOk || geoOk) return { ok: true }
   if (cfg.geo && !hasCoords) return { ok: false, reason: 'need_location' }
   return { ok: false, reason: 'network' }

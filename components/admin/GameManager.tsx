@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { type GameRow, type PrizeRow } from '@/lib/game'
 import Toggle from '@/components/admin/ui/Toggle'
@@ -10,6 +9,7 @@ import Field, { inputClass } from '@/components/admin/ui/Field'
 import SetupCard from '@/components/admin/game/SetupCard'
 import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
 import PlayGates from '@/components/admin/game/PlayGates'
+import PresenceLock from '@/components/admin/game/PresenceLock'
 import SurveyResponses from '@/components/admin/game/SurveyResponses'
 
 /**
@@ -180,12 +180,11 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
           <Stat label="Gains à remettre" value={stats.pending} />
           <Stat label="Remis aujourd’hui" value={stats.redeemed} />
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-          <Link href="/admin/caisse" className="font-semibold text-orange-600 hover:underline">Valider un code en caisse →</Link>
-          {game.active && (
+        {game.active && (
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <a href={`/${slug}/jeu`} target="_blank" className="font-semibold text-zinc-500 hover:text-zinc-700">Voir la page du jeu ↗</a>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Prizes */}
@@ -194,7 +193,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
           <div>
             <h4 className="font-semibold text-zinc-900">Lots de la roue</h4>
             <p className="mt-0.5 text-xs text-zinc-400">
-              La « Chance » fixe la probabilité de chaque lot. « Coût » = valeur du lot en TND (laissez vide pour une remise) — il sert au budget ci-dessous. Indépendant des points de fidélité (gagnés sur les achats).
+              La « Chance » fixe la probabilité de chaque lot. « Coût » = valeur du lot en TND (laissez vide pour une remise) — il sert au budget ci-dessous.
             </p>
           </div>
           <Button variant="neutral" onClick={addPrize} className="!min-h-0 shrink-0 px-3 py-2 text-xs">+ Lot</Button>
@@ -328,6 +327,9 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
 
       {/* Conditions pour jouer (gates: social follow / link / survey) */}
       <PlayGates gameId={game.id} config={game.config || {}} onConfig={(c) => setGame({ ...game, config: c })} />
+
+      {/* Restreindre au réseau du restaurant (présence : IP Wi-Fi / géofence GPS) */}
+      <PresenceLock gameId={game.id} config={game.config || {}} onConfig={(c) => setGame({ ...game, config: c })} />
 
       {/* Survey answers collected by the gates (shows only when there are any) */}
       <SurveyResponses businessId={businessId} />

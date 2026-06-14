@@ -160,3 +160,51 @@ export async function playGame(slug: string, deviceId: string | null, phone: str
     return { ok: false, error: 'server' }
   }
 }
+
+/** Coerce a stored games.config.presence blob into a safe, complete PresenceConfig. */
+export function normalizePresence(raw: any): PresenceConfig {
+  if (!raw || typeof raw !== 'object') return DEFAULT_PRESENCE
+  const mode = raw.mode === 'geo' || raw.mode === 'both' ? raw.mode : 'ip'
+  const ips = Array.isArray(raw.ips) ? raw.ips.map((x: any) => String(x).trim()).filter(Boolean) : []
+  const geo =
+    raw.geo && typeof raw.geo === 'object' && typeof raw.geo.lat === 'number' && typeof raw.geo.lng === 'number'
+      ? { lat: raw.geo.lat, lng: raw.geo.lng, radiusM: Number(raw.geo.radiusM) > 0 ? Number(raw.geo.radiusM) : 150 }
+      : null
+  return {
+    enabled: Boolean(raw.enabled),
+    mode,
+    ips,
+    geo,
+    message: typeof raw.message === 'string' ? raw.message : '',
+    alsoRedeem: Boolean(raw.alsoRedeem),
+  }
+}
+
+/**
+ * FULL presence config (incl. ips/coords) for a business's active roulette —
+ * SERVER-ONLY, used to enforce the gate. Never send this to the client; the
+ * public summary lives in loadGameConfig().presence.
+ */
+export async function loadPresence(slug: string): Promise<PresenceConfig> {
+  try {
+    const supabase: any = await createServiceRoleClient()
+    const { data: business } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('slug', slug)
+      .eq('status', 'active')
+      .maybeSingle()
+    if (!business) return DEFAULT_PRESENCE
+    const { data: game } = await supabase
+      .from('games')
+      .select('config')
+      .eq('business_id', business.id)
+      .eq('type', 'roulette')
+      .eq('active', true)
+      .maybeSingle()
+    return normalizePresence((game as any)?.config?.presence)
+  } catch (e: any) {
+    console.error('loadPresence:', e?.message)
+    return DEFAULT_PRESENCE
+  }
+}

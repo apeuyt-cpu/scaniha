@@ -9,6 +9,18 @@ interface Reward {
   points_cost: number
 }
 
+/** Best-effort GPS coords (only requested if the server asks for them). */
+function getCoords(): Promise<{ lat: number; lng: number } | null> {
+  return new Promise((resolve) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return resolve(null)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    )
+  })
+}
+
 /**
  * "Boutique" — a clean points store shown from the roulette page. The diner
  * sees their balance and the rewards they can buy with points; affordable ones
@@ -64,7 +76,7 @@ export default function RewardsStore({
     return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey) }
   }, [onClose])
 
-  async function redeem(reward: Reward) {
+  async function redeem(reward: Reward, coords?: { lat: number; lng: number }) {
     if (!session) { onRequireLogin?.(); return }
     setBusyId(reward.id)
     setError(null)
@@ -72,9 +84,15 @@ export default function RewardsStore({
       const res = await fetch(`/api/loyalty/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: session.phone, rewardId: reward.id }),
+        body: JSON.stringify({ phone: session.phone, rewardId: reward.id, ...(coords ? coords : {}) }),
       })
       const j = await res.json()
+      // Presence gate asks for location only when the owner uses a geofence —
+      // grab coords once and retry, so IP-locked shops never see a GPS prompt.
+      if (res.status === 403 && j.needLocation && !coords) {
+        const c = await getCoords()
+        if (c) return redeem(reward, c)
+      }
       if (!res.ok || !j.success) throw new Error(j.error || 'Échange impossible.')
       setRedeemed({ code: j.code, rewardLabel: j.rewardLabel })
       await load()

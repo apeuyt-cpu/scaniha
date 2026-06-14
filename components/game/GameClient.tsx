@@ -8,7 +8,7 @@ import DinerAuth, { type DinerSession } from './DinerAuth'
 import AccountSheet from './AccountSheet'
 import RewardsStore from './RewardsStore'
 import PlayGatesGate from './PlayGatesGate'
-import type { GameGate, PresenceSummary } from '@/lib/game'
+import type { GameGate } from '@/lib/game'
 
 type Phase = 'loading' | 'inactive' | 'auth' | 'ready' | 'spinning' | 'won' | 'blocked'
 
@@ -48,6 +48,18 @@ function clearToken(slug: string) {
   try {
     localStorage.removeItem(KEY(slug))
   } catch {}
+}
+
+/** Best-effort GPS coords for the presence geofence — resolves null if denied/unavailable. */
+function getCoords(): Promise<{ lat: number; lng: number } | null> {
+  return new Promise((resolve) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return resolve(null)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    )
+  })
 }
 
 export default function GameClient({ slug }: { slug: string }) {
@@ -198,7 +210,7 @@ export default function GameClient({ slug }: { slug: string }) {
     setPhase('auth')
   }
 
-  async function spin(tokenOverride?: string, gatesOk?: boolean) {
+  async function spin(tokenOverride?: string, gatesOk?: boolean, coords?: { lat: number; lng: number }) {
     // Conditions first: if not cleared, open the gates popup instead of spinning.
     if (!gatesOk && gates.length > 0 && !gatesCleared) {
       setGatesModalOpen(true)
@@ -217,13 +229,19 @@ export default function GameClient({ slug }: { slug: string }) {
       const res = await fetch(`/api/game/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deviceId: deviceId(), token }),
+        body: JSON.stringify({ deviceId: deviceId(), token, ...(coords ? { lat: coords.lat, lng: coords.lng } : {}) }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.success) {
         if (res.status === 401 || json.authRequired) {
           requireLogin('Votre session a expiré. Reconnectez-vous pour jouer.')
           return
+        }
+        // Presence geofence: the server asks for location only when it needs it
+        // (a Wi-Fi-IP lock never does) → grab coords once and retry automatically.
+        if (res.status === 403 && json.needLocation && !coords) {
+          const c = await getCoords()
+          if (c) { spin(token, true, c); return }
         }
         setPhase(res.status === 429 ? 'blocked' : 'ready')
         setError(json.error || 'Une erreur est survenue. Réessayez.')
@@ -249,7 +267,33 @@ export default function GameClient({ slug }: { slug: string }) {
   }
 
   if (phase === 'loading') {
-    return <p className="py-24 text-center text-sm text-[#8A8178]">Chargement du jeu…</p>
+    return (
+      <div className="flex min-h-[100svh] flex-col items-center justify-center gap-5 bg-white px-6 text-center">
+        <span className="relative flex h-16 w-16 items-center justify-center" aria-hidden="true">
+          <span className="gl-ping absolute inset-0 rounded-full" style={{ backgroundColor: `${accent}1f` }} />
+          <svg viewBox="0 0 40 40" width="60" height="60" className="gl-spin">
+            <circle cx="20" cy="20" r="16" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round" strokeDasharray="4 6" />
+            <g stroke={accent} strokeWidth="1.6" strokeLinecap="round">
+              <line x1="20" y1="20" x2="20" y2="6" /><line x1="20" y1="20" x2="32" y2="13" /><line x1="20" y1="20" x2="32" y2="27" /><line x1="20" y1="20" x2="20" y2="34" /><line x1="20" y1="20" x2="8" y2="27" /><line x1="20" y1="20" x2="8" y2="13" />
+            </g>
+            <circle cx="20" cy="20" r="3.2" fill={accent} />
+          </svg>
+        </span>
+        <p className="gl-pulse text-sm font-medium text-[#8A8178]">Chargement du jeu…</p>
+        <style jsx>{`
+          @keyframes gl-spin { to { transform: rotate(360deg) } }
+          @keyframes gl-ping { 0% { transform: scale(0.85); opacity: 0.7 } 100% { transform: scale(1.8); opacity: 0 } }
+          @keyframes gl-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.45 } }
+          .gl-spin { transform-origin: 50% 50%; animation: gl-spin 1.1s linear infinite }
+          .gl-ping { animation: gl-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite }
+          .gl-pulse { animation: gl-pulse 1.6s ease-in-out infinite }
+          @media (prefers-reduced-motion: reduce) {
+            .gl-spin, .gl-ping, .gl-pulse { animation: none !important }
+            .gl-ping { display: none }
+          }
+        `}</style>
+      </div>
+    )
   }
 
   if (phase === 'inactive') {
@@ -609,11 +653,10 @@ function WinModal({
           Valable jusqu’au {new Date(result.expiresAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.
         </p>
 
-        {(result.pointsEarned ?? 0) > 0 && (
-          <p className="mt-3 inline-block rounded-full border bg-[#FAFAF9] px-4 py-1.5 text-sm font-medium" style={{ borderColor: '#ECE7DF', color: accent }}>
-            +{result.pointsEarned} points{typeof result.balance === 'number' ? ` · solde ${result.balance}` : ''}
-          </p>
-        )}
+        {/* No "+points" cue here — the roulette only hands out a prize CODE.
+            Points are earned solely at the caisse (on purchases), so we never
+            advertise points on a spin even though the backend may still log a
+            small loyalty bonus. */}
 
         {/* The next-play countdown — now front-and-centre, not a tiny footer line. */}
         <NextSpinCountdown accent={accent} />

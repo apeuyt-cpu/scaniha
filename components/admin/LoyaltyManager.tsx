@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Toggle from '@/components/admin/ui/Toggle'
 import Button from '@/components/admin/ui/Button'
@@ -161,22 +160,15 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
           label={program.active ? 'Programme actif' : 'Programme désactivé'}
           hint={program.active ? 'Vos clients voient leurs points sur /fidelite.' : 'Activez pour ouvrir la page fidélité.'}
         />
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Field label="Points par TND dépensé" hint="Ex. 1 = 1 point par dinar.">
+        <div className="mt-4">
+          <Field label="Points par TND dépensé" hint="Ex. 1 = 1 point par dinar. Les points se gagnent uniquement en caisse, sur le montant dépensé.">
             <input type="number" min={0} step={0.5} value={program.points_per_tnd}
-              onChange={(e) => updateProgram({ points_per_tnd: Math.max(0, Number(e.target.value)) })} className={inputClass} />
-          </Field>
-          <Field label="Points de bienvenue" hint="Offerts à la première visite d’un client.">
-            <input type="number" min={0} value={program.welcome_points}
-              onChange={(e) => updateProgram({ welcome_points: Math.max(0, Number(e.target.value)) })} className={inputClass} />
+              onChange={(e) => updateProgram({ points_per_tnd: Math.max(0, Number(e.target.value)) })} className={`${inputClass} sm:max-w-xs`} />
           </Field>
         </div>
-        <div className="mt-4 text-xs">
-          <Link href="/admin/caisse" className="font-semibold text-orange-600 hover:underline">
-            Créditer un achat ou valider une récompense en caisse →
-          </Link>
-          {pending > 0 && <span className="ml-2 text-zinc-400">{pending} récompense{pending > 1 ? 's' : ''} à remettre</span>}
-        </div>
+        {pending > 0 && (
+          <div className="mt-4 text-xs text-zinc-400">{pending} récompense{pending > 1 ? 's' : ''} à remettre</div>
+        )}
       </div>
 
       {/* Rewards */}

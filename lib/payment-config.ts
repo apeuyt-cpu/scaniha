@@ -92,25 +92,24 @@ export interface PaymentMethod {
   details: string
 }
 
-// ⚠️ TODO: replace the placeholder `details` below with your real D17 / RIB / Flouci information.
 export const PAYMENT_METHODS: PaymentMethod[] = [
   {
     id: 'd17',
     label: 'D17',
     instructions: 'Envoyez le montant via l’application D17 au numéro ci-dessous, puis joignez le reçu.',
-    details: 'D17 : 00 000 000 (à configurer)',
+    details: 'D17 : 58415520',
   },
   {
     id: 'rib',
     label: 'Virement (RIB)',
     instructions: 'Effectuez un virement bancaire vers le RIB ci-dessous, puis joignez le reçu.',
-    details: 'RIB : 00 000 0000000000000 00 (à configurer)',
+    details: 'RIB : 2600 3000 8902 1314 8653',
   },
   {
     id: 'flouci',
     label: 'Flouci',
-    instructions: 'Envoyez le montant via Flouci au numéro/lien ci-dessous, puis joignez le reçu.',
-    details: 'Flouci : 00 000 000 (à configurer)',
+    instructions: 'Envoyez le montant via Flouci au numéro ci-dessous, puis joignez le reçu.',
+    details: 'Flouci : 58415520',
   },
 ]
 

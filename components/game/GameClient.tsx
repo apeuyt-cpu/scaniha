@@ -415,8 +415,9 @@ export default function GameClient({ slug }: { slug: string }) {
         </div>
       </header>
 
-      {/* Greeting + wheel fill the screen so the page itself never scrolls. */}
-      <div className="flex flex-1 flex-col items-center justify-center gap-7 py-2">
+      {/* Title · wheel · action — one compact, vertically-centred cluster so the
+          spin button sits right under the wheel instead of stranded at the bottom. */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 py-2">
         <div className="text-center">
           <h1 className="text-2xl font-medium text-[#1B1714]">Roue de la chance</h1>
           {greeting && <p className="mt-1.5 text-sm font-medium text-[#1B1714]">Bonjour {greeting}</p>}
@@ -441,10 +442,9 @@ export default function GameClient({ slug }: { slug: string }) {
             }
           }}
         />
-      </div>
 
-      {/* Bottom action zone — pinned, compact. */}
-      <div className="shrink-0">
+        {/* Action — directly under the wheel, full width. */}
+        <div className="w-full">
         {!played ? (
           <>
             <button

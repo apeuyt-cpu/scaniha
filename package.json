@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "sync:images": "node scripts/sync-images.js"
+    "sync:images": "node scripts/sync-images.js",
+    "audit:images": "node scripts/img-audit.mjs",
+    "optimize:images": "node scripts/optimize-images.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

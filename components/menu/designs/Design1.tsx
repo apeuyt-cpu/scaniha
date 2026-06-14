@@ -125,7 +125,7 @@ export default function Design1({ business, categories }: { business: any; categ
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher un plat…"
-              className="w-full bg-transparent text-[14px] outline-none placeholder:text-[#a8a097]"
+              className="w-full bg-transparent text-base outline-none placeholder:text-[#a8a097]"
             />
           </label>
           <RouletteButton

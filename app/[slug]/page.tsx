@@ -5,6 +5,8 @@ import { getBusinessSeo } from '@/lib/seo/business-seo'
 import { getTheme } from '@/lib/themes'
 import PublicMenu from '@/components/menu/PublicMenu'
 import PoweredByScaniha from '@/components/menu/PoweredByScaniha'
+import BottomNav from '@/components/menu/BottomNav'
+import { businessAccent } from '@/lib/db/game'
 import LogView from '@/components/LogView'
 import QrScanMint from '@/components/game/QrScanMint'
 import type { Database } from '@/lib/supabase/database.types'
@@ -137,6 +139,7 @@ export default async function PublicMenuPage({
         theme={theme}
       />
       {!isPaused && <PoweredByScaniha />}
+      {!isPaused && <BottomNav slug={business.slug} accent={businessAccent(business)} active="menu" />}
       <LogView businessId={business.id} slug={business.slug} />
       {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
       <QrScanMint slug={business.slug} />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Toggle from '@/components/admin/ui/Toggle'
 import Button from '@/components/admin/ui/Button'
@@ -39,6 +39,9 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rewardToDelete, setRewardToDelete] = useState<string | null>(null)
+  // Reward NAME persists on a short debounce (not only on blur) so a typed name
+  // is never lost if the owner switches tab or navigates before the input blurs.
+  const labelTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   const load = useCallback(async () => {
     const { data: p, error: pErr } = await (supabase.from('loyalty_programs') as any)
@@ -119,6 +122,11 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
     if (e) { console.error('LoyaltyManager updateReward error:', e); setError(SAVE_MSG) }
   }
 
+  function saveLabelDebounced(id: string, label: string) {
+    clearTimeout(labelTimers.current[id])
+    labelTimers.current[id] = setTimeout(() => updateReward(id, { label }), 600)
+  }
+
   async function addReward() {
     const { data, error: e } = await (supabase.from('loyalty_rewards') as any)
       .insert({ business_id: businessId, label: 'Nouvelle récompense', points_cost: 100 })
@@ -185,8 +193,8 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
             <div key={r.id} className={`flex flex-wrap items-center gap-2 rounded-xl border border-zinc-100 bg-zinc-50/60 p-2.5 ${r.active ? '' : 'opacity-60'}`}>
               <input
                 value={r.label}
-                onChange={(e) => setRewards((cur) => cur.map((x) => (x.id === r.id ? { ...x, label: e.target.value } : x)))}
-                onBlur={(e) => updateReward(r.id, { label: e.target.value })}
+                onChange={(e) => { const v = e.target.value; setRewards((cur) => cur.map((x) => (x.id === r.id ? { ...x, label: v } : x))); saveLabelDebounced(r.id, v) }}
+                onBlur={(e) => { clearTimeout(labelTimers.current[r.id]); updateReward(r.id, { label: e.target.value }) }}
                 className={`${inputClass} min-w-0 flex-1`}
               />
               <label className="flex items-center gap-1.5 text-xs text-zinc-500">

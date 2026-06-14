@@ -39,6 +39,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   if (!session.ok) {
     return NextResponse.json({ success: false, error: 'Connectez-vous pour jouer.', authRequired: true }, { status: 401 })
   }
+
+  // Pin the token to THIS café. A diner session is issued per business, so a
+  // café-A token must never be replayable against café B's slug — that would
+  // record a play, credit café B's points and burn its daily limit under a phone
+  // that never created a café-B account. Resolve the slug's business once (also
+  // reused by the QR gate below) and reject any mismatch.
+  const loaded = await loadQrGate(slug)
+  if (!loaded) {
+    return NextResponse.json({ success: false, error: ERR.no_business.msg }, { status: 404 })
+  }
+  if (session.businessId && loaded.businessId !== session.businessId) {
+    return NextResponse.json({ success: false, error: 'Connectez-vous pour jouer.', authRequired: true }, { status: 401 })
+  }
+
   const phone = session.phone
   const deviceId: string | null = typeof body.deviceId === 'string' && body.deviceId ? body.deviceId.slice(0, 64) : null
   if (!deviceId) {
@@ -48,8 +62,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   // QR-session gate: only let diners who scanned the café's CURRENT QR recently
   // spin. The signed scan cookie is minted by /api/game/[slug]/scan; here we just
   // verify it against the current key + TTL. Expired/missing → "rescan".
-  const loaded = await loadQrGate(slug)
-  if (loaded && loaded.gate.enabled && loaded.gate.qrKey) {
+  if (loaded.gate.enabled && loaded.gate.qrKey) {
     const cookie = req.cookies.get(scanCookieName(loaded.businessId))?.value
     if (!verifyScan(cookie, loaded.businessId, loaded.gate.qrKey, loaded.gate.ttlMin)) {
       return NextResponse.json(

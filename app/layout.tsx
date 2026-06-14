@@ -62,13 +62,11 @@ export const metadata: Metadata = {
   },
 }
 
-// Lock the scale so mobile Safari/Chrome never auto-zooms when an input smaller
-// than 16px gains focus (the qty box, search bars, the caisse amount, etc.).
+// Pinch-zoom is allowed (accessibility / Lighthouse) — we keep iOS from
+// auto-zooming on focus by sizing inputs at ≥16px rather than locking the scale.
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 }
 
 const LOCALE_SCRIPT = `
@@ -90,21 +88,9 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: LOCALE_SCRIPT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "BreadcrumbList",
-              "itemListElement": [
-                { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://scaniha.com" },
-                { "@type": "ListItem", "position": 2, "name": "Fonctionnalités", "item": "https://scaniha.com/features" },
-                { "@type": "ListItem", "position": 3, "name": "Tarifs", "item": "https://scaniha.com/pricing" },
-                { "@type": "ListItem", "position": 4, "name": "À propos", "item": "https://scaniha.com/about" },
-              ]
-            }),
-          }}
-        />
+        {/* NOTE: a site-wide BreadcrumbList was removed — a fixed Accueil→…→À
+            propos trail on every page is incorrect. Breadcrumbs are emitted
+            per-page where the trail is real. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -115,12 +101,6 @@ export default function RootLayout({
               "url": "https://scaniha.com",
               "logo": "https://scaniha.com/logo.png",
               "description": "Créateur de menu QR pour restaurants, cafés et commerces alimentaires.",
-              "sameAs": [
-                "https://facebook.com/scaniha",
-                "https://twitter.com/scaniha",
-                "https://instagram.com/scaniha",
-                "https://linkedin.com/company/scaniha"
-              ],
               "founder": { "@type": "Organization", "name": "Rakiza Group", "url": "https://rakiza.group" },
               "parentOrganization": { "@type": "Organization", "name": "Rakiza Group", "url": "https://rakiza.group" },
               "employee": { "@type": "Person", "name": "Hamed", "jobTitle": "PDG" },
@@ -192,11 +172,7 @@ export default function RootLayout({
               "name": "Scaniha",
               "url": "https://scaniha.com",
               "inLanguage": "fr",
-              "potentialAction": {
-                "@type": "SearchAction",
-                "target": "https://scaniha.com/?q={search_term_string}",
-                "query-input": "required name=search_term_string",
-              },
+              "publisher": { "@type": "Organization", "name": "Scaniha" },
             }),
           }}
         />

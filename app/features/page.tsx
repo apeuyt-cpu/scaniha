@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
+  alternates: { canonical: 'https://scaniha.com/features' },
   title: 'Fonctionnalités | Scaniha - Créateur de menu QR',
   description: 'Découvrez toutes les fonctionnalités du créateur de menu QR numérique Scaniha. Mises à jour en temps réel, statistiques de consultation, génération de QR codes, jeu de la roue de la chance et bien plus pour votre restaurant.',
   openGraph: {

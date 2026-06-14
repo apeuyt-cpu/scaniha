@@ -122,7 +122,7 @@ export default function Design6({ business, categories }: { business: any; categ
           <div className="mx-auto flex max-w-md items-stretch gap-2.5">
             <label className="flex flex-1 items-center gap-2.5 rounded-full border bg-white px-4 transition focus-within:border-transparent focus-within:ring-2" style={{ borderColor: DIVIDER, height: 48, ['--tw-ring-color' as any]: `${accent}55` }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={FAINT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un plat…" aria-label="Rechercher un plat" className="w-full bg-transparent text-[14px] outline-none placeholder:text-[#A9A095]" style={{ color: INK, fontFamily: SANS }} />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un plat…" aria-label="Rechercher un plat" className="w-full bg-transparent text-base outline-none placeholder:text-[#A9A095]" style={{ color: INK, fontFamily: SANS }} />
               {q && (
                 <button type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche" className="shrink-0 text-[#B5ADA1] transition hover:text-[#7A7166]">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { type GameRow, type PrizeRow } from '@/lib/game'
 import Toggle from '@/components/admin/ui/Toggle'
@@ -31,6 +31,9 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
   // the owner opens "Options avancées" for costs, stock, budget, daily limits,
   // play conditions and the presence lock.
   const [advanced, setAdvanced] = useState(false)
+  // Prize NAME persists on a short debounce (not only on blur) so a typed name is
+  // never lost if the owner switches tab or navigates before the input blurs.
+  const labelTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   const load = useCallback(async () => {
     setError(null)
@@ -105,6 +108,11 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
     setPrizes((cur) => cur.map((p) => (p.id === id ? { ...p, ...patch } : p)))
     const { ok, json } = await gameApi('updatePrize', { prizeId: id, patch })
     if (!ok) { console.error('GameManager updatePrize error:', json.error); setError(json.error || SAVE_MSG) }
+  }
+
+  function saveLabelDebounced(id: string, label: string) {
+    clearTimeout(labelTimers.current[id])
+    labelTimers.current[id] = setTimeout(() => updatePrize(id, { label }), 600)
   }
 
   async function addPrize() {
@@ -209,8 +217,8 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
               <div className="flex items-center gap-2">
                 <input
                   value={p.label}
-                  onChange={(e) => setPrizes((cur) => cur.map((x) => (x.id === p.id ? { ...x, label: e.target.value } : x)))}
-                  onBlur={(e) => updatePrize(p.id, { label: e.target.value })}
+                  onChange={(e) => { const v = e.target.value; setPrizes((cur) => cur.map((x) => (x.id === p.id ? { ...x, label: v } : x))); saveLabelDebounced(p.id, v) }}
+                  onBlur={(e) => { clearTimeout(labelTimers.current[p.id]); updatePrize(p.id, { label: e.target.value }) }}
                   className={`${inputClass} min-w-0 flex-1`}
                   placeholder="Nom du lot"
                 />

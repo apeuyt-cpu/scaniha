@@ -17,11 +17,12 @@ export async function generateMetadata({ params }: { params: Promise<{ competito
   const { competitor } = await params
   const comp = competitors[competitor.toLowerCase()]
   if (!comp) {
-    return { title: 'Page introuvable | Scaniha' }
+    return { title: 'Page introuvable | Scaniha', robots: { index: false, follow: false } }
   }
   return {
     title: `Scaniha vs ${comp.name} | Comparatif des créateurs de menu QR`,
     description: `Comparez Scaniha avec ${comp.name}. Découvrez pourquoi Scaniha est le meilleur choix pour le menu numérique de votre restaurant.`,
+    alternates: { canonical: `https://scaniha.com/compare/${competitor}` },
     openGraph: {
       title: `Scaniha vs ${comp.name} | Comparatif`,
       description: `Découvrez pourquoi les restaurants choisissent Scaniha plutôt que ${comp.name}.`,

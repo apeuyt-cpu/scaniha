@@ -3,6 +3,7 @@ import Link from 'next/link'
 import PricingComparison from '@/components/pricing/PricingComparison'
 
 export const metadata: Metadata = {
+  alternates: { canonical: 'https://scaniha.com/pricing' },
   title: 'Tarifs | Scaniha - Créateur de menu QR',
   description: 'Choisissez le forfait idéal pour votre restaurant ou café. Commencez par un essai gratuit de 7 jours. Forfaits 6 mois, 1 an et à vie disponibles. Sans frais cachés.',
   openGraph: {

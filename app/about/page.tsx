@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
+  alternates: { canonical: 'https://scaniha.com/about' },
   title: 'À propos | Scaniha - Créateur de menu QR',
   description: 'Découvrez Scaniha, le créateur de menu QR numérique pour les restaurants et les cafés. Fondé par Rakiza Group, dirigé par son PDG Hamed, pour transformer l\'expérience en restaurant.',
   openGraph: {

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
+  alternates: { canonical: 'https://scaniha.com/resources' },
   title: 'Ressources | Scaniha - Guide du créateur de menu QR',
   description: 'Apprenez à créer et à optimiser votre menu QR numérique. Guides, conseils et bonnes pratiques pour les menus numériques de restaurant.',
   openGraph: {

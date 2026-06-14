@@ -228,7 +228,7 @@ export default function PaymentRequestModal({ businessId, open, onClose, existin
                 {selectedMethod && (
                   <div className="mt-3 rounded-xl bg-zinc-50 p-4 text-sm">
                     <p className="text-zinc-600">{selectedMethod.instructions}</p>
-                    <p className="mt-2 font-mono font-semibold text-zinc-900">{selectedMethod.details}</p>
+                    <p className="mt-2 whitespace-pre-line font-mono font-semibold leading-relaxed text-zinc-900">{selectedMethod.details}</p>
                   </div>
                 )}
               </div>

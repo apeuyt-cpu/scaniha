@@ -102,8 +102,8 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   {
     id: 'rib',
     label: 'Virement (RIB)',
-    instructions: 'Effectuez un virement bancaire vers le RIB ci-dessous, puis joignez le reçu.',
-    details: 'RIB : 2600 3000 8902 1314 8653',
+    instructions: 'Effectuez un virement bancaire vers l’un des RIB ci-dessous, puis joignez le reçu.',
+    details: 'BTE : 24 031 168 0052 511101 32\nBTL : 2600 3000 8902 1314 8653',
   },
   {
     id: 'flouci',

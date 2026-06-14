@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dinerSignup, dinerLogin, dinerSession, dinerLogout } from '@/lib/db/account'
+import { loadQrGate } from '@/lib/db/game'
 
 /**
  * Public diner-account endpoint (phone + password, per business by slug).
@@ -25,7 +26,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
   if (action === 'me') {
     const r = await dinerSession(typeof body.token === 'string' ? body.token : null)
-    return NextResponse.json(r, { status: r.ok ? 200 : 401 })
+    if (!r.ok) return NextResponse.json({ ok: false }, { status: 401 })
+    // Pin the token to this café — a session is per-business, so a café-A token
+    // must not resolve an account against café B's slug.
+    const biz = await loadQrGate(slug)
+    if (r.businessId && biz && biz.businessId !== r.businessId) {
+      return NextResponse.json({ ok: false }, { status: 401 })
+    }
+    return NextResponse.json({ ok: true, phone: r.phone, name: r.name }, { status: 200 })
   }
   if (action === 'logout') {
     await dinerLogout(typeof body.token === 'string' ? body.token : null)

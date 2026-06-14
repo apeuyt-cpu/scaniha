@@ -44,11 +44,13 @@ export default function MenuAnalytics() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period])
 
-  const maxCount = Math.max(...(data?.daily.map(d => d.count) || [1]), 1)
-
   const formatDay = (dateStr: string) => {
-    const d = new Date(dateStr + 'T00:00:00')
+    const d = new Date(dateStr + 'T12:00:00')
     return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })
+  }
+  const formatFull = (dateStr: string) => {
+    const d = new Date(dateStr + 'T12:00:00')
+    return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })
   }
 
   return (
@@ -113,27 +115,68 @@ export default function MenuAnalytics() {
               </p>
             </div>
           ) : (
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-              <p className="text-sm font-semibold text-zinc-700">Visites quotidiennes</p>
-              {data.daily.length > 0 ? (
-                <div className="mt-4 flex h-36 items-end gap-1.5" style={{ direction: 'ltr' }}>
-                  {data.daily.map(day => (
-                    <div key={day.date} className="group flex flex-1 flex-col items-center gap-1">
-                      <span className="text-[10px] font-semibold text-zinc-400">{day.count}</span>
-                      <div className="flex w-full flex-1 items-end">
-                        <div
-                          className="w-full rounded-t-md bg-orange-400 transition-all group-hover:bg-orange-500"
-                          style={{ height: `${Math.max((day.count / maxCount) * 100, day.count > 0 ? 6 : 2)}%` }}
-                        />
-                      </div>
-                      <span className="mt-1 truncate text-[10px] leading-none text-zinc-400">{formatDay(day.date)}</span>
+            (() => {
+              const series = buildDaySeries(data.daily, period)
+              const peak = Math.max(...series.map((s) => s.count), 0)
+              const totalPeriod = series.reduce((s, d) => s + d.count, 0)
+              const avg = Math.round(totalPeriod / series.length)
+              return (
+                <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-sm font-semibold text-zinc-700">Visites quotidiennes</p>
+                    {totalPeriod > 0 && (
+                      <p className="text-xs text-zinc-400">
+                        <span className="font-semibold text-zinc-600">{totalPeriod}</span> au total · {avg}/jour
+                      </p>
+                    )}
+                  </div>
+
+                  {totalPeriod > 0 ? (
+                    <div className={`mt-5 flex h-40 items-end ${period === 'month' ? 'gap-[3px]' : 'gap-2'}`} style={{ direction: 'ltr' }}>
+                      {series.map((day, i) => {
+                        const isToday = i === series.length - 1
+                        const isPeak = day.count === peak && day.count > 0
+                        const h = day.count > 0 ? Math.max((day.count / peak) * 100, 7) : 0
+                        const showLabel =
+                          period === 'week' ||
+                          i === 0 ||
+                          i === series.length - 1 ||
+                          i === Math.floor((series.length - 1) / 2)
+                        return (
+                          <div key={day.date} className="group relative flex flex-1 flex-col items-center justify-end">
+                            {/* hover tooltip — exact count + date */}
+                            <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg bg-zinc-900 px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                              {day.count} visite{day.count > 1 ? 's' : ''} · {formatFull(day.date)}
+                            </div>
+                            {/* count above the bar — only in week view, where there's room */}
+                            {period === 'week' && (
+                              <span className={`mb-1 text-[10px] font-bold ${day.count > 0 ? (isToday ? 'text-orange-600' : 'text-zinc-500') : 'text-zinc-300'}`}>
+                                {day.count}
+                              </span>
+                            )}
+                            <div className="flex w-full flex-1 items-end">
+                              {day.count > 0 ? (
+                                <div
+                                  className={`w-full rounded-md transition-all ${isToday ? 'bg-orange-500' : isPeak ? 'bg-orange-400' : 'bg-orange-200 group-hover:bg-orange-400'}`}
+                                  style={{ height: `${h}%` }}
+                                />
+                              ) : (
+                                <div className="h-[3px] w-full rounded-full bg-zinc-100" />
+                              )}
+                            </div>
+                            <span className={`mt-1.5 h-3 truncate text-[9px] leading-none ${isToday ? 'font-bold text-orange-600' : 'text-zinc-400'}`}>
+                              {showLabel ? formatDay(day.date) : ''}
+                            </span>
+                          </div>
+                        )
+                      })}
                     </div>
-                  ))}
+                  ) : (
+                    <p className="py-12 text-center text-sm text-zinc-400">Aucune visite durant cette période</p>
+                  )}
                 </div>
-              ) : (
-                <p className="py-10 text-center text-sm text-zinc-400">Aucune visite durant cette période</p>
-              )}
-            </div>
+              )
+            })()
           )}
         </>
       ) : (
@@ -143,6 +186,23 @@ export default function MenuAnalytics() {
       )}
     </div>
   )
+}
+
+// Fill in every day of the period (including 0-visit days) so the chart is a
+// continuous timeline instead of a sparse list of only the days that had traffic.
+function buildDaySeries(daily: DailyView[], period: 'today' | 'week' | 'month'): DailyView[] {
+  const byDate: Record<string, number> = {}
+  for (const d of daily) byDate[d.date] = d.count
+  const span = period === 'month' ? 30 : 7
+  const now = new Date()
+  const out: DailyView[] = []
+  for (let i = span - 1; i >= 0; i--) {
+    // UTC day keys — the API buckets views by their UTC date, so we match that.
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i))
+    const date = d.toISOString().slice(0, 10)
+    out.push({ date, count: byDate[date] || 0 })
+  }
+  return out
 }
 
 function Tile({ value, label, icon }: { value: number; label: string; icon: React.ReactNode }) {

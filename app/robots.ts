@@ -24,7 +24,7 @@ export default function robots(): MetadataRoute.Robots {
           '/blog',
           '/contact',
         ],
-        disallow: ['/admin/', '/super-admin/', '/api/', '/gallery', '/upload-demo/'],
+        disallow: ['/admin/', '/super-admin/', '/api/', '/upload-demo/'],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

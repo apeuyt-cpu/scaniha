@@ -288,7 +288,7 @@ function LookupCard() {
       )}
 
       <p className="mt-4 text-xs text-zinc-400">
-        Configurer les lots et récompenses : <Link href="/admin/game" className="font-semibold text-orange-600 hover:underline">Jeu &amp; Fidélité →</Link>
+        Configurer les lots et récompenses : <Link href="/admin/game" className="font-semibold text-orange-600 hover:underline">Programme de fidélité →</Link>
       </p>
     </div>
   )

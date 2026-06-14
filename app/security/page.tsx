@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
+  alternates: { canonical: 'https://scaniha.com/security' },
   title: 'Sécurité | Scaniha - Créateur de menu QR',
   description: 'Comment Scaniha protège vos données : connexions chiffrées (HTTPS/TLS), base de données Postgres avec isolation par compte, identifiants gérés par Supabase Auth, accès au moindre privilège et sauvegardes régulières.',
   openGraph: {

@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export default function GamePage() {
   return (
     <PageShell
-      title="Jeu & Fidélité"
+      title="Programme de fidélité"
       width="3xl"
       action={
         <Link

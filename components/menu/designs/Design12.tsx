@@ -133,8 +133,11 @@ export default function Design12({ business, categories }: { business: any; cate
       </div>
 
       {/* ===== Search + roulette entry ===== */}
+      {/* pt-7 (not pt-4): leaves room for the roulette button's floating
+          « Gagnez » caption so it sits in the gap below the sticky z-30 header
+          instead of being painted over by it. */}
       {totalItems > 0 && (
-        <div className="px-4 pt-4">
+        <div className="px-4 pt-7">
           <div className="flex items-stretch gap-2.5">
             <label className="flex flex-1 items-center gap-2.5 rounded-full px-4 ring-1 transition" style={{ backgroundColor: CARD, height: 46, ['--tw-ring-color' as string]: LINE }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -143,7 +146,7 @@ export default function Design12({ business, categories }: { business: any; cate
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Rechercher un plat…"
                 aria-label="Rechercher un plat"
-                className="w-full bg-transparent text-[14px] outline-none"
+                className="w-full bg-transparent text-base outline-none"
                 style={{ color: INK }}
               />
               {q && (

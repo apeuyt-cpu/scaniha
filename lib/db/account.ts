@@ -11,7 +11,7 @@ export type AccountResult =
   | { ok: true; token: string; phone: string; name: string | null }
   | { ok: false; error: string }
 
-export type SessionResult = { ok: true; phone: string; name: string | null } | { ok: false }
+export type SessionResult = { ok: true; phone: string; name: string | null; businessId: string } | { ok: false }
 
 /** Map an RPC error key to a French message for the diner. */
 const SIGNUP_MSG: Record<string, string> = {
@@ -71,7 +71,9 @@ export async function dinerSession(token: string | null | undefined): Promise<Se
     const supabase: any = await createServiceRoleClient()
     const { data, error } = await supabase.rpc('diner_session', { p_token: token })
     if (error || !data?.ok) return { ok: false }
-    return { ok: true, phone: data.phone, name: data.name ?? null }
+    // businessId binds the token to the café it was issued for — callers compare
+    // it against the slug being acted on to block cross-business token replay.
+    return { ok: true, phone: data.phone, name: data.name ?? null, businessId: data.businessId }
   } catch {
     return { ok: false }
   }

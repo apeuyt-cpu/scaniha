@@ -174,7 +174,7 @@ export default function Design11({ business, categories }: { business: any; cate
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher un plat…"
               aria-label="Rechercher un plat"
-              className="w-full bg-transparent text-[14.5px] outline-none placeholder:text-[#A89E92]"
+              className="w-full bg-transparent text-base outline-none placeholder:text-[#A89E92]"
               style={{ color: INK }}
             />
             {query && (

@@ -50,12 +50,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/login`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.3,
-    },
-    {
       url: `${baseUrl}/blog`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
@@ -103,6 +97,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.7,
     },
+    // Competitor comparison pages (generateStaticParams in app/compare/[competitor]).
+    ...['menulog', 'qrmenu', 'menuly', 'restomenu'].map((c) => ({
+      url: `${baseUrl}/compare/${c}`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
     {
       url: `${baseUrl}/blog/how-to-create-qr-menu-for-restaurant`,
       lastModified: new Date(),

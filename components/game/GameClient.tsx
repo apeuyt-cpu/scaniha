@@ -212,6 +212,10 @@ export default function GameClient({ slug }: { slug: string }) {
       return
     }
     setError(null)
+    // Replay: clear the previous win so the wheel re-spins from scratch instead
+    // of snapping to the old prize before the new result lands.
+    setResult(null)
+    setRevealed(false)
     setPhase('spinning')
     try {
       const res = await fetch(`/api/game/${slug}`, {
@@ -442,17 +446,35 @@ export default function GameClient({ slug }: { slug: string }) {
               {phase === 'spinning' ? 'La roue tourne…' : 'Tourner la roue'}
             </button>
             <p className="mt-3 text-center text-[11px] leading-relaxed text-[#8A8178]">
-              Une partie par jour — vos gains et points sont liés à votre compte.
+              Vos gains et vos points sont gardés sur votre compte.
             </p>
             {error && <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p>}
           </>
         ) : (
           <div className="space-y-3">
-            {phase === 'blocked' && error && (
-              <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">{error}</p>
+            {/* Countdown to tomorrow only when the SERVER actually blocked the
+                play (daily limit reached, 429) — never just because they won. */}
+            {phase === 'blocked' && (
+              <>
+                {error && (
+                  <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">{error}</p>
+                )}
+                <NextSpinCountdown accent={accent} />
+              </>
             )}
-            <NextSpinCountdown accent={accent} />
             <div className="flex flex-col gap-2.5">
+              {/* The server enforces the per-day limit — after a win we simply
+                  offer Rejouer; if no plays remain the spin returns 429 → blocked. */}
+              {phase === 'won' && (
+                <button
+                  type="button"
+                  onClick={() => spin()}
+                  className="rounded-2xl py-3.5 text-sm font-semibold text-white transition active:scale-[0.99]"
+                  style={{ backgroundColor: accent, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+                >
+                  Rejouer
+                </button>
+              )}
               {phase === 'won' && result && (
                 <button
                   type="button"
@@ -467,8 +489,8 @@ export default function GameClient({ slug }: { slug: string }) {
                 <button
                   type="button"
                   onClick={() => setAccountOpen(true)}
-                  className="rounded-2xl py-3.5 text-sm font-medium text-white transition active:scale-[0.99]"
-                  style={{ backgroundColor: accent, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+                  className="rounded-2xl border bg-white py-3.5 text-sm font-medium text-[#1B1714] transition hover:bg-[#FAFAF9] active:scale-[0.99]"
+                  style={{ borderColor: '#ECE7DF' }}
                 >
                   Mon compte
                 </button>
@@ -712,7 +734,7 @@ function NextSpinCountdown({ accent, compact = false }: { accent: string; compac
     <div className="mt-5 rounded-2xl border bg-white px-4 py-4 text-center" style={{ borderColor: '#ECE7DF', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
       <p className="text-[11px] font-medium uppercase tracking-wide text-[#8A8178]">Prochaine partie dans</p>
       <p className="mt-1 text-3xl font-medium tabular-nums" style={{ color: accent }}>{fmtCountdown(ms)}</p>
-      <p className="mt-1 text-[11px] text-[#8A8178]">Une partie par jour — revenez demain&nbsp;!</p>
+      <p className="mt-1 text-[11px] text-[#8A8178]">Revenez demain pour rejouer&nbsp;!</p>
     </div>
   )
 }

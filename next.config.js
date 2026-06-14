@@ -11,10 +11,6 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'www.thd.tn',
       },
-      {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-      },
     ],
   },
 }

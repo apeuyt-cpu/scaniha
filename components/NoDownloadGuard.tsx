@@ -25,7 +25,6 @@ const MARKETING_PREFIXES = [
   '/security',
   '/contact',
   '/resources',
-  '/gallery',
   '/blog',
   '/compare',
   '/login',

@@ -282,47 +282,6 @@ export interface Database {
           redeemed_at?: string | null
         }
       }
-      images: {
-        Row: {
-          id: string
-          public_id: string
-          image_url: string
-          format: string | null
-          width: number | null
-          height: number | null
-          bytes: number | null
-          folder: string | null
-          tags: string[]
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          public_id: string
-          image_url: string
-          format?: string | null
-          width?: number | null
-          height?: number | null
-          bytes?: number | null
-          folder?: string | null
-          tags?: string[]
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          public_id?: string
-          image_url?: string
-          format?: string | null
-          width?: number | null
-          height?: number | null
-          bytes?: number | null
-          folder?: string | null
-          tags?: string[]
-          created_at?: string
-          updated_at?: string
-        }
-      }
     }
   }
 }

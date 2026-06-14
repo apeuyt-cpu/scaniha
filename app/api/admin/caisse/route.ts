@@ -5,7 +5,8 @@ import { validateCode, awardPoints, customerSummary, normPhone } from '@/lib/db/
 
 /**
  * Owner "caisse" console — one endpoint, three actions:
- *   { action: 'validate', code }          → redeem a win OR reward code
+ *   { action: 'check', code }              → PEEK a code (no redeem) — show it first
+ *   { action: 'validate', code }          → redeem/collect a win OR reward code
  *   { action: 'award', phone, amount, note? } → credit a purchase (+ welcome)
  *   { action: 'lookup', phone }            → balance + history + active codes
  *
@@ -23,10 +24,11 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}))
     const action = body.action
 
-    if (action === 'validate') {
+    if (action === 'check' || action === 'validate') {
       const code = typeof body.code === 'string' ? body.code.trim() : ''
       if (code.length < 4) return NextResponse.json({ error: 'Code invalide.' }, { status: 400 })
-      const result = await validateCode(business.id, code)
+      // 'check' peeks (no redeem); 'validate' collects (marks redeemed).
+      const result = await validateCode(business.id, code, action === 'validate')
       return NextResponse.json(result)
     }
 

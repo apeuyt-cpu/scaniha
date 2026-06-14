@@ -253,7 +253,10 @@ export default function AdminHome() {
         <IconLogout /> Se déconnecter
       </button>
 
-      <PaymentRequestModal businessId={business.id} open={showPlanPicker} onClose={() => setShowPlanPicker(false)} />
+      {/* This branch only renders for active/paused businesses (pending returns
+          earlier), i.e. existing customers renewing — they already have their QR
+          supports, so the add-ons upsell is hidden (only the plan/pricing shows). */}
+      <PaymentRequestModal businessId={business.id} open={showPlanPicker} onClose={() => setShowPlanPicker(false)} existingCustomer />
     </div>
   )
 }

@@ -5,7 +5,6 @@ import { getBusinessSeo } from '@/lib/seo/business-seo'
 import { getTheme } from '@/lib/themes'
 import PublicMenu from '@/components/menu/PublicMenu'
 import PoweredByScaniha from '@/components/menu/PoweredByScaniha'
-import GameFab from '@/components/game/GameFab'
 import LogView from '@/components/LogView'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Metadata } from 'next'
@@ -64,11 +63,6 @@ export default async function PublicMenuPage({
   }
 
   const theme = getTheme(business.theme_id, business.primary_color)
-
-  // The unified MenuDock no longer carries the roulette — instead, EVERY design
-  // (modern templates AND classic themes) gets the dedicated floating wheel
-  // button (GameFab) below. It self-detects an active game and renders nothing
-  // otherwise, so it's safe to always mount on non-paused menus.
 
   // Create a business object with modified status for display
   const businessForDisplay = {
@@ -141,7 +135,6 @@ export default async function PublicMenuPage({
         categories={categories}
         theme={theme}
       />
-      {!isPaused && <GameFab slug={business.slug} />}
       {!isPaused && <PoweredByScaniha />}
       <LogView businessId={business.id} slug={business.slug} />
     </>

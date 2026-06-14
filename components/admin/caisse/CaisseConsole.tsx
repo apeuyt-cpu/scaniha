@@ -31,7 +31,7 @@ async function caisse(action: string, payload: Record<string, unknown>) {
 /** The owner's day-to-day console: validate a code, credit a purchase, look up a customer. */
 export default function CaisseConsole() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <ValidateCard />
       <AwardCard />
       <LookupCard />
@@ -39,14 +39,16 @@ export default function CaisseConsole() {
   )
 }
 
-/* ── Validate a code (win or reward) ─────────────────────────────── */
+/* ── Validate a code (win or reward) — two-step: check → collect ───── */
 function ValidateCard() {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
+  const [collecting, setCollecting] = useState(false)
   const [result, setResult] = useState<ValidateResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
-  async function submit() {
+  // Step 1: PEEK the code — shows what it is without consuming it.
+  async function check() {
     const c = code.trim()
     if (c.replace(/[^A-Za-z0-9]/g, '').length < 4) {
       setErr('Entrez un code valide.')
@@ -55,45 +57,97 @@ function ValidateCard() {
     setBusy(true)
     setErr(null)
     setResult(null)
-    const { ok, json } = await caisse('validate', { code: c })
+    const { ok, json } = await caisse('check', { code: c })
     setBusy(false)
     if (!ok) {
       setErr(json.error || 'Erreur.')
       return
     }
     setResult(json as ValidateResult)
-    if (json?.status === 'redeemed') setCode('')
+  }
+
+  // Step 2: COLLECT — atomically marks it redeemed so it can't be reused.
+  async function collect() {
+    setCollecting(true)
+    setErr(null)
+    const { ok, json } = await caisse('validate', { code: code.trim() })
+    setCollecting(false)
+    if (!ok) {
+      setErr(json.error || 'Erreur.')
+      return
+    }
+    setResult(json as ValidateResult)
+  }
+
+  function reset() {
+    setCode('')
+    setResult(null)
+    setErr(null)
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-6">
       <h2 className="font-bold text-zinc-900">Valider un code</h2>
-      <p className="mt-0.5 text-sm text-zinc-500">Le client montre son code (lot gagné ou récompense) — saisissez-le pour le remettre.</p>
+      <p className="mt-0.5 text-sm text-zinc-500">Le client montre son code — vérifiez-le, puis marquez-le comme récupéré.</p>
       <div className="mt-4 flex gap-2">
         <input
           value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          onKeyDown={(e) => e.key === 'Enter' && submit()}
+          onChange={(e) => { setCode(e.target.value.toUpperCase()); setResult(null) }}
+          onKeyDown={(e) => e.key === 'Enter' && check()}
           placeholder="K7F-3QZ"
           autoCapitalize="characters"
           autoComplete="off"
           className={`${inputClass} font-mono text-base tracking-[0.2em]`}
         />
-        <Button variant="primary" onClick={submit} disabled={busy} className="shrink-0">
-          {busy ? '…' : 'Valider'}
+        <Button variant="primary" onClick={check} disabled={busy} className="shrink-0">
+          {busy ? '…' : 'Vérifier'}
         </Button>
       </div>
       {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
-      {result && <ValidateBanner result={result} />}
+      {result && <ValidateResultView result={result} collecting={collecting} onCollect={collect} onReset={reset} />}
     </div>
   )
 }
 
-function ValidateBanner({ result }: { result: ValidateResult }) {
+function ValidateResultView({ result, collecting, onCollect, onReset }: { result: ValidateResult; collecting: boolean; onCollect: () => void; onReset: () => void }) {
   if (!result.found) return <Banner tone="red" title="Code introuvable" text="Vérifiez le code saisi." />
   const kind = result.kind === 'win' ? 'Lot' : 'Récompense'
   const who = result.customerPhone ? ` · ${result.customerPhone}` : ''
-  if (result.status === 'redeemed') return <Banner tone="green" title={`✓ Validé — ${result.label}`} text={`${kind} remis au client${who}.`} />
+
+  // Step-2 affordance: a still-claimable code → show it + the collect button.
+  if (result.status === 'valid') {
+    return (
+      <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{kind} à remettre</p>
+        <p className="mt-1 text-lg font-bold text-zinc-900">{result.label}</p>
+        <p className="mt-0.5 text-sm text-zinc-500">
+          Client{who}{result.expiresAt ? ` · valable jusqu’au ${fmt(result.expiresAt)}` : ''}
+        </p>
+        <button
+          type="button"
+          onClick={onCollect}
+          disabled={collecting}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-700 active:scale-[0.99] disabled:opacity-60"
+        >
+          {collecting ? 'Validation…' : '✓ Marquer comme récupéré'}
+        </button>
+        <p className="mt-2 text-center text-xs text-zinc-400">Une fois récupéré, ce code ne pourra plus être réutilisé.</p>
+      </div>
+    )
+  }
+
+  if (result.status === 'redeemed') {
+    return (
+      <div className="mt-3 rounded-xl border border-green-200 bg-green-50 p-4 text-center">
+        <p className="text-sm font-bold text-green-800">✓ Récupéré — {result.label}</p>
+        <p className="mt-0.5 text-sm text-green-700/90">{kind} remis au client{who}.</p>
+        <button type="button" onClick={onReset} className="mt-3 text-sm font-semibold text-zinc-600 hover:text-zinc-900">
+          Valider un autre code
+        </button>
+      </div>
+    )
+  }
+
   if (result.status === 'already')
     return <Banner tone="amber" title="Déjà utilisé" text={`${kind} « ${result.label} » déjà remis${result.redeemedAt ? ` le ${fmt(result.redeemedAt)}` : ''}${who}.`} />
   if (result.status === 'expired') return <Banner tone="amber" title="Code expiré" text={`${kind} « ${result.label} » — ce code n’est plus valable${who}.`} />
@@ -122,7 +176,7 @@ function AwardCard() {
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-6">
       <h2 className="font-bold text-zinc-900">Créditer un achat</h2>
       <p className="mt-0.5 text-sm text-zinc-500">Le client donne son numéro — saisissez le montant de l’addition.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_8rem_auto] sm:items-end">
@@ -162,7 +216,7 @@ function LookupCard() {
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-6">
       <h2 className="font-bold text-zinc-900">Rechercher un client</h2>
       <p className="mt-0.5 text-sm text-zinc-500">Voir le solde de points, l’historique et les codes encore valables.</p>
       <div className="mt-4 flex gap-2">

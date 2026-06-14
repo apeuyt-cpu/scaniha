@@ -8,9 +8,15 @@ interface PaymentRequestModalProps {
   businessId: string
   open: boolean
   onClose: () => void
+  /**
+   * True for an existing customer (already on a paid plan, renewing/extending).
+   * They already have their QR supports, so the physical-add-ons upsell is hidden
+   * — they only pick a plan. New (pending) businesses still see the add-ons.
+   */
+  existingCustomer?: boolean
 }
 
-export default function PaymentRequestModal({ businessId, open, onClose }: PaymentRequestModalProps) {
+export default function PaymentRequestModal({ businessId, open, onClose, existingCustomer = false }: PaymentRequestModalProps) {
   const [step, setStep] = useState<'plan' | 'form' | 'done'>('plan')
   const [plan, setPlan] = useState<PlanId | null>(null)
   const [method, setMethod] = useState<PaymentMethodId | null>(null)
@@ -128,42 +134,47 @@ export default function PaymentRequestModal({ businessId, open, onClose }: Payme
               </p>
             )}
 
-            {/* Physical add-ons */}
-            <div className="mt-6">
-              <h3 className="text-sm font-bold text-zinc-900">Supports QR pour vos tables <span className="font-normal text-zinc-400">(optionnel)</span></h3>
-              <div className="mt-3 space-y-2.5">
-                {ADDONS.map((a) => {
-                  const qty = addons[a.id] || 0
-                  return (
-                    <div key={a.id} className={`rounded-2xl border p-3.5 transition-colors ${qty > 0 ? 'border-orange-300 bg-orange-50/40' : 'border-zinc-200'}`}>
-                      <div className="flex items-center justify-between gap-3">
+            {/* Physical add-ons — compact one-row-per-item.
+                Hidden for existing customers (renewals): they already have their
+                QR supports, so a renewal only needs a plan, not the upsell. */}
+            {!existingCustomer && (
+              <div className="mt-5">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="text-sm font-bold text-zinc-900">Supports QR <span className="font-normal text-zinc-400">(optionnel)</span></h3>
+                  <span className="text-[11px] text-zinc-400">1 par table</span>
+                </div>
+                <div className="mt-2 space-y-1.5">
+                  {ADDONS.map((a) => {
+                    const qty = addons[a.id] || 0
+                    return (
+                      <div key={a.id} className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 transition-colors ${qty > 0 ? 'border-orange-300 bg-orange-50/40' : 'border-zinc-200'}`}>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-zinc-900">
+                          <p className="truncate text-[13px] font-semibold text-zinc-900">
                             <span aria-hidden="true">{a.emoji}</span> {a.label}
                           </p>
-                          <p className="text-xs text-zinc-500">{a.price} TND {a.unit}</p>
+                          <p className="text-[11px] text-zinc-500">
+                            {a.price} TND {a.unit}
+                            {qty > 0 && <span className="font-bold text-orange-600"> · {qty * a.price} TND</span>}
+                          </p>
                         </div>
-                        <div className="flex shrink-0 items-center gap-1.5">
-                          <button type="button" onClick={() => setQty(a.id, qty - 1)} aria-label="Moins" className="h-8 w-8 rounded-lg border border-zinc-200 text-base font-bold text-zinc-600 hover:border-zinc-300 disabled:opacity-40" disabled={qty === 0}>−</button>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button type="button" onClick={() => setQty(a.id, qty - 1)} aria-label="Moins" className="h-7 w-7 rounded-lg border border-zinc-200 text-base font-bold text-zinc-600 hover:border-zinc-300 disabled:opacity-40" disabled={qty === 0}>−</button>
                           <input
                             type="number"
                             min={0}
                             max={a.max}
                             value={qty}
                             onChange={(e) => setQty(a.id, Number(e.target.value))}
-                            className="h-8 w-14 rounded-lg border border-zinc-200 text-center text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className="h-7 w-10 rounded-lg border border-zinc-200 text-center text-sm font-bold text-zinc-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
                           />
-                          <button type="button" onClick={() => setQty(a.id, qty + 1)} aria-label="Plus" className="h-8 w-8 rounded-lg border border-zinc-200 text-base font-bold text-zinc-600 hover:border-zinc-300">+</button>
+                          <button type="button" onClick={() => setQty(a.id, qty + 1)} aria-label="Plus" className="h-7 w-7 rounded-lg border border-zinc-200 text-base font-bold text-zinc-600 hover:border-zinc-300">+</button>
                         </div>
                       </div>
-                      <p className="mt-1.5 text-xs text-zinc-400">{a.desc}</p>
-                      {qty > 0 && <p className="mt-1 text-right text-xs font-bold text-orange-600">{qty} × {a.price} = {qty * a.price} TND</p>}
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-              <p className="mt-2 text-xs text-zinc-400"><span aria-hidden="true">💡</span> Un support par table — comptez vos tables.</p>
-            </div>
+            )}
 
             {/* Total + continue */}
             <div className="mt-5 flex items-center justify-between rounded-2xl bg-zinc-50 px-4 py-3">

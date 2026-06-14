@@ -11,6 +11,7 @@ import { getDesignSettings, resolveAccent, resolveGradient } from '@/lib/design-
 import { normalizeCats, searchItems, type KitItem, type KitCategory } from './kit'
 import { InteractiveStyles, CenteredItemModal } from './interactive'
 import { MenuDock } from './MenuDock'
+import RouletteButton from './RouletteButton'
 import { getSocials } from './SocialLinks'
 import { FoodIcon } from './icons'
 
@@ -120,7 +121,7 @@ export default function Design12({ business, categories }: { business: any; cate
               <img src={business.logo_url} alt={business?.name || ''} className="h-10 w-10 rounded-full object-cover ring-1 ring-black/10" style={{ outline: `2px solid ${PAGE}`, outlineOffset: 1 }} />
             </button>
           ) : (
-            <button type="button" onClick={toTop} aria-label="Accueil" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white shadow-[0_8px_18px_-8px_rgba(244,123,32,0.9)] transition active:scale-95" style={{ backgroundImage: gradient }}>
+            <button type="button" onClick={toTop} aria-label="Accueil" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition active:scale-95" style={{ backgroundImage: gradient, boxShadow: `0 8px 18px -8px ${accent}e6` }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></svg>
             </button>
           )}
@@ -131,25 +132,35 @@ export default function Design12({ business, categories }: { business: any; cate
         </header>
       </div>
 
-      {/* ===== Search ===== */}
+      {/* ===== Search + roulette entry ===== */}
       {totalItems > 0 && (
         <div className="px-4 pt-4">
-          <label className="flex items-center gap-2.5 rounded-full px-4 ring-1 transition" style={{ backgroundColor: CARD, height: 46, ['--tw-ring-color' as string]: LINE }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher un plat…"
-              aria-label="Rechercher un plat"
-              className="w-full bg-transparent text-[14px] outline-none"
-              style={{ color: INK }}
+          <div className="flex items-stretch gap-2.5">
+            <label className="flex flex-1 items-center gap-2.5 rounded-full px-4 ring-1 transition" style={{ backgroundColor: CARD, height: 46, ['--tw-ring-color' as string]: LINE }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Rechercher un plat…"
+                aria-label="Rechercher un plat"
+                className="w-full bg-transparent text-[14px] outline-none"
+                style={{ color: INK }}
+              />
+              {q && (
+                <button type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition active:scale-90" style={{ color: MUTED }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </button>
+              )}
+            </label>
+            <RouletteButton
+              slug={business?.slug}
+              accent={accent}
+              gradient={gradient}
+              font={SANS}
+              size={46}
+              rounded="rounded-full"
             />
-            {q && (
-              <button type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition active:scale-90" style={{ color: MUTED }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-              </button>
-            )}
-          </label>
+          </div>
         </div>
       )}
 
@@ -186,7 +197,10 @@ export default function Design12({ business, categories }: { business: any; cate
               {cats.length > 0 && <span className="text-[12px] font-semibold" style={{ color: MUTED }}>{cats.length}</span>}
             </div>
 
-            <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
+            {/* pt/pb give the active circle's outline + drop-shadow room — an
+                overflow-x scroller also clips vertical overflow, which was
+                slicing the top of the selected category circle. */}
+            <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pt-2 pb-3">
               {cats.map((cat) => {
                 const isActive = cat.id === active?.id
                 return (
@@ -200,7 +214,7 @@ export default function Design12({ business, categories }: { business: any; cate
                     <span
                       className="relative flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-full transition"
                       style={{
-                        boxShadow: isActive ? '0 12px 26px -12px rgba(244,123,32,0.65)' : '0 8px 22px -16px rgba(42,33,24,0.6)',
+                        boxShadow: isActive ? `0 12px 26px -12px ${accent}a6` : '0 8px 22px -16px rgba(42,33,24,0.6)',
                         outline: isActive ? `2.5px solid ${accent}` : `2.5px solid transparent`,
                         outlineOffset: 2,
                       }}
@@ -272,7 +286,7 @@ export default function Design12({ business, categories }: { business: any; cate
       <MenuFooter business={business} settings={settings} accent={accent} />
 
       <CenteredItemModal item={selected} onClose={() => setSelected(null)} gradient={gradient} ink={INK} muted={MUTED} font={SANS} />
-      <MenuDock business={business} categories={cats} accent={accent} gradient={gradient} font={SANS} />
+      <MenuDock business={business} categories={cats} accent={accent} gradient={gradient} font={SANS} includeSurprise={false} />
     </div>
   )
 }

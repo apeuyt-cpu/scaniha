@@ -42,7 +42,10 @@ export default function LoyaltyClient({ slug }: { slug: string }) {
   // 'guest' = not logged in (prompt to connect); 'view' = account loaded.
   const [phase, setPhase] = useState<'loading' | 'inactive' | 'guest' | 'view'>('loading')
   const [businessName, setBusinessName] = useState('')
-  const [accent, setAccent] = useState('#F47B20')
+  // The loyalty/account area is a SCANIHA feature → fixed Scaniha brand, not the
+  // café owner's custom menu colour.
+  const accent = '#F47B20'
+  const gradient = 'linear-gradient(135deg, #F47B20, #F5B82E)'
   const [rewards, setRewards] = useState<Reward[]>([])
   const [token, setToken] = useState<string | null>(null)
   const [phone, setPhone] = useState('')
@@ -59,7 +62,6 @@ export default function LoyaltyClient({ slug }: { slug: string }) {
         const cfgRes = await fetch(`/api/loyalty/${slug}`)
         const cfg = await cfgRes.json()
         if (cancelled) return
-        if (cfg.accent) setAccent(cfg.accent)
         if (!cfg.active) {
           setPhase('inactive')
           return
@@ -198,7 +200,7 @@ export default function LoyaltyClient({ slug }: { slug: string }) {
           <Link
             href={`/${slug}/jeu`}
             className="mt-5 inline-block w-full rounded-2xl py-3.5 text-base font-extrabold text-white shadow-lg transition active:scale-[0.98]"
-            style={{ backgroundColor: accent, boxShadow: `0 10px 24px -8px ${accent}99` }}
+            style={{ backgroundImage: gradient, boxShadow: `0 10px 24px -8px ${accent}99` }}
           >
             Se connecter pour jouer 🎡
           </Link>
@@ -228,7 +230,7 @@ export default function LoyaltyClient({ slug }: { slug: string }) {
       </div>
 
       {/* Balance */}
-      <div className="mt-8 rounded-3xl p-6 text-center text-white shadow-xl" style={{ backgroundImage: `linear-gradient(135deg, ${accent}, ${accent}cc)`, boxShadow: `0 18px 40px -16px ${accent}` }}>
+      <div className="mt-8 rounded-3xl p-6 text-center text-white shadow-xl" style={{ backgroundImage: gradient, boxShadow: `0 18px 40px -16px ${accent}` }}>
         <p className="text-sm font-medium text-white/85">{name || phone}</p>
         <p className="mt-1 text-5xl font-black">{balance}</p>
         <p className="mt-1 text-sm font-semibold text-white/90">points</p>
@@ -288,7 +290,7 @@ export default function LoyaltyClient({ slug }: { slug: string }) {
                   onClick={() => redeem(r)}
                   disabled={!affordable || busy}
                   className="rounded-xl px-4 py-2 text-xs font-bold text-white disabled:opacity-100"
-                  style={affordable ? { backgroundColor: accent } : { backgroundColor: '#f4f4f5', color: '#a1a1aa' }}
+                  style={affordable ? { backgroundImage: gradient } : { backgroundColor: '#f4f4f5', color: '#a1a1aa' }}
                 >
                   {affordable ? 'Échanger' : `Encore ${r.points_cost - balance} pts`}
                 </button>
@@ -323,7 +325,7 @@ export default function LoyaltyClient({ slug }: { slug: string }) {
 
       <div className="mt-8 flex justify-center gap-3">
         <Link href={`/${slug}`} className="rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white">← Retour au menu</Link>
-        <Link href={`/${slug}/jeu`} className="rounded-xl border bg-white px-5 py-2.5 text-sm font-semibold" style={{ borderColor: accent, color: accent }}>
+        <Link href={`/${slug}/jeu`} className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-md" style={{ backgroundImage: gradient, boxShadow: `0 8px 20px -10px ${accent}99` }}>
           🎡 Jouer
         </Link>
       </div>

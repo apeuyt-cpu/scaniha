@@ -26,6 +26,79 @@ export interface PrizeRow {
   position: number
 }
 
+// ─── "Conditions pour jouer" — gates a player must clear before spinning ─────
+export type GateType = 'instagram' | 'facebook' | 'tiktok' | 'youtube' | 'link' | 'survey'
+
+export interface SurveyQuestion {
+  id: string
+  text: string
+}
+
+export interface GameGate {
+  id: string
+  type: GateType
+  label: string
+  enabled: boolean
+  /** Link-style gates (instagram/facebook/tiktok/youtube/link). */
+  url?: string
+  /** Survey gate only — inline questions; answers are saved server-side. */
+  questions?: SurveyQuestion[]
+}
+
+export interface GatesConfig {
+  enabled: boolean
+  items: GameGate[]
+}
+
+// ─── "Présence" — restrict spinning to the café's network / location ─────────
+// A web page can't read the Wi-Fi SSID, so "in the café" is enforced by the
+// café's public IP (all devices on its Wi-Fi share it) and/or a GPS geofence.
+export type PresenceMode = 'ip' | 'geo' | 'both'
+
+export interface PresenceGeo {
+  lat: number
+  lng: number
+  /** Allowed distance from (lat,lng) in meters. */
+  radiusM: number
+}
+
+export interface PresenceConfig {
+  enabled: boolean
+  mode: PresenceMode
+  /** Allowed public IPs: IPv4 exact or CIDR; IPv6 matched on the /64 prefix. */
+  ips: string[]
+  geo: PresenceGeo | null
+  /** Optional custom message shown to a blocked diner (French). */
+  message: string
+  /** Also gate loyalty reward redemption with the same rule. */
+  alsoRedeem: boolean
+}
+
+/** Public (sanitized) presence summary sent to the client — NEVER the ips/coords. */
+export interface PresenceSummary {
+  enabled: boolean
+  mode: PresenceMode
+}
+
+export const DEFAULT_PRESENCE: PresenceConfig = {
+  enabled: false,
+  mode: 'ip',
+  ips: [],
+  geo: null,
+  message: '',
+  alsoRedeem: false,
+}
+
+/** Catalogue of gate types + whether each opens a link or shows the inline survey. */
+export const GATE_TYPES: { type: GateType; label: string; isLink: boolean; emoji: string }[] = [
+  { type: 'instagram', label: 'Instagram', isLink: true, emoji: '📸' },
+  { type: 'facebook', label: 'Facebook', isLink: true, emoji: '👍' },
+  { type: 'tiktok', label: 'TikTok', isLink: true, emoji: '🎵' },
+  { type: 'youtube', label: 'YouTube', isLink: true, emoji: '▶️' },
+  { type: 'link', label: 'Lien', isLink: true, emoji: '🔗' },
+  { type: 'survey', label: 'Sondage', isLink: false, emoji: '📝' },
+]
+
 export interface WinRow {
   id: string
   business_id: string
@@ -90,10 +163,12 @@ export type ValidateResult =
   | {
       found: true
       kind: 'win' | 'reward'
-      status: 'redeemed' | 'expired' | 'already' | 'cancelled'
+      // 'valid' = peek result: claimable but NOT yet collected (p_redeem=false).
+      status: 'valid' | 'redeemed' | 'expired' | 'already' | 'cancelled'
       label: string
       customerPhone: string | null
       redeemedAt?: string
+      expiresAt?: string
       pointsCost?: number
     }
 

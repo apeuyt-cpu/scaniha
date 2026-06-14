@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import MenuDesignPicker from './MenuDesignPicker'
+import { createClient } from '@/lib/supabase/client'
+import MenuDesignPicker, { type ThemeCtrl } from './MenuDesignPicker'
 import {
   ClassicColorForm,
   ModelControls,
@@ -11,8 +12,7 @@ import {
 } from './DesignSettings'
 import ColorsTab from './design/ColorsTab'
 import BrandTab from './design/BrandTab'
-import PhonePreview from './design/PhonePreview'
-import type { DesignId, DesignSettings as Settings } from '@/lib/design-settings'
+import { resolveAccent, resolveGradient, type DesignId, type DesignSettings as Settings } from '@/lib/design-settings'
 
 type TabId = 'model' | 'colors' | 'brand'
 
@@ -29,6 +29,7 @@ const TABS: { id: TabId; label: string }[] = [
  * preview reflects unsaved colour/name/logo changes instantly.
  */
 export default function DesignStudio({ business }: { business: any }) {
+  const supabase = createClient()
   const [activeDesign, setActiveDesign] = useState<string>(business.theme_id)
   const [settingsMap, setSettingsMap] = useState<Record<string, any>>(
     business.design_settings && typeof business.design_settings === 'object'
@@ -40,6 +41,45 @@ export default function DesignStudio({ business }: { business: any }) {
   // Lifted brand fields so name/logo edits in the Marque tab update the preview live.
   const [bizName, setBizName] = useState<string>(business.name || '')
   const [logoUrl, setLogoUrl] = useState<string | null>(business.logo_url || null)
+
+  // Theme selection lives HERE (not in the picker) — DesignStudio never remounts,
+  // so the optimistic highlight + the DB write survive the keyed workspace
+  // remount that selecting a design triggers. This is what makes it one-tap.
+  const [themeSavingId, setThemeSavingId] = useState<string | null>(null)
+  const [themeSavedId, setThemeSavedId] = useState<string | null>(null)
+  const [themeError, setThemeError] = useState<string | null>(null)
+
+  async function selectTheme(id: string) {
+    if (id === activeDesign || themeSavingId) return
+    const previous = activeDesign
+    setActiveDesign(id) // optimistic — instant highlight, switches the workspace
+    setThemeSavingId(id)
+    setThemeError(null)
+    setThemeSavedId(null)
+    try {
+      const { data, error } = await (supabase.from('businesses') as any)
+        .update({ theme_id: id })
+        .eq('id', business.id)
+        .select('id')
+      if (error) throw new Error(error.message)
+      if (!data || data.length === 0) throw new Error("La modification n'a pas pu être enregistrée. Vérifiez vos accès.")
+      setThemeSavedId(id)
+      setTimeout(() => setThemeSavedId((cur) => (cur === id ? null : cur)), 2000)
+    } catch (err: any) {
+      setActiveDesign(previous) // revert on failure
+      setThemeError(err?.message || 'Une erreur est survenue.')
+    } finally {
+      setThemeSavingId(null)
+    }
+  }
+
+  const themeCtrl: ThemeCtrl = {
+    activeId: activeDesign,
+    onSelect: selectTheme,
+    savingId: themeSavingId,
+    savedId: themeSavedId,
+    error: themeError,
+  }
 
   return (
     <div>
@@ -85,7 +125,7 @@ export default function DesignStudio({ business }: { business: any }) {
           tab={tab}
           bizName={bizName}
           logoUrl={logoUrl}
-          setActiveDesign={setActiveDesign}
+          themeCtrl={themeCtrl}
           onLogoUpdated={(url) => setLogoUrl(url || null)}
           onNameUpdated={setBizName}
         />
@@ -95,7 +135,7 @@ export default function DesignStudio({ business }: { business: any }) {
           tab={tab}
           bizName={bizName}
           logoUrl={logoUrl}
-          setActiveDesign={setActiveDesign}
+          themeCtrl={themeCtrl}
           onLogoUpdated={(url) => setLogoUrl(url || null)}
           onNameUpdated={setBizName}
         />
@@ -116,7 +156,7 @@ function DesignWorkspace({
   tab,
   bizName,
   logoUrl,
-  setActiveDesign,
+  themeCtrl,
   onLogoUpdated,
   onNameUpdated,
 }: {
@@ -127,25 +167,24 @@ function DesignWorkspace({
   tab: TabId
   bizName: string
   logoUrl: string | null
-  setActiveDesign: (id: string) => void
+  themeCtrl: ThemeCtrl
   onLogoUpdated: (url: string) => void
   onNameUpdated: (name: string) => void
 }) {
   const ctrl = useDesignSettings(business, designId, settingsMap, onSaved)
+  const accent = resolveAccent(ctrl.s, designId)
+  const gradient = resolveGradient(ctrl.s, designId)
 
   return (
-    <TwoPane
-      preview={
-        <PhonePreview settings={ctrl.s} designId={designId} businessName={bizName} logoUrl={logoUrl} />
-      }
-    >
+    <>
+    <div className="space-y-6">
       <TabPanel id="model" active={tab === 'model'}>
         <div className="space-y-6">
           <MenuDesignPicker
-            businessId={business.id}
-            currentThemeId={business.theme_id}
+            themeCtrl={themeCtrl}
             slug={business.slug}
-            onSelect={setActiveDesign}
+            accent={accent}
+            gradient={gradient}
           />
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 lg:p-6">
             <h3 className="mb-4 text-lg font-bold text-zinc-900">Réglages du design</h3>
@@ -157,7 +196,6 @@ function DesignWorkspace({
       <TabPanel id="colors" active={tab === 'colors'}>
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 lg:p-6">
           <ColorsTab ctrl={ctrl} designId={designId} />
-          <SaveBar ctrl={ctrl} />
         </div>
       </TabPanel>
 
@@ -168,7 +206,9 @@ function DesignWorkspace({
           onNameUpdated={onNameUpdated}
         />
       </TabPanel>
-    </TwoPane>
+    </div>
+    {(tab === 'model' || tab === 'colors') && <FloatingSave ctrl={ctrl} />}
+    </>
   )
 }
 
@@ -182,7 +222,7 @@ function ClassicWorkspace({
   tab,
   bizName,
   logoUrl,
-  setActiveDesign,
+  themeCtrl,
   onLogoUpdated,
   onNameUpdated,
 }: {
@@ -190,7 +230,7 @@ function ClassicWorkspace({
   tab: TabId
   bizName: string
   logoUrl: string | null
-  setActiveDesign: (id: string) => void
+  themeCtrl: ThemeCtrl
   onLogoUpdated: (url: string) => void
   onNameUpdated: (name: string) => void
 }) {
@@ -199,10 +239,9 @@ function ClassicWorkspace({
       <TabPanel id="model" active={tab === 'model'}>
         <div className="space-y-6">
           <MenuDesignPicker
-            businessId={business.id}
-            currentThemeId={business.theme_id}
+            themeCtrl={themeCtrl}
             slug={business.slug}
-            onSelect={setActiveDesign}
+            accent={business.primary_color || '#F47B20'}
           />
         </div>
       </TabPanel>
@@ -224,20 +263,6 @@ function ClassicWorkspace({
 
 /* ---------- layout + small helpers ---------- */
 
-function TwoPane({ children, preview }: { children: React.ReactNode; preview: React.ReactNode }) {
-  return (
-    <div className="lg:flex lg:items-start lg:gap-8">
-      {/* Preview: top on mobile, sticky right column on desktop */}
-      <aside className="mb-6 lg:order-2 lg:mb-0 lg:w-[220px] lg:shrink-0">
-        <div className="lg:sticky lg:top-20">{preview}</div>
-      </aside>
-
-      {/* Controls */}
-      <div className="min-w-0 flex-1 lg:order-1">{children}</div>
-    </div>
-  )
-}
-
 function TabPanel({ id, active, children }: { id: TabId; active: boolean; children: React.ReactNode }) {
   if (!active) return null
   return (
@@ -247,23 +272,41 @@ function TabPanel({ id, active, children }: { id: TabId; active: boolean; childr
   )
 }
 
-function SaveBar({ ctrl }: { ctrl: DesignSettingsController }) {
+/** Always-visible, floating save for the per-design settings (Modèle + Couleurs). */
+function FloatingSave({ ctrl }: { ctrl: DesignSettingsController }) {
   return (
-    <>
+    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2">
       {ctrl.error && (
-        <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{ctrl.error}</div>
+        <div className="max-w-[16rem] rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 shadow-lg">
+          {ctrl.error}
+        </div>
       )}
-      <div className="mt-6 flex items-center gap-3 border-t border-zinc-100 pt-5">
-        <button
-          type="button"
-          onClick={ctrl.save}
-          disabled={ctrl.saving}
-          className="rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
-        >
-          {ctrl.saving ? 'Enregistrement…' : 'Enregistrer les réglages'}
-        </button>
-        {ctrl.saved && <span className="text-sm font-medium text-green-600">Enregistré ✓</span>}
-      </div>
-    </>
+      <button
+        type="button"
+        onClick={ctrl.save}
+        disabled={ctrl.saving}
+        aria-label="Enregistrer les réglages du design"
+        className={`flex items-center gap-2 rounded-full px-5 py-3 text-sm font-bold text-white shadow-[0_14px_34px_-8px_rgba(244,123,32,0.7)] transition active:scale-95 disabled:opacity-70 ${
+          ctrl.saved ? 'bg-green-600' : 'bg-orange-500 hover:bg-orange-600'
+        }`}
+      >
+        {ctrl.saved ? (
+          <>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+            Enregistré
+          </>
+        ) : (
+          <>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+              <path d="M17 21v-8H7v8M7 3v5h8" />
+            </svg>
+            {ctrl.saving ? 'Enregistrement…' : 'Enregistrer'}
+          </>
+        )}
+      </button>
+    </div>
   )
 }

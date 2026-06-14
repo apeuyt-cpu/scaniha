@@ -42,7 +42,7 @@ function useScrollReveal() {
   }, [])
 }
 
-export default function LandingPage() {
+export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | null }) {
   const { t, locale, dir } = useLocale()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showStickyCta, setShowStickyCta] = useState(false)
@@ -91,15 +91,26 @@ export default function LandingPage() {
 
           {/* Desktop CTAs */}
           <div className="hidden items-center gap-1 lg:flex">
-            <Link href="/login" className="px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900">
-              {t('nav.login')}
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-700"
-            >
-              {t('nav.signup')}
-            </Link>
+            {dashboardUrl ? (
+              <Link
+                href={dashboardUrl}
+                className="rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-700"
+              >
+                Mon espace
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900">
+                  {t('nav.login')}
+                </Link>
+                <Link
+                  href="/signup"
+                  className="rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-700"
+                >
+                  {t('nav.signup')}
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -140,12 +151,20 @@ export default function LandingPage() {
                 {t('nav.about') || 'À propos'}
               </Link>
               <div className="mt-3 flex flex-col gap-2 border-t border-zinc-100 pt-4">
-                <Link href="/login" className="rounded-lg border border-zinc-300 px-4 py-2.5 text-center text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50" onClick={() => setMobileMenuOpen(false)}>
-                  {t('nav.login')}
-                </Link>
-                <Link href="/signup" className="rounded-lg bg-orange-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-orange-700" onClick={() => setMobileMenuOpen(false)}>
-                  {t('nav.signup')}
-                </Link>
+                {dashboardUrl ? (
+                  <Link href={dashboardUrl} className="rounded-lg bg-orange-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-orange-700" onClick={() => setMobileMenuOpen(false)}>
+                    Mon espace
+                  </Link>
+                ) : (
+                  <>
+                    <Link href="/login" className="rounded-lg border border-zinc-300 px-4 py-2.5 text-center text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50" onClick={() => setMobileMenuOpen(false)}>
+                      {t('nav.login')}
+                    </Link>
+                    <Link href="/signup" className="rounded-lg bg-orange-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-orange-700" onClick={() => setMobileMenuOpen(false)}>
+                      {t('nav.signup')}
+                    </Link>
+                  </>
+                )}
               </div>
             </nav>
           </div>
@@ -183,18 +202,29 @@ export default function LandingPage() {
 
             {/* CTA buttons — desktop */}
             <div className="hero-up mt-8 hidden justify-center gap-3 lg:flex" style={{ ['--hero-delay' as string]: '340ms' }}>
-              <Link
-                href="/signup"
-                className="btn-shine rounded-xl bg-orange-500 px-7 py-3.5 text-center text-base font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
-              >
-                Commencer l&apos;essai gratuit
-              </Link>
-              <Link
-                href="/login"
-                className="btn-shine rounded-xl border border-zinc-300 bg-[#FEFEFE] px-7 py-3.5 text-center text-base font-bold text-zinc-900 hover:bg-zinc-50"
-              >
-                Connexion
-              </Link>
+              {dashboardUrl ? (
+                <Link
+                  href={dashboardUrl}
+                  className="btn-shine rounded-xl bg-orange-500 px-7 py-3.5 text-center text-base font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
+                >
+                  Aller à mon espace
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/signup"
+                    className="btn-shine rounded-xl bg-orange-500 px-7 py-3.5 text-center text-base font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
+                  >
+                    Commencer l&apos;essai gratuit
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="btn-shine rounded-xl border border-zinc-300 bg-[#FEFEFE] px-7 py-3.5 text-center text-base font-bold text-zinc-900 hover:bg-zinc-50"
+                  >
+                    Connexion
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
@@ -215,18 +245,29 @@ export default function LandingPage() {
             </div>
             {/* CTA buttons — mobile (side by side, under the image) */}
             <div className="mt-6 flex gap-3 lg:hidden">
-              <Link
-                href="/signup"
-                className="btn-shine flex-1 rounded-xl bg-orange-500 px-4 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
-              >
-                Essai gratuit
-              </Link>
-              <Link
-                href="/login"
-                className="btn-shine flex-1 rounded-xl border border-zinc-300 bg-[#FEFEFE] px-4 py-3.5 text-center text-sm font-bold text-zinc-900 hover:bg-zinc-50"
-              >
-                Connexion
-              </Link>
+              {dashboardUrl ? (
+                <Link
+                  href={dashboardUrl}
+                  className="btn-shine flex-1 rounded-xl bg-orange-500 px-4 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
+                >
+                  Mon espace
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/signup"
+                    className="btn-shine flex-1 rounded-xl bg-orange-500 px-4 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
+                  >
+                    Essai gratuit
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="btn-shine flex-1 rounded-xl border border-zinc-300 bg-[#FEFEFE] px-4 py-3.5 text-center text-sm font-bold text-zinc-900 hover:bg-zinc-50"
+                  >
+                    Connexion
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -419,7 +460,7 @@ export default function LandingPage() {
                 </li>
               </ul>
               <Link
-                href="/signup"
+                href={dashboardUrl || '/signup'}
                 className="btn-shine mt-8 inline-block rounded-xl bg-orange-500 px-7 py-3.5 text-base font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
               >
                 Équiper mes tables →
@@ -475,18 +516,29 @@ export default function LandingPage() {
               Commencez votre essai gratuit aujourd&apos;hui. Aucun paiement requis.
             </p>
             <div className="relative mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link
-                href="/signup"
-                className="btn-shine w-full rounded-xl bg-[#FEFEFE] px-8 py-4 text-base font-extrabold text-orange-600 shadow-lg hover:bg-white sm:w-auto"
-              >
-                Démarrer l&apos;essai gratuit →
-              </Link>
-              <Link
-                href="/login"
-                className="w-full rounded-xl border border-white/50 px-8 py-4 text-base font-bold text-white transition-colors hover:bg-white/10 sm:w-auto"
-              >
-                Connexion
-              </Link>
+              {dashboardUrl ? (
+                <Link
+                  href={dashboardUrl}
+                  className="btn-shine w-full rounded-xl bg-[#FEFEFE] px-8 py-4 text-base font-extrabold text-orange-600 shadow-lg hover:bg-white sm:w-auto"
+                >
+                  Aller à mon espace →
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/signup"
+                    className="btn-shine w-full rounded-xl bg-[#FEFEFE] px-8 py-4 text-base font-extrabold text-orange-600 shadow-lg hover:bg-white sm:w-auto"
+                  >
+                    Démarrer l&apos;essai gratuit →
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="w-full rounded-xl border border-white/50 px-8 py-4 text-base font-bold text-white transition-colors hover:bg-white/10 sm:w-auto"
+                  >
+                    Connexion
+                  </Link>
+                </>
+              )}
             </div>
             <p className="relative mt-7 text-sm font-medium text-white/90">
               Rejoint par des restaurants et cafés en Tunisie 🇹🇳
@@ -542,10 +594,10 @@ export default function LandingPage() {
       {/* Sticky mobile CTA */}
       <div className={`sticky-cta lg:hidden fixed bottom-0 inset-x-0 z-50 p-3 bg-[#FEFEFE]/90 backdrop-blur-md border-t border-zinc-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] ${showStickyCta ? 'show' : ''}`}>
         <Link
-          href="/signup"
+          href={dashboardUrl || '/signup'}
           className="btn-shine block w-full text-center px-6 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-lg shadow-lg shadow-orange-500/30"
         >
-          Commencer l&apos;essai gratuit
+          {dashboardUrl ? 'Aller à mon espace' : "Commencer l'essai gratuit"}
         </Link>
       </div>
     </div>

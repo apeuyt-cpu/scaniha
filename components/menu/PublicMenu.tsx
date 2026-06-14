@@ -10,11 +10,13 @@ import Design6 from '@/components/menu/designs/Design6'
 import Design11 from '@/components/menu/designs/Design11'
 import Design12 from '@/components/menu/designs/Design12'
 import { MenuDock } from '@/components/menu/designs/MenuDock'
+import RouletteButton from '@/components/menu/designs/RouletteButton'
 import { FoodIcon } from '@/components/menu/designs/icons'
 
 type Business = Database['public']['Tables']['businesses']['Row']
+type Item = Database['public']['Tables']['items']['Row']
 type Category = Database['public']['Tables']['categories']['Row'] & {
-  items: Database['public']['Tables']['items']['Row'][]
+  items: Item[]
 }
 
 interface PublicMenuProps {
@@ -86,9 +88,9 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
 
   // Minimal theme - unique layout
   if (isMinimal) {
-    return <MinimalLayout 
-      business={business} 
-      categories={visibleCategories} 
+    return <MinimalLayout
+      business={business}
+      categories={visibleCategories}
       theme={theme}
       isPaused={isPaused}
       activeCategory={activeCategory}
@@ -133,7 +135,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
         
         .menu-item-dark:hover {
           border-color: ${theme.colors.primary}80;
-          background: linear-gradient(135deg, rgba(212,175,55,0.10) 0%, rgba(255,255,255,0.03) 100%);
+          background: linear-gradient(135deg, ${theme.colors.primary}1a 0%, rgba(255,255,255,0.03) 100%);
         }
         
         .menu-item-light:hover {
@@ -193,7 +195,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
         }
         
         .gold-glow {
-          text-shadow: 0 0 20px rgba(212,175,55,0.3);
+          text-shadow: 0 0 20px ${theme.colors.primary}4d;
         }
         
         .card-glow {
@@ -435,6 +437,16 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
         )}
 
         <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+          {totalVisibleItems > 0 && (
+            <div className="mb-8 flex justify-end">
+              <RouletteButton
+                slug={business.slug}
+                accent={theme.colors.primary}
+                gradient={`linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary})`}
+                size={46}
+              />
+            </div>
+          )}
           <div className="space-y-14">
             {visibleCategories.map((category, catIndex) => (
               <section 
@@ -623,6 +635,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
           business={business}
           categories={visibleCategories as any}
           accent={theme.colors.primary}
+          includeSurprise={false}
         />
       )}
     </>
@@ -652,6 +665,7 @@ function MinimalLayout({
   setExpandedItem: (id: string | null) => void
 }) {
   const activeItems = categories.find(c => c.id === activeCategory)?.items.filter(i => i.available) || []
+  const minimalAllItems = categories.flatMap((c) => c.items).filter((i) => i.available)
 
   return (
     <div
@@ -804,7 +818,18 @@ function MinimalLayout({
             {/* Items Content */}
             <main className="flex-1 overflow-y-auto">
               <div className="px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
-              
+
+              {minimalAllItems.length > 0 && (
+                <div className="mb-6 flex justify-end">
+                  <RouletteButton
+                    slug={business.slug}
+                    accent={theme.colors.primary}
+                    gradient={`linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primary})`}
+                    size={46}
+                  />
+                </div>
+              )}
+
               {/* Active Category Header */}
               {activeCategory && (
                 <div className="mb-6 minimal-fade">
@@ -981,6 +1006,7 @@ function MinimalLayout({
             business={business}
             categories={categories as any}
             accent={theme.colors.primary}
+            includeSurprise={false}
           />
         )}
       </div>

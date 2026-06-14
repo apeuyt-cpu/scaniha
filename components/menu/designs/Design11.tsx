@@ -3,12 +3,13 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import MenuFooter from './MenuFooter'
-import { getDesignSettings, resolveAccent, resolveGradient, resolveShowcaseItems } from '@/lib/design-settings'
+import { getDesignSettings, resolveAccent, resolveGradient, resolveShowcaseItems, getExtra } from '@/lib/design-settings'
 import { normalizeCats, type KitItem } from './kit'
 import { FoodIcon } from './icons'
 import { InteractiveStyles, CenteredItemModal } from './interactive'
 import { getSocials } from './SocialLinks'
 import { MenuDock } from './MenuDock'
+import RouletteButton from './RouletteButton'
 
 const FONT = "'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif"
 const INK = '#171210'
@@ -37,8 +38,8 @@ function NoPhoto({ hint, accent, className }: { hint: string; accent: string; cl
 
 /**
  * Design11 — "Vitrine Immersive": premium full-screen cover hero, frosted-glass
- * category nav, large grouped cards, refined motion, plus a "Surprends-moi"
- * random-special reveal (via the dock) and a clean centered detail modal.
+ * category nav, large grouped cards, refined motion, plus an inline roulette
+ * entry button beside the search (when a game is live) and a centered detail modal.
  */
 export default function Design11({ business, categories }: { business: any; categories: any[] }) {
   const settings = getDesignSettings(business, 'design11')
@@ -162,25 +163,35 @@ export default function Design11({ business, categories }: { business: any; cate
       <div className="sticky top-0 z-30 -mt-6 rounded-t-[28px] border-t border-white/50 bg-white/85 px-5 pb-3 pt-4 shadow-[0_-10px_34px_-22px_rgba(0,0,0,0.45)] backdrop-blur-xl">
         <span className="mx-auto mb-3.5 block h-1 w-10 rounded-full" style={{ backgroundColor: HAIR }} aria-hidden="true" />
 
-        <label className="flex items-center gap-2.5 rounded-2xl px-4 transition-shadow focus-within:shadow-[0_0_0_2px_rgba(244,123,32,0.25)]" style={{ backgroundColor: PAGE, border: `1px solid ${HAIR}`, height: 48 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher un plat…"
-            aria-label="Rechercher un plat"
-            className="w-full bg-transparent text-[14.5px] outline-none placeholder:text-[#A89E92]"
-            style={{ color: INK }}
+        <div className="flex items-stretch gap-2.5">
+          <label className="flex flex-1 items-center gap-2.5 rounded-2xl px-4 transition-shadow focus-within:shadow-[0_0_0_2px_var(--d11-focus)]" style={{ backgroundColor: PAGE, border: `1px solid ${HAIR}`, height: 48, ['--d11-focus' as any]: `${accent}40` }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Rechercher un plat…"
+              aria-label="Rechercher un plat"
+              className="w-full bg-transparent text-[14.5px] outline-none placeholder:text-[#A89E92]"
+              style={{ color: INK }}
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition active:scale-90" style={{ backgroundColor: HAIR, color: MUTED }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+              </button>
+            )}
+          </label>
+          <RouletteButton
+            slug={business?.slug}
+            accent={accent}
+            gradient={gradient}
+            font={FONT}
+            size={48}
+            rounded="rounded-2xl"
           />
-          {query && (
-            <button type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition active:scale-90" style={{ backgroundColor: HAIR, color: MUTED }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-            </button>
-          )}
-        </label>
+        </div>
 
         {!q && cats.length > 1 && (
           <nav ref={navRef} aria-label="Catégories" className="no-scrollbar -mx-5 mt-3 flex gap-2 overflow-x-auto px-5">
@@ -194,7 +205,7 @@ export default function Design11({ business, categories }: { business: any; cate
                   onClick={() => jump(cat.id)}
                   className="flex h-9 shrink-0 items-center whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold transition active:scale-95"
                   style={active
-                    ? { backgroundImage: gradient, color: '#fff', boxShadow: '0 6px 16px -8px rgba(244,123,32,0.7)' }
+                    ? { backgroundImage: gradient, color: '#fff', boxShadow: `0 6px 16px -8px ${accent}b3` }
                     : { backgroundColor: PAGE, color: '#6B6259', border: `1px solid ${HAIR}` }}
                 >
                   {cat.name}
@@ -340,7 +351,7 @@ export default function Design11({ business, categories }: { business: any; cate
       )}
 
       <CenteredItemModal item={selected} onClose={() => setSelected(null)} gradient={gradient} ink={INK} muted={MUTED} font={FONT} />
-      <MenuDock business={business} categories={cats} accent={accent} gradient={gradient} font={FONT} />
+      <MenuDock business={business} categories={cats} accent={accent} gradient={gradient} font={FONT} includeSurprise={false} />
     </div>
   )
 }

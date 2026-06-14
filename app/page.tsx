@@ -1,5 +1,4 @@
-import { redirect } from 'next/navigation'
-import { getCurrentProfile } from '@/lib/auth'
+import { getCurrentProfile, getDashboardUrl } from '@/lib/auth'
 import LandingPage from '@/components/landing/LandingPage'
 import type { Metadata } from 'next'
 
@@ -43,11 +42,10 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   const profile = await getCurrentProfile()
+  // Logged-in users CAN view the landing page now — we no longer redirect them.
+  // Their CTAs just point to the right dashboard instead of Connexion / Inscription.
+  const role = (profile as any)?.role as 'owner' | 'super_admin' | null | undefined
+  const dashboardUrl = role ? getDashboardUrl(role) : null
 
-  if (profile) {
-    // Default to admin dashboard - middleware will redirect super_admins if needed
-    redirect('/admin')
-  }
-
-  return <LandingPage />
+  return <LandingPage dashboardUrl={dashboardUrl} />
 }

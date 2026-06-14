@@ -10,14 +10,33 @@ import { InteractiveStyles, useOverlayDismiss } from './interactive'
 
 type Social = { label: string; url: string; color: string; icon: 'facebook' | 'instagram' | 'x' | 'whatsapp' | 'web' }
 
+/**
+ * Normalize a stored social value into a usable link, or null to skip it.
+ * Only renders a network the owner actually filled in with a real URL — free
+ * text (e.g. "caffe ciao manzah 8") or blanks are dropped, and a schemeless
+ * domain ("test.com") gets an https:// prefix so the link works.
+ */
+function socialUrl(v: any): string | null {
+  if (typeof v !== 'string') return null
+  const t = v.trim()
+  // Must look like a URL: contains a dot-domain and no spaces. Otherwise it's
+  // free text the owner typed, not a link.
+  if (!t || /\s/.test(t) || !/[^.\s]\.[a-z]{2,}/i.test(t)) return null
+  return /^https?:\/\//i.test(t) ? t : `https://${t}`
+}
+
 export function getSocials(business: any): Social[] {
   const wa = (business?.whatsapp_number || '').replace(/[^\d]/g, '')
+  const ig = socialUrl(business?.instagram_url)
+  const fb = socialUrl(business?.facebook_url)
+  const tw = socialUrl(business?.twitter_url)
+  const web = socialUrl(business?.website_url)
   return [
-    business?.instagram_url && { label: 'Instagram', url: business.instagram_url, color: '#E1306C', icon: 'instagram' as const },
-    business?.facebook_url && { label: 'Facebook', url: business.facebook_url, color: '#1877F2', icon: 'facebook' as const },
-    business?.twitter_url && { label: 'X', url: business.twitter_url, color: '#111111', icon: 'x' as const },
-    wa && { label: 'WhatsApp', url: `https://wa.me/${wa}`, color: '#25D366', icon: 'whatsapp' as const },
-    business?.website_url && { label: 'Site web', url: business.website_url, color: '#6B7280', icon: 'web' as const },
+    ig && { label: 'Instagram', url: ig, color: '#E1306C', icon: 'instagram' as const },
+    fb && { label: 'Facebook', url: fb, color: '#1877F2', icon: 'facebook' as const },
+    tw && { label: 'X', url: tw, color: '#111111', icon: 'x' as const },
+    wa.length >= 8 && { label: 'WhatsApp', url: `https://wa.me/${wa}`, color: '#25D366', icon: 'whatsapp' as const },
+    web && { label: 'Site web', url: web, color: '#6B7280', icon: 'web' as const },
   ].filter(Boolean) as Social[]
 }
 
@@ -44,10 +63,10 @@ export function SocialPopup({ business, accent = '#F47B20', open, onClose, font 
   useOverlayDismiss(open, onClose, dialogRef)
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-6" style={{ fontFamily: font }}>
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-5" style={{ fontFamily: font }}>
       <InteractiveStyles />
       <div className="sx-backdrop absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="sx-modal relative w-full max-w-sm overflow-hidden rounded-t-[28px] bg-white pb-7 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.55)] outline-none sm:rounded-[28px]">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="sx-modal relative max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-[28px] bg-white pb-7 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.55)] outline-none">
         <div className="flex items-center justify-between px-6 pb-2 pt-5">
           <h3 id={titleId} className="text-[18px] font-extrabold text-zinc-900">Suivez-nous</h3>
           <button type="button" onClick={onClose} aria-label="Fermer" className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition hover:bg-zinc-200 active:scale-90">

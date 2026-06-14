@@ -4,7 +4,7 @@
  * `as any` for the service client lives here; routes are the auth boundary.
  */
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { businessAccent, FALLBACK_ACCENT, isMissingRpc } from '@/lib/db/game'
+import { businessAccent, businessGradient, FALLBACK_ACCENT, isMissingRpc } from '@/lib/db/game'
 import type { CustomerSummary, RedeemResult, AwardResult, ValidateResult } from '@/lib/game'
 
 /** Normalize a phone to digits (+ optional leading +); 8–15 chars or null. */
@@ -18,6 +18,7 @@ export interface LoyaltyConfig {
   active: boolean
   businessName: string
   accent: string
+  gradient: string
   pointsPerTnd: number
   rewards: { id: string; label: string; points_cost: number }[]
   summary: CustomerSummary | null
@@ -25,7 +26,7 @@ export interface LoyaltyConfig {
 
 /** Public loyalty data for /[slug]/fidelite. Includes the customer summary when a phone is given. */
 export async function loadLoyalty(slug: string, phoneRaw?: string | null): Promise<LoyaltyConfig> {
-  const off: LoyaltyConfig = { active: false, businessName: '', accent: FALLBACK_ACCENT, pointsPerTnd: 1, rewards: [], summary: null }
+  const off: LoyaltyConfig = { active: false, businessName: '', accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', pointsPerTnd: 1, rewards: [], summary: null }
   try {
     const supabase: any = await createServiceRoleClient()
     const { data: business } = await supabase
@@ -36,6 +37,7 @@ export async function loadLoyalty(slug: string, phoneRaw?: string | null): Promi
       .maybeSingle()
     if (!business) return off
     const accent = businessAccent(business)
+    const gradient = businessGradient(business)
 
     const { data: program } = await supabase
       .from('loyalty_programs')
@@ -43,7 +45,7 @@ export async function loadLoyalty(slug: string, phoneRaw?: string | null): Promi
       .eq('business_id', business.id)
       .eq('active', true)
       .maybeSingle()
-    if (!program) return { ...off, businessName: business.name, accent }
+    if (!program) return { ...off, businessName: business.name, accent, gradient }
 
     const { data: rewards } = await supabase
       .from('loyalty_rewards')
@@ -59,6 +61,7 @@ export async function loadLoyalty(slug: string, phoneRaw?: string | null): Promi
       active: true,
       businessName: business.name,
       accent,
+      gradient,
       pointsPerTnd: Number(program.points_per_tnd) || 1,
       rewards: rewards || [],
       summary,
@@ -118,11 +121,17 @@ export async function awardPoints(businessId: string, phone: string, amount: num
   }
 }
 
-/** Validate one code (win OR reward) and mark it redeemed if still valid. */
-export async function validateCode(businessId: string, code: string): Promise<ValidateResult> {
+/**
+ * Validate one code (win OR reward).
+ *  - redeem=false → "peek": report status without consuming (status 'valid' when
+ *    still claimable), so the caisse can show it before staff confirm.
+ *  - redeem=true (default) → atomically mark it redeemed = collected (a code can
+ *    never be collected twice).
+ */
+export async function validateCode(businessId: string, code: string, redeem = true): Promise<ValidateResult> {
   try {
     const supabase: any = await createServiceRoleClient()
-    const { data, error } = await supabase.rpc('validate_code', { p_business: businessId, p_code: code })
+    const { data, error } = await supabase.rpc('validate_code', { p_business: businessId, p_code: code, p_redeem: redeem })
     if (error || !data) return { found: false }
     return data as ValidateResult
   } catch {

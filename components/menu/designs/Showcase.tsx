@@ -107,7 +107,7 @@ export default function Showcase({
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduce) return
 
-    const ms = Math.min(8000, Math.max(2000, intervalMs || 4000))
+    const ms = Math.min(8000, Math.max(1000, intervalMs || 2000))
     const id = setInterval(() => {
       if (pausedRef.current || selectedRef.current || !onscreenRef.current) return
       setIndex((i) => (i + 1) % total)
@@ -204,6 +204,11 @@ export default function Showcase({
         </div>
       )}
 
+      <style jsx global>{`
+        @keyframes sc-kb { from { transform: scale(1.04) } to { transform: scale(1.13) } }
+        .sc-kb { animation: sc-kb 7s ease-in-out infinite alternate; will-change: transform; }
+        @media (prefers-reduced-motion: reduce) { .sc-kb { animation: none } }
+      `}</style>
       <div
         ref={trackRef}
         onScroll={handleScroll}
@@ -218,7 +223,7 @@ export default function Showcase({
           >
             {item.image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.image_url} alt={item.name} className="absolute inset-0 h-full w-full object-cover" />
+              <img src={item.image_url} alt={item.name} className="sc-kb absolute inset-0 h-full w-full object-cover" />
             ) : (
               // No photo → branded gradient panel + line glyph (never an empty box).
               <div

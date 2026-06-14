@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ItemDetailModal, type SheetItem } from './MenuSheets'
+import { type SheetItem } from './MenuSheets'
+import { CenteredItemModal } from './interactive'
 import Showcase from './Showcase'
 import MenuFooter from './MenuFooter'
 import { getSocials } from './SocialLinks'
@@ -9,6 +10,7 @@ import { getDesignSettings, resolveAccent, resolveGradient, resolveShowcaseItems
 import { fmt, normalizeCats, searchItems, type KitItem } from './kit'
 import { FoodIcon } from './icons'
 import { MenuDock } from './MenuDock'
+import RouletteButton from './RouletteButton'
 
 const SERIF = "'Playfair Display', Georgia, 'Times New Roman', serif"
 const SANS = 'system-ui, -apple-system, Segoe UI, sans-serif'
@@ -114,18 +116,28 @@ export default function Design6({ business, categories }: { business: any; categ
         <Flourish gradient={gradient} />
       </header>
 
-      {/* Search */}
+      {/* Search + roulette entry */}
       {available.length > 0 && (
         <div className="px-6 pt-7 lg:px-12">
-          <label className="mx-auto flex max-w-md items-center gap-2.5 rounded-full border bg-white px-4 transition focus-within:border-transparent focus-within:ring-2" style={{ borderColor: DIVIDER, height: 48, ['--tw-ring-color' as any]: `${accent}55` }}>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={FAINT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un plat…" aria-label="Rechercher un plat" className="w-full bg-transparent text-[14px] outline-none placeholder:text-[#A9A095]" style={{ color: INK, fontFamily: SANS }} />
-            {q && (
-              <button type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche" className="shrink-0 text-[#B5ADA1] transition hover:text-[#7A7166]">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
-              </button>
-            )}
-          </label>
+          <div className="mx-auto flex max-w-md items-stretch gap-2.5">
+            <label className="flex flex-1 items-center gap-2.5 rounded-full border bg-white px-4 transition focus-within:border-transparent focus-within:ring-2" style={{ borderColor: DIVIDER, height: 48, ['--tw-ring-color' as any]: `${accent}55` }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={FAINT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un plat…" aria-label="Rechercher un plat" className="w-full bg-transparent text-[14px] outline-none placeholder:text-[#A9A095]" style={{ color: INK, fontFamily: SANS }} />
+              {q && (
+                <button type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche" className="shrink-0 text-[#B5ADA1] transition hover:text-[#7A7166]">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </button>
+              )}
+            </label>
+            <RouletteButton
+              slug={business?.slug}
+              accent={accent}
+              gradient={gradient}
+              font={SANS}
+              size={48}
+              rounded="rounded-full"
+            />
+          </div>
         </div>
       )}
 
@@ -281,8 +293,8 @@ export default function Design6({ business, categories }: { business: any; categ
         <p className="mt-12 text-center text-[11px] uppercase tracking-[0.3em]" style={{ color: FAINT, fontFamily: SANS }}>· {business.name} ·</p>
       )}
 
-      <ItemDetailModal item={selected} accent={accent} onClose={() => setSelected(null)} />
-      <MenuDock business={business} categories={cats} accent={accent} gradient={gradient} />
+      <CenteredItemModal item={selected} onClose={() => setSelected(null)} gradient={gradient} ink={INK} muted={MUTED} font={SERIF} />
+      <MenuDock business={business} categories={cats} accent={accent} gradient={gradient} includeSurprise={false} />
     </div>
   )
 }

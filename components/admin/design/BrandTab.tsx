@@ -6,6 +6,7 @@ import LogoUpload from '@/components/business/LogoUpload'
 import SocialMediaManager from '@/components/admin/SocialMediaManager'
 import { useToast } from '@/components/admin/ui/Toast'
 import { inputClass } from '@/components/admin/ui/Field'
+import ContactCard from '@/components/admin/design/ContactCard'
 
 interface BrandBusiness {
   id: string
@@ -120,6 +121,9 @@ export default function BrandTab({
 
       {/* Social media — brings its own card */}
       <SocialMediaManager businessId={business.id} />
+
+      {/* Contact & hours — brand-level footer info (moved here from Modèle) */}
+      <ContactCard businessId={business.id} />
     </div>
   )
 }

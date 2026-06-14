@@ -20,7 +20,7 @@ export interface DesignSettings {
   featuredIds: (string | number)[]
   /** Auto-advance the showcase. */
   autoSlide: boolean
-  /** Auto-advance interval in ms (clamped 2000–8000). */
+  /** Auto-advance interval in ms (clamped 1000–8000; default 1s). */
   intervalMs: number
   /** Showcase heading. */
   title: string
@@ -60,7 +60,7 @@ const BASE: Omit<DesignSettings, 'title' | 'subtitle' | 'tagline'> = {
   source: 'random',
   featuredIds: [],
   autoSlide: true,
-  intervalMs: 4000,
+  intervalMs: 1000,
   showPrices: true,
   showDescriptions: true,
   showLogo: true,
@@ -105,8 +105,19 @@ export const DESIGN_ACCENTS: Record<DesignId, string> = {
   design12: '#F47B20',
 }
 
-/** Resolve the accent: owner override, else the design's built-in accent. */
+/**
+ * Resolve the single FLAT accent colour for a design — used everywhere a design
+ * paints a solid brand element (price text, icons, chips, focus rings, shadows).
+ *
+ * The two appearance modes are mutually exclusive and BOTH must apply across the
+ * whole menu:
+ *  - Gradient mode (gradientEnabled): the flat accent is derived from the
+ *    gradient's start colour, so solid elements harmonise with the gradient
+ *    instead of staying the old flat/brand colour.
+ *  - Flat mode: the owner's accent, else the design's built-in accent.
+ */
 export function resolveAccent(settings: DesignSettings, designId: DesignId): string {
+  if (settings.gradientEnabled && settings.gradientFrom) return settings.gradientFrom
   return settings.accent || DESIGN_ACCENTS[designId]
 }
 
@@ -129,6 +140,39 @@ export function resolveGradient(settings: DesignSettings, designId: DesignId): s
   }
   const a = DESIGN_ACCENTS[designId] || '#F47B20'
   return a === '#F47B20' ? 'linear-gradient(135deg, #F47B20, #F5B82E)' : `linear-gradient(135deg, ${a}, ${a})`
+}
+
+// ─── Per-design feature capabilities ─────────────────────────────────
+// Which built-in controls actually do something for each design, so the admin
+// panel only shows relevant settings (e.g. no "banner" for the editorial
+// designs that don't render one) and never hides a control a design supports.
+
+export interface DesignFeatures {
+  /** Renders a cover / banner image. */
+  cover: boolean
+  /** Label + hint for the cover control (placement differs per design). */
+  coverLabel: string
+  coverHint: string
+  /** Renders the auto-sliding "À la une" showcase. */
+  showcase: boolean
+  /** Shows the header tagline / welcome line. */
+  tagline: boolean
+  /** Renders item descriptions. */
+  descriptions: boolean
+}
+
+export const DESIGN_FEATURES: Record<DesignId, DesignFeatures> = {
+  design1: { cover: true, coverLabel: 'Bannière du menu', coverHint: 'Grande image affichée tout en haut du menu.', showcase: true, tagline: true, descriptions: true },
+  design2: { cover: true, coverLabel: "Image de l'en-tête", coverHint: "Sert de fond à la grande carte d'en-tête sombre.", showcase: false, tagline: true, descriptions: true },
+  design3: { cover: true, coverLabel: 'Bannière', coverHint: '', showcase: true, tagline: true, descriptions: true },
+  design6: { cover: false, coverLabel: '', coverHint: '', showcase: true, tagline: true, descriptions: true },
+  design11: { cover: true, coverLabel: 'Image de couverture', coverHint: 'Photo plein écran en haut, effet vitrine.', showcase: true, tagline: true, descriptions: true },
+  design12: { cover: false, coverLabel: '', coverHint: '', showcase: false, tagline: false, descriptions: true },
+}
+
+/** Feature capabilities for a design (falls back to design1's set). */
+export function getDesignFeatures(designId: DesignId): DesignFeatures {
+  return DESIGN_FEATURES[designId] || DESIGN_FEATURES.design1
 }
 
 // ─── Design-specific extra options ───────────────────────────────────
@@ -172,15 +216,7 @@ export const DESIGN_EXTRAS: Record<DesignId, DesignExtraOption[]> = {
       hint: 'Désactivez pour une carte 100 % typographique.',
     },
   ],
-  design11: [
-    {
-      key: 'specialButton',
-      label: 'Bouton « Surprends-moi »',
-      type: 'toggle',
-      default: true,
-      hint: 'Affiche un plat surprise tiré au sort parmi vos plats à la une.',
-    },
-  ],
+  design11: [],
   design12: [],
 }
 
@@ -195,9 +231,29 @@ export function getExtra<T = any>(settings: DesignSettings, designId: DesignId, 
 export function getDesignSettings(business: any, designId: DesignId): DesignSettings {
   const stored = business?.design_settings?.[designId]
   const merged: DesignSettings = { ...DEFAULTS[designId], ...(stored && typeof stored === 'object' ? stored : {}) }
-  // Guard the numeric field.
-  merged.intervalMs = Math.min(8000, Math.max(2000, Number(merged.intervalMs) || 4000))
+  // Contact & hours are BRAND-level now (managed in the Marque tab): they live in
+  // design_settings.contact and override any legacy per-design value here.
+  const contact = business?.design_settings?.contact
+  if (contact && typeof contact === 'object') {
+    merged.contactEnabled = !!contact.enabled
+    merged.phone = String(contact.phone ?? '')
+    merged.address = String(contact.address ?? '')
+    merged.hours = String(contact.hours ?? '')
+  }
+  // Guard the numeric field. Floor is 1s (snappy) up to 8s.
+  merged.intervalMs = Math.min(8000, Math.max(1000, Number(merged.intervalMs) || 2000))
   return merged
+}
+
+/** Brand-level contact block (shared across designs), edited in the Marque tab. */
+export function getBrandContact(business: any): { enabled: boolean; phone: string; address: string; hours: string } {
+  const c = business?.design_settings?.contact
+  return {
+    enabled: !!(c && c.enabled),
+    phone: String(c?.phone ?? ''),
+    address: String(c?.address ?? ''),
+    hours: String(c?.hours ?? ''),
+  }
 }
 
 type AnyItem = { id: string | number; available?: boolean }

@@ -1,7 +1,6 @@
 import { mockBusiness, mockCategories } from '@/lib/demo-menu'
 import { getBusinessBySlug, getBusinessWithCategoriesAndItems } from '@/lib/db/business'
 import PublicMenu from '@/components/menu/PublicMenu'
-import GameFab from '@/components/game/GameFab'
 import PoweredByScaniha from '@/components/menu/PoweredByScaniha'
 import { getTheme } from '@/lib/themes'
 import Design1 from '@/components/menu/designs/Design1'
@@ -63,23 +62,19 @@ export default async function MenuDesignPreview({
 
   const classicId = classicThemes[n]
   if (classicId) {
-    // Classic themes don't have the unified dock → keep the standalone roulette button.
     return (
       <>
         <PublicMenu business={business} categories={categories} theme={getTheme(classicId)} />
-        <GameFab slug={business?.slug || ''} />
         <PoweredByScaniha />
       </>
     )
   }
-  // Modern designs render their own MenuDock, but the roulette now lives on the
-  // dedicated floating wheel button (GameFab) — mount it here too so every
-  // design gets it. It self-detects an active game and renders nothing otherwise.
+  // Every design (and PublicMenu) renders the unified MenuDock, which now carries
+  // the roulette as its top item — so no separate floating button is needed.
   const Comp = designs[n as keyof typeof designs] || Design1
   return (
     <>
       <Comp business={business} categories={categories} />
-      <GameFab slug={business?.slug || ''} />
       <PoweredByScaniha />
     </>
   )

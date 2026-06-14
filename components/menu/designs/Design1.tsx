@@ -5,8 +5,9 @@ import Showcase from './Showcase'
 import CoverBanner from './CoverBanner'
 import MenuFooter from './MenuFooter'
 import { getDesignSettings, resolveShowcaseItems, resolveAccent, resolveGradient, getExtra } from '@/lib/design-settings'
-import { InteractiveStyles, CenteredItemModal, SurpriseFlow } from './interactive'
+import { InteractiveStyles, CenteredItemModal } from './interactive'
 import { MenuDock } from './MenuDock'
+import RouletteButton from './RouletteButton'
 import { FoodIcon } from './icons'
 
 type Item = {
@@ -39,8 +40,8 @@ function priceParts(p: number | null) {
 
 /**
  * Design1 — "Spécial du Jour": modern warm-minimal menu with motion.
- * Featured + mid-list sliders, an interactive "Surprends-moi" random-special
- * reveal (specials = admin's featured items), and a clean centered detail modal.
+ * Featured + mid-list sliders, an inline roulette entry button beside the search
+ * bar (shown when a game is live), and a clean centered detail modal.
  */
 export default function Design1({ business, categories }: { business: any; categories: any[] }) {
   const settings = getDesignSettings(business, 'design1')
@@ -65,7 +66,6 @@ export default function Design1({ business, categories }: { business: any; categ
   const [activeTab, setActiveTab] = useState<string | number | 'all'>('all')
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [query, setQuery] = useState('')
-  const [revealOpen, setRevealOpen] = useState(false)
 
   const heroItems = resolveShowcaseItems(settings, photoItems, { count: 6 })
   const discoverItems = resolveShowcaseItems(settings, photoItems, { count: 6, seed: photoItems.length * 3 + 11 })
@@ -81,7 +81,7 @@ export default function Design1({ business, categories }: { business: any; categ
 
   const slot = compact ? 52 : 60
   const initial = (business?.name || 'S').trim().charAt(0).toUpperCase()
-  const fast = Math.max(2000, Math.min(settings.intervalMs, 2200))
+  const fast = Math.max(1000, Math.min(settings.intervalMs, 2200))
 
   const showDiscover = !q && activeTab === 'all' && photoItems.length >= 2 && displayedItems.length >= 4 && settings.showcase
   const midIndex = showDiscover ? Math.floor(displayedItems.length / 2) - 1 : -1
@@ -113,36 +113,30 @@ export default function Design1({ business, categories }: { business: any; categ
           </div>
         </div>
 
-        {/* Search */}
-        <label className="mt-5 flex items-center gap-2.5 rounded-2xl bg-white px-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1" style={{ ['--tw-ring-color' as string]: HAIR, height: 48 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="7" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher un plat…"
-            className="w-full bg-transparent text-[14px] outline-none placeholder:text-[#a8a097]"
+        {/* Search + roulette entry */}
+        <div className="mt-5 flex items-stretch gap-2.5">
+          <label className="flex flex-1 items-center gap-2.5 rounded-2xl bg-white px-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1" style={{ ['--tw-ring-color' as string]: HAIR, height: 48 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Rechercher un plat…"
+              className="w-full bg-transparent text-[14px] outline-none placeholder:text-[#a8a097]"
+            />
+          </label>
+          <RouletteButton
+            slug={business?.slug}
+            accent={accent}
+            gradient={gradient}
+            font={FONT}
+            size={48}
+            rounded="rounded-2xl"
           />
-        </label>
-
-        {/* Random special CTA */}
-        {availableItems.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setRevealOpen(true)}
-            className="relative mt-3 flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-2xl py-3.5 text-[15px] font-bold text-white shadow-[0_12px_30px_-12px_rgba(244,123,32,0.8)] transition hover:-translate-y-0.5 active:scale-[0.98]"
-            style={{ backgroundImage: gradient }}
-          >
-            <span className="d1-shine pointer-events-none absolute inset-y-0 left-0 w-1/3" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)' }} aria-hidden="true" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/dice.png" alt="" className="d1-float h-5 w-5 rounded-md" aria-hidden="true" />
-            Surprends-moi
-            <span className="text-[12px] font-medium text-white/85">· plat du moment</span>
-          </button>
-        )}
+        </div>
       </header>
 
       {/* ===== Featured hero slider ===== */}
@@ -171,9 +165,9 @@ export default function Design1({ business, categories }: { business: any; categ
       {visibleCategories.length > 0 && (
         <nav className="sticky top-0 z-20 mt-7 px-6 py-3 backdrop-blur-md" style={{ backgroundColor: `${PAGE}e6` }}>
           <div className="no-scrollbar flex gap-2 overflow-x-auto">
-            <Pill label="Tout" active={activeTab === 'all'} onClick={() => setActiveTab('all')} gradient={gradient} />
+            <Pill label="Tout" active={activeTab === 'all'} onClick={() => setActiveTab('all')} gradient={gradient} accent={accent} />
             {visibleCategories.map((cat) => (
-              <Pill key={cat.id} label={cat.name} active={activeTab === cat.id} onClick={() => setActiveTab(cat.id)} gradient={gradient} />
+              <Pill key={cat.id} label={cat.name} active={activeTab === cat.id} onClick={() => setActiveTab(cat.id)} gradient={gradient} accent={accent} />
             ))}
           </div>
         </nav>
@@ -256,21 +250,6 @@ export default function Design1({ business, categories }: { business: any; categ
       </section>
 
       <CenteredItemModal item={selectedItem} onClose={() => setSelectedItem(null)} gradient={gradient} ink={INK} muted={MUTED} font={FONT} />
-      {revealOpen && (
-        <SurpriseFlow
-          allItems={availableItems}
-          categories={visibleCategories.map((c) => ({ id: c.id, name: c.name, items: c.items }))}
-          gradient={gradient}
-          ink={INK}
-          muted={MUTED}
-          font={FONT}
-          onClose={() => setRevealOpen(false)}
-          onView={(it) => {
-            setRevealOpen(false)
-            setSelectedItem(it as Item)
-          }}
-        />
-      )}
       <MenuFooter business={business} settings={settings} accent={accent} />
       <MenuDock business={business} categories={visibleCategories} accent={accent} gradient={gradient} font={FONT} includeSurprise={false} />
     </div>
@@ -299,7 +278,7 @@ function Animations() {
 
 /* ---------- sub-components ---------- */
 
-function Pill({ label, active, onClick, gradient }: { label: string; active: boolean; onClick: () => void; gradient: string }) {
+function Pill({ label, active, onClick, gradient, accent }: { label: string; active: boolean; onClick: () => void; gradient: string; accent: string }) {
   return (
     <button
       type="button"
@@ -307,7 +286,7 @@ function Pill({ label, active, onClick, gradient }: { label: string; active: boo
       className="shrink-0 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold transition active:scale-95"
       style={
         active
-          ? { backgroundImage: gradient, color: '#fff', height: 38, lineHeight: '38px', boxShadow: '0 6px 16px -8px rgba(244,123,32,0.7)' }
+          ? { backgroundImage: gradient, color: '#fff', height: 38, lineHeight: '38px', boxShadow: `0 6px 16px -8px ${accent}b3` }
           : { backgroundColor: '#fff', color: '#6B655C', height: 38, lineHeight: '36px', border: `1px solid ${HAIR}` }
       }
     >

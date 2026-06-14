@@ -1,11 +1,11 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ItemDetailModal } from './MenuSheets'
+import { CenteredItemModal } from './interactive'
 import MenuFooter from './MenuFooter'
 import { getDesignSettings, resolveAccent, resolveGradient } from '@/lib/design-settings'
 import { MenuDock } from './MenuDock'
-import { BRAND } from './kit'
+import RouletteButton from './RouletteButton'
 import { FoodIcon } from './icons'
 
 type Item = {
@@ -28,9 +28,10 @@ type Category = {
 const formatPrice = (price: number | null) =>
   price == null ? null : `${Number(price).toFixed(2)} TND`
 
-// On-brand no-photo placeholder: a soft orange→amber tint + a line food glyph,
-// matching Design1/6/10/11 (no off-brand rainbow tiles, no emoji).
-const BRAND_TINT = `linear-gradient(135deg, ${BRAND.orange}1F, ${BRAND.amber}3D)`
+// On-brand no-photo placeholder: a soft tint of the owner's ACCENT + a line food
+// glyph (no off-brand rainbow tiles, no emoji). Derived from accent so it tracks
+// the chosen brand colour instead of always being orange.
+const brandTint = (accent: string) => `linear-gradient(135deg, ${accent}1F, ${accent}3D)`
 
 export default function Design2({
   business,
@@ -137,9 +138,9 @@ export default function Design2({
             )}
           </div>
 
-          {/* Search bar */}
-          <div className="mt-6">
-            <div className="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/10 focus-within:ring-white/30">
+          {/* Search bar + roulette entry */}
+          <div className="mt-6 flex items-stretch gap-2.5">
+            <div className="flex flex-1 items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/10 focus-within:ring-white/30">
               <svg
                 width="18"
                 height="18"
@@ -162,13 +163,23 @@ export default function Design2({
                 className="w-full bg-transparent text-sm text-white placeholder-white/50 outline-none"
               />
             </div>
+            <RouletteButton
+              slug={business?.slug}
+              accent={accent}
+              gradient={gradient}
+              font="'Cairo', system-ui, -apple-system, sans-serif"
+              size={50}
+              rounded="rounded-2xl"
+            />
           </div>
         </section>
 
         {/* ===== CATEGORY SLIDER (images) ===== */}
         {visibleCategories.length > 0 && (
           <section className="mt-6 -mx-4">
-            <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 pb-1">
+            {/* pt/pb so the active tile's ring (ring-offset-2) isn't clipped —
+                an overflow-x scroller also clips vertical overflow. */}
+            <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 pt-2 pb-2">
               {/* "Tout" tile */}
               <button
                 type="button"
@@ -200,8 +211,8 @@ export default function Design2({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={cat.image_url} alt={cat.name} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
                     ) : (
-                      <span className="absolute inset-0 flex items-center justify-center" style={{ background: BRAND_TINT }} aria-hidden="true">
-                        <FoodIcon hint={cat.name} className="h-10 w-10" style={{ color: `${BRAND.orange}B3` }} strokeWidth={1.4} />
+                      <span className="absolute inset-0 flex items-center justify-center" style={{ background: brandTint(accent) }} aria-hidden="true">
+                        <FoodIcon hint={cat.name} className="h-10 w-10" style={{ color: `${accent}B3` }} strokeWidth={1.4} />
                       </span>
                     )}
                     <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
@@ -218,8 +229,8 @@ export default function Design2({
         {/* ===== EMPTY STATE ===== */}
         {allItems.length === 0 ? (
           <div className="mt-16 flex flex-col items-center px-6 text-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full" style={{ background: BRAND_TINT }}>
-              <FoodIcon kind="utensils" className="h-9 w-9" style={{ color: `${BRAND.orange}B3` }} strokeWidth={1.4} />
+            <div className="flex h-20 w-20 items-center justify-center rounded-full" style={{ background: brandTint(accent) }}>
+              <FoodIcon kind="utensils" className="h-9 w-9" style={{ color: `${accent}B3` }} strokeWidth={1.4} />
             </div>
             <h2 className="mt-5 text-lg font-bold text-slate-800">
               Le menu arrive bientôt
@@ -230,8 +241,8 @@ export default function Design2({
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="mt-16 flex flex-col items-center px-6 text-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full" style={{ background: BRAND_TINT }}>
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={`${BRAND.orange}B3`} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full" style={{ background: brandTint(accent) }}>
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={`${accent}B3`} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="7" />
                 <path d="m21 21-4.3-4.3" />
               </svg>
@@ -317,8 +328,8 @@ export default function Design2({
 
       <MenuFooter business={business} settings={settings} accent={accent} />
 
-      <ItemDetailModal item={selectedItem} accent={accent} onClose={() => setSelectedItem(null)} />
-      <MenuDock business={business} categories={visibleCategories} accent={accent} gradient={gradient} />
+      <CenteredItemModal item={selectedItem} onClose={() => setSelectedItem(null)} gradient={gradient} font="'Cairo', system-ui, -apple-system, sans-serif" />
+      <MenuDock business={business} categories={visibleCategories} accent={accent} gradient={gradient} includeSurprise={false} />
     </div>
   )
 }

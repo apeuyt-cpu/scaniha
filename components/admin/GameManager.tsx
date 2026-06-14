@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { DEFAULT_PRIZES, type GameRow, type PrizeRow } from '@/lib/game'
+import { type GameRow, type PrizeRow } from '@/lib/game'
 import Toggle from '@/components/admin/ui/Toggle'
 import Button from '@/components/admin/ui/Button'
 import Field, { inputClass } from '@/components/admin/ui/Field'
 import SetupCard from '@/components/admin/game/SetupCard'
 import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
+import PlayGates from '@/components/admin/game/PlayGates'
+import SurveyResponses from '@/components/admin/game/SurveyResponses'
 
 /**
  * Owner configuration for the roulette ("everyone wins, variable value").
@@ -64,67 +66,53 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
     load()
   }, [load])
 
-  // True when the backend isn't able to provision the feature yet (tables not
-  // installed). We never show SQL to the owner — just a clear French message.
-  function isProvisioningError(err: any) {
-    return (
-      err?.code === '42P01' ||
-      err?.message?.includes('does not exist') ||
-      err?.message?.includes('schema cache')
-    )
-  }
-  const PROVISION_MSG =
-    "Le jeu n'est pas encore disponible sur votre compte. Réessayez dans un instant ou contactez le support si le problème persiste."
   const SAVE_MSG = 'Impossible d\'enregistrer. Réessayez.'
+
+  // Writes go through the server (requireOwner + service role) so a stale browser
+  // token can never silently block them — the old cause of "Impossible d'enregistrer".
+  async function gameApi(action: string, payload: Record<string, unknown> = {}) {
+    const res = await fetch('/api/admin/game', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...payload }),
+    })
+    const json = await res.json().catch(() => ({}))
+    return { ok: res.ok, json }
+  }
 
   async function createGame() {
     setBusy(true)
     setError(null)
-    try {
-      const { data: g, error: gErr } = await (supabase.from('games') as any)
-        .insert({ business_id: businessId, type: 'roulette', active: false })
-        .select('*')
-        .single()
-      if (gErr) throw gErr
-      const rows = DEFAULT_PRIZES.map((p, i) => ({ game_id: g.id, label: p.label, weight: p.weight, cost: p.cost, position: i }))
-      const { error: pErr } = await (supabase.from('prizes') as any).insert(rows)
-      if (pErr) throw pErr
-      setSetupNeeded(false)
-      await load()
-    } catch (err: any) {
-      if (isProvisioningError(err)) setError(PROVISION_MSG)
-      else { console.error('GameManager createGame error:', err); setError(SAVE_MSG) }
-    } finally {
-      setBusy(false)
-    }
+    const { ok, json } = await gameApi('createGame')
+    setBusy(false)
+    if (!ok) { console.error('GameManager createGame error:', json.error); setError(json.error || SAVE_MSG); return }
+    setSetupNeeded(false)
+    await load()
   }
 
   async function updateGame(patch: Partial<GameRow>) {
     if (!game) return
     setGame({ ...game, ...patch })
-    const { error: e } = await (supabase.from('games') as any).update(patch).eq('id', game.id)
-    if (e) { console.error('GameManager updateGame error:', e); setError(SAVE_MSG) }
+    const { ok, json } = await gameApi('updateGame', { gameId: game.id, patch })
+    if (!ok) { console.error('GameManager updateGame error:', json.error); setError(json.error || SAVE_MSG) }
   }
 
   async function updatePrize(id: string, patch: Partial<PrizeRow>) {
     setPrizes((cur) => cur.map((p) => (p.id === id ? { ...p, ...patch } : p)))
-    const { error: e } = await (supabase.from('prizes') as any).update(patch).eq('id', id)
-    if (e) { console.error('GameManager updatePrize error:', e); setError(SAVE_MSG) }
+    const { ok, json } = await gameApi('updatePrize', { prizeId: id, patch })
+    if (!ok) { console.error('GameManager updatePrize error:', json.error); setError(json.error || SAVE_MSG) }
   }
 
   async function addPrize() {
     if (!game) return
-    const { data, error: e } = await (supabase.from('prizes') as any)
-      .insert({ game_id: game.id, label: 'Nouveau lot', weight: 1, position: prizes.length })
-      .select('*')
-      .single()
-    if (e) { console.error('GameManager addPrize error:', e); setError(SAVE_MSG) }
-    else setPrizes((cur) => [...cur, data])
+    const { ok, json } = await gameApi('addPrize', { gameId: game.id, position: prizes.length })
+    if (!ok || !json.prize) { console.error('GameManager addPrize error:', json.error); setError(json.error || SAVE_MSG) }
+    else setPrizes((cur) => [...cur, json.prize])
   }
 
   async function deletePrize(id: string) {
-    const { error: e } = await (supabase.from('prizes') as any).delete().eq('id', id)
-    if (e) { console.error('GameManager deletePrize error:', e); setError(SAVE_MSG) }
+    const { ok, json } = await gameApi('deletePrize', { prizeId: id })
+    if (!ok) { console.error('GameManager deletePrize error:', json.error); setError(json.error || SAVE_MSG) }
     else setPrizes((cur) => cur.filter((p) => p.id !== id))
   }
 
@@ -147,6 +135,30 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
   }
 
   const activePrizes = prizes.filter((p) => p.active && p.weight > 0).length
+
+  // Drop chance = a prize's weight as a share of all active weight, so the owner
+  // tunes the odds directly (and, with the cost field, can budget the giveaway).
+  const totalWeight = prizes.reduce((s, p) => (p.active ? s + Math.max(0, p.weight || 0) : s), 0)
+  const chancePct = (w: number | null | undefined) =>
+    totalWeight > 0 ? (Math.max(0, w || 0) / totalWeight) * 100 : 0
+  const avgCostPerPlay =
+    totalWeight > 0
+      ? prizes.reduce(
+          (s, p) => (p.active ? s + (Math.max(0, p.weight || 0) / totalWeight) * (Number(p.cost) || 0) : s),
+          0
+        )
+      : 0
+
+  // One-tap: scale active weights so they sum to 100 → weight reads as the % directly.
+  async function balanceTo100() {
+    const active = prizes.filter((p) => p.active && p.weight > 0)
+    const tot = active.reduce((s, p) => s + p.weight, 0)
+    if (tot <= 0) return
+    for (const p of active) {
+      const w = Math.max(1, Math.round((p.weight / tot) * 100))
+      if (w !== p.weight) await updatePrize(p.id, { weight: w })
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -181,9 +193,11 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
         <div className="flex items-center justify-between gap-3">
           <div>
             <h4 className="font-semibold text-zinc-900">Lots de la roue</h4>
-            <p className="text-xs text-zinc-400">Poids = fréquence relative (plus haut = plus fréquent). Stock vide = illimité.</p>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              La « Chance » fixe la probabilité de chaque lot. « Coût » = valeur du lot en TND (laissez vide pour une remise) — il sert au budget ci-dessous. Indépendant des points de fidélité (gagnés sur les achats).
+            </p>
           </div>
-          <Button variant="neutral" onClick={addPrize} className="!min-h-0 px-3 py-2 text-xs">+ Lot</Button>
+          <Button variant="neutral" onClick={addPrize} className="!min-h-0 shrink-0 px-3 py-2 text-xs">+ Lot</Button>
         </div>
         <div className="mt-4 space-y-2.5">
           {prizes.map((p) => (
@@ -207,34 +221,52 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                   ✕
                 </button>
               </div>
-              {/* Row 2: weight, stock, active */}
-              <div className="mt-2.5 flex items-center gap-2">
-                <label className="flex flex-1 items-center gap-1.5 text-xs font-medium text-zinc-500">
-                  <span className="shrink-0">Poids</span>
+              {/* Row 2: chance, cost, stock */}
+              <div className="mt-2.5 grid grid-cols-3 gap-2">
+                <label className="block text-[11px] font-semibold text-zinc-500">
+                  <span className="mb-1 block">Chance</span>
                   <input
                     type="number"
                     min={0}
                     value={p.weight}
                     onChange={(e) => updatePrize(p.id, { weight: Math.max(0, Number(e.target.value)) })}
-                    className="w-full min-w-0 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-center text-sm outline-none focus:ring-2 focus:ring-orange-500/30"
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2.5 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
                   />
                 </label>
-                <label className="flex flex-1 items-center gap-1.5 text-xs font-medium text-zinc-500">
-                  <span className="shrink-0">Stock</span>
+                <label className="block text-[11px] font-semibold text-zinc-500">
+                  <span className="mb-1 block">Coût (TND)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.5"
+                    value={p.cost ?? ''}
+                    placeholder="—"
+                    onChange={(e) => updatePrize(p.id, { cost: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2.5 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
+                  />
+                </label>
+                <label className="block text-[11px] font-semibold text-zinc-500">
+                  <span className="mb-1 block">Stock</span>
                   <input
                     type="number"
                     min={0}
                     value={p.stock ?? ''}
                     placeholder="∞"
                     onChange={(e) => updatePrize(p.id, { stock: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
-                    className="w-full min-w-0 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-center text-sm outline-none focus:ring-2 focus:ring-orange-500/30"
+                    className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2.5 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
                   />
                 </label>
+              </div>
+              {/* Row 3: real drop chance + active toggle */}
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className={`text-xs font-bold ${p.active ? 'text-green-600' : 'text-zinc-400'}`}>
+                  Chance réelle : {chancePct(p.weight).toFixed(0)}%
+                </span>
                 <button
                   type="button"
                   onClick={() => updatePrize(p.id, { active: !p.active })}
                   aria-pressed={p.active}
-                  className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition ${p.active ? 'bg-green-100 text-green-700' : 'bg-zinc-200 text-zinc-500'}`}
+                  className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${p.active ? 'bg-green-100 text-green-700' : 'bg-zinc-200 text-zinc-500'}`}
                 >
                   {p.active ? 'Actif' : 'Inactif'}
                 </button>
@@ -243,6 +275,30 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
           ))}
           {prizes.length === 0 && <p className="py-6 text-center text-sm text-zinc-400">Aucun lot — ajoutez-en au moins deux.</p>}
         </div>
+
+        {/* Odds total + giveaway budget */}
+        {prizes.length > 0 && (
+          <div className="mt-4 space-y-2 rounded-xl bg-zinc-50 p-3 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold text-zinc-600">
+                Total des chances : <span className="text-zinc-900">{totalWeight}</span>
+              </span>
+              {totalWeight > 0 && totalWeight !== 100 && (
+                <button type="button" onClick={balanceTo100} className="font-semibold text-orange-600 hover:underline">
+                  Répartir sur 100&nbsp;%
+                </button>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-2 border-t border-zinc-200 pt-2">
+              <span className="font-semibold text-zinc-600">Coût moyen par partie</span>
+              <span className="font-bold text-zinc-900">{avgCostPerPlay.toFixed(2)} TND</span>
+            </div>
+            <div className="flex items-center justify-between gap-2 text-zinc-500">
+              <span>Budget estimé · 100 parties</span>
+              <span className="font-semibold">≈ {(avgCostPerPlay * 100).toFixed(0)} TND</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Réglages */}
@@ -269,6 +325,12 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
           </Field>
         </div>
       </div>
+
+      {/* Conditions pour jouer (gates: social follow / link / survey) */}
+      <PlayGates gameId={game.id} config={game.config || {}} onConfig={(c) => setGame({ ...game, config: c })} />
+
+      {/* Survey answers collected by the gates (shows only when there are any) */}
+      <SurveyResponses businessId={businessId} />
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 

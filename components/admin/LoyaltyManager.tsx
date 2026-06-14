@@ -166,17 +166,9 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
             <input type="number" min={0} step={0.5} value={program.points_per_tnd}
               onChange={(e) => updateProgram({ points_per_tnd: Math.max(0, Number(e.target.value)) })} className={inputClass} />
           </Field>
-          <Field label="Points par partie de roue" hint="Bonus quand un client joue avec son numéro.">
-            <input type="number" min={0} value={program.play_points}
-              onChange={(e) => updateProgram({ play_points: Math.max(0, Number(e.target.value)) })} className={inputClass} />
-          </Field>
           <Field label="Points de bienvenue" hint="Offerts à la première visite d’un client.">
             <input type="number" min={0} value={program.welcome_points}
               onChange={(e) => updateProgram({ welcome_points: Math.max(0, Number(e.target.value)) })} className={inputClass} />
-          </Field>
-          <Field label="Validité d’une récompense (heures)" hint="Délai pour récupérer une récompense échangée.">
-            <input type="number" min={1} value={program.redeem_expiry_hours}
-              onChange={(e) => updateProgram({ redeem_expiry_hours: Math.max(1, Number(e.target.value)) })} className={inputClass} />
           </Field>
         </div>
         <div className="mt-4 text-xs">

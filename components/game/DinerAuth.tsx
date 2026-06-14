@@ -20,13 +20,16 @@ const phoneValid = (p: string) => p.replace(/[^\d]/g, '').length >= 8
 export default function DinerAuth({
   slug,
   accent = '#F47B20',
+  gradient = 'linear-gradient(135deg, #F47B20, #F5B82E)',
   onAuthed,
 }: {
   slug: string
   accent?: string
+  gradient?: string
   onAuthed: (session: DinerSession) => void
 }) {
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  // Signup is the default — most diners are new, so lead with account creation.
+  const [mode, setMode] = useState<'login' | 'signup'>('signup')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -80,11 +83,21 @@ export default function DinerAuth({
     setError(null)
   }
 
+  // The auth card is a Scaniha feature → pin the brand orange, ignore any
+  // business gradient. Props kept for the contract.
+  const orange = '#F47B20'
+  void accent
+  void gradient
+
+  const inputClass =
+    'w-full rounded-xl border bg-white px-3.5 py-3 text-sm text-[#1B1714] outline-none transition placeholder:text-[#B8AFA4] focus:ring-2 disabled:opacity-60'
+  const inputStyle = { borderColor: '#ECE7DF', ['--tw-ring-color' as any]: `${orange}66` }
+
   return (
     <div className="mx-auto w-full max-w-sm">
-      <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-        {/* Toggle */}
-        <div className="mb-5 grid grid-cols-2 gap-1 rounded-2xl bg-zinc-100 p-1">
+      <div className="rounded-3xl border bg-white p-6" style={{ borderColor: '#ECE7DF', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+        {/* Segmented control */}
+        <div className="mb-6 grid grid-cols-2 gap-1 rounded-2xl p-1" style={{ backgroundColor: '#FAFAF9', boxShadow: 'inset 0 0 0 1px #ECE7DF' }}>
           {(['login', 'signup'] as const).map((m) => {
             const active = mode === m
             return (
@@ -93,8 +106,12 @@ export default function DinerAuth({
                 type="button"
                 onClick={() => switchMode(m)}
                 disabled={busy}
-                className="rounded-xl py-2 text-sm font-bold transition disabled:cursor-not-allowed"
-                style={active ? { backgroundColor: '#fff', color: accent, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } : { color: '#71717a' }}
+                className="rounded-xl py-2.5 text-sm font-medium transition disabled:cursor-not-allowed"
+                style={
+                  active
+                    ? { backgroundColor: '#fff', color: '#1B1714', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }
+                    : { color: '#8A8178' }
+                }
               >
                 {m === 'login' ? 'Connexion' : 'Inscription'}
               </button>
@@ -102,24 +119,24 @@ export default function DinerAuth({
           })}
         </div>
 
-        <form onSubmit={submit} className="space-y-3">
+        <form onSubmit={submit} className="space-y-3.5">
           {mode === 'signup' && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-500">Nom (optionnel)</label>
+              <label className="mb-1.5 block text-xs font-medium text-[#8A8178]">Nom (optionnel)</label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Votre nom"
                 autoComplete="name"
                 disabled={busy}
-                className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:ring-2 disabled:opacity-60"
-                style={{ ['--tw-ring-color' as any]: accent }}
+                className={inputClass}
+                style={inputStyle}
               />
             </div>
           )}
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">Numéro de téléphone</label>
+            <label className="mb-1.5 block text-xs font-medium text-[#8A8178]">Numéro de téléphone</label>
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -127,13 +144,13 @@ export default function DinerAuth({
               inputMode="tel"
               autoComplete="tel"
               disabled={busy}
-              className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:ring-2 disabled:opacity-60"
-              style={{ ['--tw-ring-color' as any]: accent }}
+              className={inputClass}
+              style={inputStyle}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">Mot de passe</label>
+            <label className="mb-1.5 block text-xs font-medium text-[#8A8178]">Mot de passe</label>
             <input
               type="password"
               value={password}
@@ -141,8 +158,8 @@ export default function DinerAuth({
               placeholder="6 caractères minimum"
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               disabled={busy}
-              className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:ring-2 disabled:opacity-60"
-              style={{ ['--tw-ring-color' as any]: accent }}
+              className={inputClass}
+              style={inputStyle}
             />
           </div>
 
@@ -153,8 +170,8 @@ export default function DinerAuth({
           <button
             type="submit"
             disabled={!canSubmit}
-            className="btn-shine w-full rounded-2xl py-3.5 text-base font-extrabold text-white shadow-lg transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ backgroundColor: accent, boxShadow: `0 10px 24px -8px ${accent}99` }}
+            className="w-full rounded-2xl py-3.5 text-base font-medium text-white transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ backgroundColor: orange, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
           >
             {busy
               ? mode === 'login'
@@ -166,18 +183,18 @@ export default function DinerAuth({
           </button>
         </form>
 
-        <p className="mt-4 text-center text-xs text-zinc-400">
+        <p className="mt-5 text-center text-xs text-[#8A8178]">
           {mode === 'login' ? (
             <>
               Pas encore de compte ?{' '}
-              <button type="button" onClick={() => switchMode('signup')} disabled={busy} className="font-semibold" style={{ color: accent }}>
+              <button type="button" onClick={() => switchMode('signup')} disabled={busy} className="font-medium" style={{ color: orange }}>
                 Inscrivez-vous
               </button>
             </>
           ) : (
             <>
               Déjà un compte ?{' '}
-              <button type="button" onClick={() => switchMode('login')} disabled={busy} className="font-semibold" style={{ color: accent }}>
+              <button type="button" onClick={() => switchMode('login')} disabled={busy} className="font-medium" style={{ color: orange }}>
                 Connectez-vous
               </button>
             </>

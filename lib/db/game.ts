@@ -4,8 +4,9 @@
  * and nowhere else. All spins go through the atomic `play_game` RPC.
  */
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getDesignSettings, resolveAccent, isDesignId, type DesignId } from '@/lib/design-settings'
-import type { PlayResult } from '@/lib/game'
+import { getDesignSettings, resolveAccent, resolveGradient, isDesignId, type DesignId } from '@/lib/design-settings'
+import { DEFAULT_PRESENCE } from '@/lib/game'
+import type { PlayResult, GameGate, PresenceConfig, PresenceSummary } from '@/lib/game'
 
 export const FALLBACK_ACCENT = '#F47B20'
 
@@ -31,17 +32,37 @@ export function businessAccent(business: any): string {
   return business?.primary_color || FALLBACK_ACCENT
 }
 
+/**
+ * The business's resolved brand GRADIENT (CSS) — the same one the public menu
+ * uses (custom gradient → flat accent sweep → brand default). Lets the
+ * gamification surfaces (wheel button, game page, account) match the menu
+ * instead of staying flat orange.
+ */
+export function businessGradient(business: any): string {
+  const theme = business?.theme_id
+  if (theme && typeof theme === 'string' && isDesignId(theme)) {
+    return resolveGradient(getDesignSettings(business, theme as DesignId), theme as DesignId)
+  }
+  const c = business?.primary_color || FALLBACK_ACCENT
+  return `linear-gradient(135deg, ${c}, ${c})`
+}
+
 export interface GameConfig {
   active: boolean
   loyaltyActive: boolean
   businessName: string
   prizes: string[]
   accent: string
+  gradient: string
+  /** "Conditions pour jouer" — gates the player must clear before spinning. */
+  gates: GameGate[]
+  /** Sanitized presence rule (NO ips/coords) so the client knows whether to ask for GPS. */
+  presence: PresenceSummary
 }
 
 /** Public wheel config for /[slug]/jeu and the menu FAB. Tolerates missing tables. */
 export async function loadGameConfig(slug: string): Promise<GameConfig> {
-  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], accent: FALLBACK_ACCENT }
+  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', gates: [], presence: { enabled: false, mode: 'ip' } }
   try {
     const supabase: any = await createServiceRoleClient()
     const { data: business } = await supabase
@@ -52,16 +73,19 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
       .maybeSingle()
     if (!business) return off
     const accent = businessAccent(business)
+    const gradient = businessGradient(business)
 
     const { data: game } = await supabase
       .from('games')
-      .select('id')
+      .select('id, config')
       .eq('business_id', business.id)
       .eq('type', 'roulette')
       .eq('active', true)
       .maybeSingle()
 
     let prizes: string[] = []
+    let gates: GameGate[] = []
+    let presence: PresenceSummary = { enabled: false, mode: 'ip' }
     if (game) {
       const { data: rows } = await supabase
         .from('prizes')
@@ -71,6 +95,30 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
         .order('position', { ascending: true })
         .order('created_at', { ascending: true })
       prizes = (rows || []).map((p: any) => p.label)
+
+      // Only enabled gates with usable config reach the player (no answers/keys).
+      const g = (game as any).config?.gates
+      if (g && g.enabled && Array.isArray(g.items)) {
+        gates = g.items
+          .filter((it: any) =>
+            it && it.enabled && (it.type === 'survey'
+              ? Array.isArray(it.questions) && it.questions.length > 0
+              : typeof it.url === 'string' && it.url.trim() !== ''))
+          .map((it: any) => ({
+            id: String(it.id),
+            type: it.type,
+            label: String(it.label || ''),
+            enabled: true,
+            url: it.url,
+            questions: it.type === 'survey' ? it.questions : undefined,
+          }))
+      }
+
+      // Sanitized presence summary — only enabled+mode reach the client.
+      const p = (game as any).config?.presence
+      if (p && typeof p === 'object') {
+        presence = { enabled: Boolean(p.enabled), mode: p.mode === 'geo' || p.mode === 'both' ? p.mode : 'ip' }
+      }
     }
 
     const { data: program } = await supabase
@@ -86,6 +134,9 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
       businessName: business.name,
       prizes,
       accent,
+      gradient,
+      gates,
+      presence,
     }
   } catch (e: any) {
     console.error('loadGameConfig:', e?.message)

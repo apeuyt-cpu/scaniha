@@ -6,6 +6,7 @@ import { uploadImage } from '@/lib/storage'
 import {
   DESIGN_ACCENTS,
   DESIGN_EXTRAS,
+  getDesignFeatures,
   getDesignSettings,
   isDesignId,
   type DesignId,
@@ -188,48 +189,55 @@ export function useDesignSettings(
 /* ------------------------------------------------------------------ */
 
 export function ModelControls({ ctrl, designId }: { ctrl: DesignSettingsController; designId: DesignId }) {
-  const { s, set, setExtra, extraValue, toggleFeatured, save, saving, saved, error, items, itemsLoaded, uploadingCover, handleCoverFile, showDescriptions } = ctrl
+  const { s, set, setExtra, extraValue, toggleFeatured, items, itemsLoaded, uploadingCover, handleCoverFile } = ctrl
   const extraDefs = DESIGN_EXTRAS[designId] || []
+  // Only show controls this specific design actually uses.
+  const features = getDesignFeatures(designId)
 
   return (
     <div className="space-y-5">
-      {/* Cover banner */}
-      <Field label="Image de bannière">
-        {s.coverImage ? (
-          <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={s.coverImage} alt="Bannière" className="h-16 w-28 rounded-xl object-cover ring-1 ring-zinc-200" />
-            <button
-              type="button"
-              onClick={() => set('coverImage', null)}
-              className="text-sm font-medium text-red-600 hover:text-red-700"
-            >
-              Retirer
-            </button>
-          </div>
-        ) : (
-          <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-600 hover:border-orange-400 hover:text-orange-600">
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={uploadingCover}
-              onChange={(e) => handleCoverFile(e.target.files?.[0])}
-            />
-            {uploadingCover ? 'Téléversement…' : '+ Ajouter une bannière'}
-          </label>
-        )}
-      </Field>
+      {/* Cover banner — only for designs that render one (placement varies). */}
+      {features.cover && (
+        <Field label={features.coverLabel || 'Image de bannière'}>
+          {s.coverImage ? (
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={s.coverImage} alt="Bannière" className="h-16 w-28 rounded-xl object-cover ring-1 ring-zinc-200" />
+              <button
+                type="button"
+                onClick={() => set('coverImage', null)}
+                className="text-sm font-medium text-red-600 hover:text-red-700"
+              >
+                Retirer
+              </button>
+            </div>
+          ) : (
+            <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-600 hover:border-orange-400 hover:text-orange-600">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploadingCover}
+                onChange={(e) => handleCoverFile(e.target.files?.[0])}
+              />
+              {uploadingCover ? 'Téléversement…' : '+ Ajouter une image'}
+            </label>
+          )}
+          {features.coverHint && <p className="mt-1.5 text-xs text-zinc-400">{features.coverHint}</p>}
+        </Field>
+      )}
 
-      {/* Tagline */}
-      <Field label="Slogan / message d'accueil">
-        <input
-          value={s.tagline}
-          onChange={(e) => set('tagline', e.target.value)}
-          placeholder="Ex. Découvrez nos spécialités"
-          className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-        />
-      </Field>
+      {/* Tagline — only for designs with a header slot for it. */}
+      {features.tagline && (
+        <Field label="Slogan / message d'accueil">
+          <input
+            value={s.tagline}
+            onChange={(e) => set('tagline', e.target.value)}
+            placeholder="Ex. Découvrez nos spécialités"
+            className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+        </Field>
+      )}
 
       <Toggle label="Afficher le logo" checked={s.showLogo} onChange={(v) => set('showLogo', v)} />
 
@@ -280,6 +288,8 @@ export function ModelControls({ ctrl, designId }: { ctrl: DesignSettingsControll
         </>
       )}
 
+      {features.showcase && (
+      <>
       <div className="border-t border-zinc-100" />
 
       {/* Showcase toggle */}
@@ -314,6 +324,11 @@ export function ModelControls({ ctrl, designId }: { ctrl: DesignSettingsControll
               <Radio label="Aléatoire" checked={s.source === 'random'} onClick={() => set('source', 'random')} />
               <Radio label="Choisis" checked={s.source === 'manual'} onClick={() => set('source', 'manual')} />
             </div>
+            <p className="mt-1.5 text-xs text-zinc-400">
+              {s.source === 'random'
+                ? 'On met en avant des plats au hasard à chaque visite.'
+                : 'Vous choisissez les plats mis en avant ci-dessous.'}
+            </p>
           </Field>
 
           {s.source === 'manual' && (
@@ -350,24 +365,36 @@ export function ModelControls({ ctrl, designId }: { ctrl: DesignSettingsControll
           {/* Auto-slide + speed */}
           <Toggle label="Défilement automatique" checked={s.autoSlide} onChange={(v) => set('autoSlide', v)} />
           {s.autoSlide && (
-            <Field label={`Vitesse : ${(s.intervalMs / 1000).toFixed(0)} s`}>
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-sm font-medium text-zinc-700">Vitesse de défilement</span>
+                <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-orange-700">
+                  {(s.intervalMs / 1000).toFixed(1).replace(/\.0$/, '')} s
+                </span>
+              </div>
               <input
                 type="range"
-                min={2000}
+                min={1000}
                 max={8000}
-                step={1000}
+                step={500}
                 value={s.intervalMs}
                 onChange={(e) => set('intervalMs', Number(e.target.value))}
                 className="w-full accent-orange-500"
               />
-            </Field>
+              <div className="mt-1 flex justify-between text-[11px] text-zinc-400">
+                <span>Rapide · 1 s</span>
+                <span>Lent · 8 s</span>
+              </div>
+            </div>
           )}
         </div>
+      )}
+      </>
       )}
 
       {/* Display toggles */}
       <Toggle label="Afficher les prix" checked={s.showPrices} onChange={(v) => set('showPrices', v)} />
-      {showDescriptions && (
+      {features.descriptions && (
         <Toggle
           label="Afficher les descriptions"
           checked={s.showDescriptions}
@@ -381,62 +408,9 @@ export function ModelControls({ ctrl, designId }: { ctrl: DesignSettingsControll
         onChange={(v) => set('showSoldOut', v)}
       />
 
-      <div className="border-t border-zinc-100" />
-
-      {/* Contact / hours footer */}
-      <Toggle
-        label="Pied de page : contact & horaires"
-        hint="Affiche téléphone, adresse, horaires et réseaux sociaux."
-        checked={s.contactEnabled}
-        onChange={(v) => set('contactEnabled', v)}
-      />
-      {s.contactEnabled && (
-        <div className="space-y-3 rounded-xl bg-zinc-50 p-4">
-          <Field label="Téléphone">
-            <input
-              value={s.phone}
-              onChange={(e) => set('phone', e.target.value)}
-              placeholder="+216 ..."
-              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </Field>
-          <Field label="Adresse">
-            <input
-              value={s.address}
-              onChange={(e) => set('address', e.target.value)}
-              placeholder="Rue, ville"
-              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </Field>
-          <Field label="Horaires">
-            <input
-              value={s.hours}
-              onChange={(e) => set('hours', e.target.value)}
-              placeholder="Lun–Dim · 9h–23h"
-              className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </Field>
-          <p className="text-xs text-zinc-400">
-            Les réseaux sociaux proviennent de l&apos;onglet « Marque ».
-          </p>
-        </div>
-      )}
-
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      )}
-
-      <div className="flex items-center gap-3 pt-1">
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving}
-          className="rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
-        >
-          {saving ? 'Enregistrement…' : 'Enregistrer les réglages'}
-        </button>
-        {saved && <span className="text-sm font-medium text-green-600">Enregistré ✓</span>}
-      </div>
+      <p className="rounded-xl bg-zinc-50 px-3 py-2.5 text-xs text-zinc-500">
+        <span aria-hidden="true">ℹ️</span> Le pied de page (contact, adresse, horaires) et les réseaux sociaux se gèrent dans l&apos;onglet <span className="font-semibold">« Marque »</span> — c&apos;est partagé entre tous les designs.
+      </p>
     </div>
   )
 }
@@ -489,33 +463,48 @@ export function ClassicColorForm({ businessId }: { businessId: string }) {
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 lg:p-6">
       <div className="mb-5">
         <h3 className="text-lg font-bold text-zinc-900">Couleur du thème</h3>
-        <p className="text-sm text-zinc-500">Choisissez la couleur principale de ce thème classique.</p>
+        <p className="text-sm text-zinc-500">
+          Les thèmes classiques ont une mise en page et une palette soignées et figées. Vous réglez seulement leur couleur d’accent — une couleur unie, sans dégradé.
+        </p>
       </div>
-      <Field label="Couleur principale">
-        <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={color || CLASSIC_DEFAULT}
-            disabled={!loaded}
-            onChange={(e) => {
-              setColor(e.target.value)
-              setSaved(false)
-            }}
-            className="h-9 w-12 cursor-pointer rounded-lg border border-zinc-200 disabled:opacity-50"
-          />
-          <span className="text-xs text-zinc-400">{color || 'Couleur par défaut'}</span>
-          {color && (
+      <Field label="Couleur d’accent">
+        <div className="space-y-3">
+          {/* Curated flat presets + "Par défaut" (the theme's own colour) */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => {
-                setColor(null)
-                setSaved(false)
-              }}
-              className="text-sm font-medium text-zinc-500 hover:text-zinc-800"
+              onClick={() => { setColor(null); setSaved(false) }}
+              aria-pressed={!color}
+              className={`flex h-9 items-center rounded-lg border px-3 text-xs font-semibold transition ${!color ? 'border-zinc-900 text-zinc-900' : 'border-zinc-200 text-zinc-500 hover:border-zinc-300'}`}
             >
-              Réinitialiser
+              Par défaut
             </button>
-          )}
+            {['#F47B20', '#8B2635', '#C9A962', '#2F6E4E', '#2A4D69', '#C65D3B', '#6B3B5E', '#2C2C2C'].map((hex) => {
+              const active = (color || '').toLowerCase() === hex.toLowerCase()
+              return (
+                <button
+                  key={hex}
+                  type="button"
+                  onClick={() => { setColor(hex); setSaved(false) }}
+                  aria-label={`Couleur ${hex}`}
+                  title={hex}
+                  className={`h-9 w-9 rounded-lg transition ${active ? 'ring-2 ring-zinc-900 ring-offset-2' : 'ring-1 ring-black/10 hover:ring-black/25'}`}
+                  style={{ backgroundColor: hex }}
+                />
+              )
+            })}
+          </div>
+          {/* Custom flat colour + hex readout */}
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={color || CLASSIC_DEFAULT}
+              disabled={!loaded}
+              onChange={(e) => { setColor(e.target.value); setSaved(false) }}
+              className="h-9 w-12 cursor-pointer rounded-lg border border-zinc-200 disabled:opacity-50"
+            />
+            <span className="text-xs text-zinc-400">Personnalisée · {color || 'couleur d’origine du thème'}</span>
+          </div>
         </div>
       </Field>
       {error && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}

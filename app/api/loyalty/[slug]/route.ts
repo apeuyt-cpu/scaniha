@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadLoyalty, redeemReward, normPhone } from '@/lib/db/loyalty'
-import { loadPresence } from '@/lib/db/game'
-import { getClientIp, checkPresence } from '@/lib/presence'
+import { loadQrGate } from '@/lib/db/game'
+import { scanCookieName, verifyScan } from '@/lib/qr-session'
 
 /**
  * Public loyalty endpoints (by business slug).
@@ -33,21 +33,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ success: false, error: 'Numéro ou récompense manquant.' }, { status: 400 })
   }
 
-  // Presence gate (only when the owner opted to also lock redemptions).
-  const presence = await loadPresence(slug)
-  if (presence.enabled && presence.alsoRedeem) {
-    const lat = typeof body.lat === 'number' ? body.lat : null
-    const lng = typeof body.lng === 'number' ? body.lng : null
-    const pres = checkPresence(presence, { ip: getClientIp(req), lat, lng })
-    if (!pres.ok) {
-      const error =
-        pres.reason === 'need_location'
-          ? 'Activez la localisation pour échanger ici.'
-          : pres.reason === 'location'
-            ? 'Vous êtes trop loin du restaurant.'
-            : presence.message.trim() || 'Connectez-vous au Wi-Fi du restaurant pour échanger.'
+  // QR-session gate — only when the owner opted to also lock redemptions.
+  const loaded = await loadQrGate(slug)
+  if (loaded && loaded.gate.enabled && loaded.gate.qrKey && loaded.gate.alsoRedeem) {
+    const cookie = req.cookies.get(scanCookieName(loaded.businessId))?.value
+    if (!verifyScan(cookie, loaded.businessId, loaded.gate.qrKey, loaded.gate.ttlMin)) {
       return NextResponse.json(
-        { success: false, presenceBlocked: true, reason: pres.reason, needLocation: pres.reason === 'need_location', error },
+        { success: false, rescanRequired: true, error: loaded.gate.message.trim() || 'Scannez le QR du restaurant pour échanger.' },
         { status: 403 }
       )
     }

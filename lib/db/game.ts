@@ -5,8 +5,8 @@
  */
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getDesignSettings, resolveAccent, resolveGradient, isDesignId, type DesignId } from '@/lib/design-settings'
-import { DEFAULT_PRESENCE } from '@/lib/game'
-import type { PlayResult, GameGate, PresenceConfig, PresenceSummary } from '@/lib/game'
+import { DEFAULT_QR_GATE } from '@/lib/game'
+import type { PlayResult, GameGate, QrGateConfig, QrGateSummary } from '@/lib/game'
 
 export const FALLBACK_ACCENT = '#F47B20'
 
@@ -56,13 +56,13 @@ export interface GameConfig {
   gradient: string
   /** "Conditions pour jouer" — gates the player must clear before spinning. */
   gates: GameGate[]
-  /** Sanitized presence rule (NO ips/coords) so the client knows whether to ask for GPS. */
-  presence: PresenceSummary
+  /** Sanitized QR-gate summary (NO key) — tells the client whether a scan is required. */
+  qrGate: QrGateSummary
 }
 
 /** Public wheel config for /[slug]/jeu and the menu FAB. Tolerates missing tables. */
 export async function loadGameConfig(slug: string): Promise<GameConfig> {
-  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', gates: [], presence: { enabled: false, mode: 'ip' } }
+  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', gates: [], qrGate: { enabled: false } }
   try {
     const supabase: any = await createServiceRoleClient()
     const { data: business } = await supabase
@@ -85,7 +85,7 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
 
     let prizes: string[] = []
     let gates: GameGate[] = []
-    let presence: PresenceSummary = { enabled: false, mode: 'ip' }
+    let qrGate: QrGateSummary = { enabled: false }
     if (game) {
       const { data: rows } = await supabase
         .from('prizes')
@@ -114,10 +114,10 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
           }))
       }
 
-      // Sanitized presence summary — only enabled+mode reach the client.
-      const p = (game as any).config?.presence
-      if (p && typeof p === 'object') {
-        presence = { enabled: Boolean(p.enabled), mode: p.mode === 'geo' || p.mode === 'both' ? p.mode : 'ip' }
+      // Sanitized QR-gate summary — only the enabled flag reaches the client.
+      const q = (game as any).config?.qrGate
+      if (q && typeof q === 'object') {
+        qrGate = { enabled: Boolean(q.enabled) && typeof q.qrKey === 'string' && q.qrKey.length > 0 }
       }
     }
 
@@ -136,7 +136,7 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
       accent,
       gradient,
       gates,
-      presence,
+      qrGate,
     }
   } catch (e: any) {
     console.error('loadGameConfig:', e?.message)
@@ -161,31 +161,25 @@ export async function playGame(slug: string, deviceId: string | null, phone: str
   }
 }
 
-/** Coerce a stored games.config.presence blob into a safe, complete PresenceConfig. */
-export function normalizePresence(raw: any): PresenceConfig {
-  if (!raw || typeof raw !== 'object') return DEFAULT_PRESENCE
-  const mode = raw.mode === 'geo' || raw.mode === 'both' ? raw.mode : 'ip'
-  const ips = Array.isArray(raw.ips) ? raw.ips.map((x: any) => String(x).trim()).filter(Boolean) : []
-  const geo =
-    raw.geo && typeof raw.geo === 'object' && typeof raw.geo.lat === 'number' && typeof raw.geo.lng === 'number'
-      ? { lat: raw.geo.lat, lng: raw.geo.lng, radiusM: Number(raw.geo.radiusM) > 0 ? Number(raw.geo.radiusM) : 150 }
-      : null
+/** Coerce a stored games.config.qrGate blob into a safe, complete QrGateConfig. */
+export function normalizeQrGate(raw: any): QrGateConfig {
+  if (!raw || typeof raw !== 'object') return DEFAULT_QR_GATE
+  const ttl = Number(raw.ttlMin)
   return {
     enabled: Boolean(raw.enabled),
-    mode,
-    ips,
-    geo,
+    ttlMin: Number.isFinite(ttl) && ttl > 0 ? Math.min(1440, Math.round(ttl)) : DEFAULT_QR_GATE.ttlMin,
+    qrKey: typeof raw.qrKey === 'string' ? raw.qrKey : '',
     message: typeof raw.message === 'string' ? raw.message : '',
     alsoRedeem: Boolean(raw.alsoRedeem),
   }
 }
 
 /**
- * FULL presence config (incl. ips/coords) for a business's active roulette —
- * SERVER-ONLY, used to enforce the gate. Never send this to the client; the
- * public summary lives in loadGameConfig().presence.
+ * FULL QR-gate config + the business id for an active roulette — SERVER-ONLY,
+ * used to enforce the scan cookie. Never send qrKey to the client; the public
+ * summary lives in loadGameConfig().qrGate.
  */
-export async function loadPresence(slug: string): Promise<PresenceConfig> {
+export async function loadQrGate(slug: string): Promise<{ businessId: string; gate: QrGateConfig } | null> {
   try {
     const supabase: any = await createServiceRoleClient()
     const { data: business } = await supabase
@@ -194,7 +188,7 @@ export async function loadPresence(slug: string): Promise<PresenceConfig> {
       .eq('slug', slug)
       .eq('status', 'active')
       .maybeSingle()
-    if (!business) return DEFAULT_PRESENCE
+    if (!business) return null
     const { data: game } = await supabase
       .from('games')
       .select('config')
@@ -202,9 +196,9 @@ export async function loadPresence(slug: string): Promise<PresenceConfig> {
       .eq('type', 'roulette')
       .eq('active', true)
       .maybeSingle()
-    return normalizePresence((game as any)?.config?.presence)
+    return { businessId: business.id, gate: normalizeQrGate((game as any)?.config?.qrGate) }
   } catch (e: any) {
-    console.error('loadPresence:', e?.message)
-    return DEFAULT_PRESENCE
+    console.error('loadQrGate:', e?.message)
+    return null
   }
 }

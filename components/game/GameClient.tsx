@@ -50,18 +50,6 @@ function clearToken(slug: string) {
   } catch {}
 }
 
-/** Best-effort GPS coords for the presence geofence — resolves null if denied/unavailable. */
-function getCoords(): Promise<{ lat: number; lng: number } | null> {
-  return new Promise((resolve) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return resolve(null)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-    )
-  })
-}
-
 export default function GameClient({ slug }: { slug: string }) {
   const [phase, setPhase] = useState<Phase>('loading')
   const [prizes, setPrizes] = useState<string[]>([])
@@ -210,7 +198,7 @@ export default function GameClient({ slug }: { slug: string }) {
     setPhase('auth')
   }
 
-  async function spin(tokenOverride?: string, gatesOk?: boolean, coords?: { lat: number; lng: number }) {
+  async function spin(tokenOverride?: string, gatesOk?: boolean) {
     // Conditions first: if not cleared, open the gates popup instead of spinning.
     if (!gatesOk && gates.length > 0 && !gatesCleared) {
       setGatesModalOpen(true)
@@ -229,7 +217,7 @@ export default function GameClient({ slug }: { slug: string }) {
       const res = await fetch(`/api/game/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deviceId: deviceId(), token, ...(coords ? { lat: coords.lat, lng: coords.lng } : {}) }),
+        body: JSON.stringify({ deviceId: deviceId(), token }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.success) {
@@ -237,12 +225,9 @@ export default function GameClient({ slug }: { slug: string }) {
           requireLogin('Votre session a expiré. Reconnectez-vous pour jouer.')
           return
         }
-        // Presence geofence: the server asks for location only when it needs it
-        // (a Wi-Fi-IP lock never does) → grab coords once and retry automatically.
-        if (res.status === 403 && json.needLocation && !coords) {
-          const c = await getCoords()
-          if (c) { spin(token, true, c); return }
-        }
+        // QR-session gate (403 rescanRequired): the scan expired or they never
+        // scanned. Stay on 'ready' (not 'blocked' — that's the daily-limit
+        // countdown) so the spin button remains once they re-scan the café QR.
         setPhase(res.status === 429 ? 'blocked' : 'ready')
         setError(json.error || 'Une erreur est survenue. Réessayez.')
         return
@@ -498,6 +483,7 @@ export default function GameClient({ slug }: { slug: string }) {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Quiet logout */}

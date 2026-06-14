@@ -6,6 +6,7 @@ import { getTheme } from '@/lib/themes'
 import PublicMenu from '@/components/menu/PublicMenu'
 import PoweredByScaniha from '@/components/menu/PoweredByScaniha'
 import LogView from '@/components/LogView'
+import QrScanMint from '@/components/game/QrScanMint'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Metadata } from 'next'
 
@@ -137,6 +138,8 @@ export default async function PublicMenuPage({
       />
       {!isPaused && <PoweredByScaniha />}
       <LogView businessId={business.id} slug={business.slug} />
+      {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
+      <QrScanMint slug={business.slug} />
     </>
   )
 }

@@ -3,6 +3,35 @@ import { requireOwner } from '@/lib/auth'
 import { getBusinessByOwner } from '@/lib/db/business'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { DEFAULT_PRIZES } from '@/lib/game'
+import { newQrKey } from '@/lib/qr-session'
+
+/**
+ * GET → the owner's roulette game id + config (+ slug). Used by the QR-gate
+ * admin panel and the Partage page to read/embed the current qrKey.
+ */
+export async function GET() {
+  try {
+    const { user } = await requireOwner()
+    const business = await getBusinessByOwner(user.id)
+    if (!business || business.owner_id !== user.id) {
+      return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
+    }
+    const supabase: any = await createServiceRoleClient()
+    const { data } = await supabase
+      .from('games')
+      .select('id, config')
+      .eq('business_id', business.id)
+      .eq('type', 'roulette')
+      .order('created_at', { ascending: true })
+      .limit(1)
+    const game = data?.[0]
+    return NextResponse.json({ slug: business.slug, gameId: game?.id || null, config: game?.config || {} })
+  } catch (e: any) {
+    if (e?.digest?.startsWith('NEXT_REDIRECT')) throw e
+    console.error('admin/game GET:', e?.message)
+    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
+  }
+}
 
 /**
  * Owner game (roulette) setup — server-side CRUD so saving never depends on the
@@ -93,6 +122,20 @@ export async function POST(request: Request) {
       const { error } = await supabase.from('prizes').delete().eq('id', body.prizeId)
       if (error) throw error
       return NextResponse.json({ ok: true })
+    }
+
+    // Rotate the QR-gate secret server-side (crypto-strong) — instantly
+    // invalidates every outstanding scan cookie for this café.
+    if (action === 'regenQrKey') {
+      if (!(await ownGame(String(body.gameId || '')))) return NextResponse.json({ error: 'Jeu introuvable.' }, { status: 404 })
+      const { data: cur } = await supabase.from('games').select('config').eq('id', body.gameId).maybeSingle()
+      const config = cur?.config && typeof cur.config === 'object' ? cur.config : {}
+      const prevGate = config.qrGate && typeof config.qrGate === 'object' ? config.qrGate : {}
+      const qrKey = newQrKey()
+      const nextConfig = { ...config, qrGate: { ...prevGate, qrKey } }
+      const { error } = await supabase.from('games').update({ config: nextConfig }).eq('id', body.gameId)
+      if (error) throw error
+      return NextResponse.json({ ok: true, qrKey, config: nextConfig })
     }
 
     return NextResponse.json({ error: 'Action inconnue.' }, { status: 400 })

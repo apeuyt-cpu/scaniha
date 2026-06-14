@@ -9,7 +9,7 @@ import Field, { inputClass } from '@/components/admin/ui/Field'
 import SetupCard from '@/components/admin/game/SetupCard'
 import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
 import PlayGates from '@/components/admin/game/PlayGates'
-import PresenceLock from '@/components/admin/game/PresenceLock'
+import QrSessionLock from '@/components/admin/game/QrSessionLock'
 import SurveyResponses from '@/components/admin/game/SurveyResponses'
 
 /**
@@ -27,6 +27,10 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [prizeToDelete, setPrizeToDelete] = useState<string | null>(null)
+  // Progressive disclosure — keep the screen simple (on/off + prizes) by default;
+  // the owner opens "Options avancées" for costs, stock, budget, daily limits,
+  // play conditions and the presence lock.
+  const [advanced, setAdvanced] = useState(false)
 
   const load = useCallback(async () => {
     setError(null)
@@ -193,7 +197,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
           <div>
             <h4 className="font-semibold text-zinc-900">Lots de la roue</h4>
             <p className="mt-0.5 text-xs text-zinc-400">
-              La « Chance » fixe la probabilité de chaque lot. « Coût » = valeur du lot en TND (laissez vide pour une remise) — il sert au budget ci-dessous.
+              Ajoutez vos lots et leur chance de tomber. Tout le monde gagne quelque chose.
             </p>
           </div>
           <Button variant="neutral" onClick={addPrize} className="!min-h-0 shrink-0 px-3 py-2 text-xs">+ Lot</Button>
@@ -201,7 +205,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
         <div className="mt-4 space-y-2.5">
           {prizes.map((p) => (
             <div key={p.id} className={`rounded-xl border border-zinc-100 bg-zinc-50/60 p-3 ${p.active ? '' : 'opacity-60'}`}>
-              {/* Row 1: name + delete */}
+              {/* Row 1: name · active · delete */}
               <div className="flex items-center gap-2">
                 <input
                   value={p.label}
@@ -212,6 +216,14 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                 />
                 <button
                   type="button"
+                  onClick={() => updatePrize(p.id, { active: !p.active })}
+                  aria-pressed={p.active}
+                  className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition ${p.active ? 'bg-green-100 text-green-700' : 'bg-zinc-200 text-zinc-500'}`}
+                >
+                  {p.active ? 'Actif' : 'Inactif'}
+                </button>
+                <button
+                  type="button"
                   onClick={() => setPrizeToDelete(p.id)}
                   aria-label="Supprimer le lot"
                   title="Supprimer"
@@ -220,63 +232,57 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                   ✕
                 </button>
               </div>
-              {/* Row 2: chance, cost, stock */}
-              <div className="mt-2.5 grid grid-cols-3 gap-2">
-                <label className="block text-[11px] font-semibold text-zinc-500">
-                  <span className="mb-1 block">Chance</span>
+              {/* Row 2: win chance (weight) + the real % it represents */}
+              <div className="mt-2.5 flex items-center gap-3">
+                <label className="flex items-center gap-2 text-[11px] font-semibold text-zinc-500">
+                  <span>Chance</span>
                   <input
                     type="number"
                     min={0}
                     value={p.weight}
                     onChange={(e) => updatePrize(p.id, { weight: Math.max(0, Number(e.target.value)) })}
-                    className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2.5 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
+                    className="w-16 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
                   />
                 </label>
-                <label className="block text-[11px] font-semibold text-zinc-500">
-                  <span className="mb-1 block">Coût (TND)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.5"
-                    value={p.cost ?? ''}
-                    placeholder="—"
-                    onChange={(e) => updatePrize(p.id, { cost: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
-                    className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2.5 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
-                  />
-                </label>
-                <label className="block text-[11px] font-semibold text-zinc-500">
-                  <span className="mb-1 block">Stock</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={p.stock ?? ''}
-                    placeholder="∞"
-                    onChange={(e) => updatePrize(p.id, { stock: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
-                    className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2.5 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
-                  />
-                </label>
-              </div>
-              {/* Row 3: real drop chance + active toggle */}
-              <div className="mt-2 flex items-center justify-between gap-2">
                 <span className={`text-xs font-bold ${p.active ? 'text-green-600' : 'text-zinc-400'}`}>
-                  Chance réelle : {chancePct(p.weight).toFixed(0)}%
+                  ≈ {chancePct(p.weight).toFixed(0)}% des tours
                 </span>
-                <button
-                  type="button"
-                  onClick={() => updatePrize(p.id, { active: !p.active })}
-                  aria-pressed={p.active}
-                  className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${p.active ? 'bg-green-100 text-green-700' : 'bg-zinc-200 text-zinc-500'}`}
-                >
-                  {p.active ? 'Actif' : 'Inactif'}
-                </button>
               </div>
+              {/* Advanced: cost (feeds the budget) + stock cap */}
+              {advanced && (
+                <div className="mt-2.5 grid grid-cols-2 gap-2">
+                  <label className="block text-[11px] font-semibold text-zinc-500">
+                    <span className="mb-1 block">Coût (TND)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.5"
+                      value={p.cost ?? ''}
+                      placeholder="—"
+                      onChange={(e) => updatePrize(p.id, { cost: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2.5 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
+                    />
+                  </label>
+                  <label className="block text-[11px] font-semibold text-zinc-500">
+                    <span className="mb-1 block">Stock</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={p.stock ?? ''}
+                      placeholder="∞"
+                      onChange={(e) => updatePrize(p.id, { stock: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
+                      className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2.5 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
+                    />
+                  </label>
+                </div>
+              )}
             </div>
           ))}
           {prizes.length === 0 && <p className="py-6 text-center text-sm text-zinc-400">Aucun lot — ajoutez-en au moins deux.</p>}
         </div>
 
-        {/* Odds total + giveaway budget */}
-        {prizes.length > 0 && (
+        {/* Odds total + giveaway budget — advanced only */}
+        {advanced && prizes.length > 0 && (
           <div className="mt-4 space-y-2 rounded-xl bg-zinc-50 p-3 text-xs">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-semibold text-zinc-600">
@@ -300,39 +306,60 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
         )}
       </div>
 
-      {/* Réglages */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-        <h4 className="font-semibold text-zinc-900">Réglages</h4>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Field label="Parties par jour" hint="Par client (téléphone) et par appareil.">
-            <input
-              type="number"
-              min={1}
-              value={game.daily_limit}
-              onChange={(e) => updateGame({ daily_limit: Math.max(1, Number(e.target.value)) })}
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Validité d’un gain (heures)" hint="Délai pour récupérer un lot avant expiration.">
-            <input
-              type="number"
-              min={1}
-              value={game.win_expiry_hours}
-              onChange={(e) => updateGame({ win_expiry_hours: Math.max(1, Number(e.target.value)) })}
-              className={inputClass}
-            />
-          </Field>
-        </div>
-      </div>
+      {/* Advanced options — collapsed by default to keep setup simple. */}
+      <button
+        type="button"
+        onClick={() => setAdvanced((v) => !v)}
+        aria-expanded={advanced}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-left transition hover:bg-zinc-50"
+      >
+        <span className="flex items-center gap-3">
+          <span className="text-lg leading-none text-zinc-400" aria-hidden="true">⚙</span>
+          <span>
+            <span className="block text-sm font-semibold text-zinc-900">Options avancées</span>
+            <span className="block text-xs text-zinc-400">Coûts &amp; stock, budget, limites, conditions, présence</span>
+          </span>
+        </span>
+        <span className="shrink-0 text-sm text-zinc-400">{advanced ? '▲' : '▼'}</span>
+      </button>
 
-      {/* Conditions pour jouer (gates: social follow / link / survey) */}
-      <PlayGates gameId={game.id} config={game.config || {}} onConfig={(c) => setGame({ ...game, config: c })} />
+      {advanced && (
+        <>
+          {/* Réglages */}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+            <h4 className="font-semibold text-zinc-900">Réglages</h4>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Field label="Parties par jour" hint="Par client (téléphone) et par appareil.">
+                <input
+                  type="number"
+                  min={1}
+                  value={game.daily_limit}
+                  onChange={(e) => updateGame({ daily_limit: Math.max(1, Number(e.target.value)) })}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Validité d’un gain (heures)" hint="Délai pour récupérer un lot avant expiration.">
+                <input
+                  type="number"
+                  min={1}
+                  value={game.win_expiry_hours}
+                  onChange={(e) => updateGame({ win_expiry_hours: Math.max(1, Number(e.target.value)) })}
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+          </div>
 
-      {/* Restreindre au réseau du restaurant (présence : IP Wi-Fi / géofence GPS) */}
-      <PresenceLock gameId={game.id} config={game.config || {}} onConfig={(c) => setGame({ ...game, config: c })} />
+          {/* Conditions pour jouer (gates: social follow / link / survey) */}
+          <PlayGates gameId={game.id} config={game.config || {}} onConfig={(c) => setGame({ ...game, config: c })} />
 
-      {/* Survey answers collected by the gates (shows only when there are any) */}
-      <SurveyResponses businessId={businessId} />
+          {/* Exiger le scan du QR pour jouer (session QR limitée, contrôlée ici) */}
+          <QrSessionLock gameId={game.id} config={game.config || {}} onConfig={(c) => setGame({ ...game, config: c })} />
+
+          {/* Survey answers collected by the gates (shows only when there are any) */}
+          <SurveyResponses businessId={businessId} />
+        </>
+      )}
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 

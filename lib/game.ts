@@ -50,41 +50,35 @@ export interface GatesConfig {
   items: GameGate[]
 }
 
-// ─── "Présence" — restrict spinning to the café's network / location ─────────
-// A web page can't read the Wi-Fi SSID, so "in the café" is enforced by the
-// café's public IP (all devices on its Wi-Fi share it) and/or a GPS geofence.
-export type PresenceMode = 'ip' | 'geo' | 'both'
-
-export interface PresenceGeo {
-  lat: number
-  lng: number
-  /** Allowed distance from (lat,lng) in meters. */
-  radiusM: number
-}
-
-export interface PresenceConfig {
+// ─── QR-session gate — "must have scanned the café's QR recently" ────────────
+// Replaces the old Wi-Fi/IP + GPS presence lock. The café's QR carries a secret
+// key (qrKey); scanning it mints a short-lived signed cookie. Spinning requires
+// a valid, non-expired cookie, so a diner must (re)scan on-site. The owner can
+// rotate qrKey from admin to invalidate every active scan session at once.
+export interface QrGateConfig {
   enabled: boolean
-  mode: PresenceMode
-  /** Allowed public IPs: IPv4 exact or CIDR; IPv6 matched on the /64 prefix. */
-  ips: string[]
-  geo: PresenceGeo | null
+  /** Scan-session validity in minutes — how long after a scan a diner can play. */
+  ttlMin: number
+  /** Secret embedded in the QR URL (?s=…). Empty until the owner enables the gate. */
+  qrKey: string
   /** Optional custom message shown to a blocked diner (French). */
   message: string
-  /** Also gate loyalty reward redemption with the same rule. */
+  /** Also require a fresh scan to redeem loyalty rewards. */
   alsoRedeem: boolean
 }
 
-/** Public (sanitized) presence summary sent to the client — NEVER the ips/coords. */
-export interface PresenceSummary {
+/** Public (sanitized) gate summary sent to the client — NEVER the qrKey. */
+export interface QrGateSummary {
   enabled: boolean
-  mode: PresenceMode
 }
 
-export const DEFAULT_PRESENCE: PresenceConfig = {
+/** Allowed scan-session durations (minutes) offered in the admin. */
+export const QR_TTL_OPTIONS = [30, 60, 120, 240, 480] as const
+
+export const DEFAULT_QR_GATE: QrGateConfig = {
   enabled: false,
-  mode: 'ip',
-  ips: [],
-  geo: null,
+  ttlMin: 120,
+  qrKey: '',
   message: '',
   alsoRedeem: false,
 }

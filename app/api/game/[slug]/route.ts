@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { loadGameConfig, playGame, loadPresence } from '@/lib/db/game'
+import { loadGameConfig, playGame, loadQrGate } from '@/lib/db/game'
 import { dinerSession } from '@/lib/db/account'
-import { getClientIp, checkPresence } from '@/lib/presence'
+import { scanCookieName, verifyScan } from '@/lib/qr-session'
 
 /**
  * Public game endpoints for a business (by slug).
@@ -45,22 +45,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ success: false, error: 'Appareil non identifié.' }, { status: 400 })
   }
 
-  // Presence gate: only let people physically in the café spin (Wi-Fi IP and/or
-  // GPS geofence). The check is server-side; coords (if any) come from the body.
-  const presence = await loadPresence(slug)
-  if (presence.enabled) {
-    const lat = typeof body.lat === 'number' ? body.lat : null
-    const lng = typeof body.lng === 'number' ? body.lng : null
-    const pres = checkPresence(presence, { ip: getClientIp(req), lat, lng })
-    if (!pres.ok) {
-      const error =
-        pres.reason === 'need_location'
-          ? 'Activez la localisation pour jouer ici.'
-          : pres.reason === 'location'
-            ? 'Vous êtes trop loin du restaurant pour jouer.'
-            : presence.message.trim() || 'Connectez-vous au Wi-Fi du restaurant pour jouer.'
+  // QR-session gate: only let diners who scanned the café's CURRENT QR recently
+  // spin. The signed scan cookie is minted by /api/game/[slug]/scan; here we just
+  // verify it against the current key + TTL. Expired/missing → "rescan".
+  const loaded = await loadQrGate(slug)
+  if (loaded && loaded.gate.enabled && loaded.gate.qrKey) {
+    const cookie = req.cookies.get(scanCookieName(loaded.businessId))?.value
+    if (!verifyScan(cookie, loaded.businessId, loaded.gate.qrKey, loaded.gate.ttlMin)) {
       return NextResponse.json(
-        { success: false, presenceBlocked: true, reason: pres.reason, needLocation: pres.reason === 'need_location', error },
+        { success: false, rescanRequired: true, error: loaded.gate.message.trim() || 'Scannez le QR du restaurant pour jouer.' },
         { status: 403 }
       )
     }

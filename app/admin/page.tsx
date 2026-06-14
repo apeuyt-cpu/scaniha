@@ -20,6 +20,8 @@ interface Business {
   design_settings: any
   wheel_enabled: boolean
   wheel_visible: boolean
+  /** Current plan label ("À vie", "1 an", "Essai gratuit", …). */
+  plan?: string | null
 }
 
 export default function AdminHome() {
@@ -198,13 +200,28 @@ export default function AdminHome() {
         </a>
       </div>
 
-      {/* Subscription */}
-      {countdown && (
+      {/* Subscription + current plan */}
+      {isActiveStatus && !business.expires_at ? (
+        // Lifetime / no-expiry plan — no countdown, no renewal.
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-green-500" />
+            <div className="min-w-0">
+              <p className="font-semibold text-zinc-900">Abonnement actif</p>
+              <p className="text-sm text-zinc-500">Accès à vie — aucune expiration.</p>
+            </div>
+          </div>
+          <span className="shrink-0 rounded-full bg-zinc-900 px-3 py-1 text-xs font-bold text-white">{business.plan || 'À vie'}</span>
+        </div>
+      ) : countdown ? (
         <div className={`flex items-center justify-between gap-3 rounded-2xl border bg-white p-4 ${sub.border}`}>
           <div className="flex min-w-0 items-start gap-2.5">
             <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${sub.dot} ${isUrgent ? 'animate-pulse' : ''}`} />
             <div className="min-w-0">
-              <p className="font-semibold text-zinc-900">{sub.title}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-zinc-900">{sub.title}</p>
+                {business.plan && <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-bold text-zinc-600">{business.plan}</span>}
+              </div>
               <p className="text-sm text-zinc-500">{sub.text}</p>
             </div>
           </div>
@@ -212,7 +229,7 @@ export default function AdminHome() {
             {sub.cta}
           </button>
         </div>
-      )}
+      ) : null}
 
       {/* First-run onboarding — hides itself once complete or dismissed */}
       {isActiveStatus && (
@@ -239,7 +256,7 @@ export default function AdminHome() {
         <SectionHeader title="Plus" />
         <div className="space-y-3.5">
           <TaskRow href="/admin/analytics" title="Statistiques" subtitle="Visites de votre menu" icon={<IconChart />} />
-          <TaskRow href="/admin/game" title="Jeu & Fidélité" subtitle="Roue et points de fidélité" icon={<IconGift />} />
+          <TaskRow href="/admin/game" title="Programme de fidélité" subtitle="Roue et points de fidélité" icon={<IconGift />} />
           <TaskRow href="/admin/settings" title="Réglages" subtitle="Lien du menu, SEO, préférences" icon={<IconGear />} />
         </div>
       </div>

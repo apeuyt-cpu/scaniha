@@ -33,6 +33,28 @@ export default function ContactPage() {
             </a>
           </div>
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE] text-center">
+            <h2 className="text-xl font-bold text-zinc-900 mb-2">Téléphone</h2>
+            <p className="text-sm text-zinc-600 mb-3">
+              Besoin d&apos;une réponse rapide&nbsp;? Appelez-nous ou écrivez-nous sur WhatsApp.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <a
+                href="tel:+21651089100"
+                className="inline-block rounded-xl bg-zinc-900 px-6 py-3 font-semibold text-white transition hover:bg-zinc-800"
+              >
+                📞 +216 51 089 100
+              </a>
+              <a
+                href="https://wa.me/21651089100"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block rounded-xl bg-green-600 px-6 py-3 font-semibold text-white transition hover:bg-green-700"
+              >
+                WhatsApp
+              </a>
+            </div>
+          </div>
+          <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE] text-center">
             <h2 className="text-xl font-bold text-zinc-900 mb-2">Liens rapides</h2>
             <div className="flex flex-col gap-3">
               <Link href="/pricing" className="text-orange-600 font-semibold hover:text-orange-700">Voir les tarifs</Link>

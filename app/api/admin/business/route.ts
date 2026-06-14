@@ -1,8 +1,40 @@
 import { NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/auth'
 import { getBusinessByOwner } from '@/lib/db/business'
-import { createServerClient } from '@/lib/supabase/server'
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { generateSlug } from '@/lib/utils/slug'
+import { PAYMENT_PLANS } from '@/lib/payment-config'
+
+/** Friendly plan name — all lifetime variants collapse to "À vie". */
+function planDisplayLabel(plan: string): string {
+  if (typeof plan === 'string' && plan.startsWith('lifetime')) return 'À vie'
+  return PAYMENT_PLANS[plan]?.label || plan
+}
+
+/**
+ * Current plan for a business: the most recent APPROVED manual payment request
+ * (payment_requests is service-role only). No approved payment yet but still
+ * active with an expiry → it's the 7-day free trial.
+ */
+async function currentPlan(business: any): Promise<string | null> {
+  try {
+    const svc: any = await createServiceRoleClient()
+    const { data } = await svc
+      .from('payment_requests')
+      .select('plan, created_at')
+      .eq('business_id', business.id)
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const pr = data?.[0]
+    if (pr?.plan) return planDisplayLabel(pr.plan)
+    if (business.status === 'active' && business.expires_at) return 'Essai gratuit'
+    return null
+  } catch (e: any) {
+    console.error('[admin/business] plan lookup:', e?.message)
+    return null
+  }
+}
 
 export async function GET() {
   try {
@@ -25,8 +57,9 @@ export async function GET() {
     }
 
     // Don't auto-pause here - owners should always access their dashboard
-    // Return business as-is, even if expired - dashboard will show warning
-    return NextResponse.json(business)
+    // Return business as-is (even if expired) + the current plan label.
+    const plan = await currentPlan(business)
+    return NextResponse.json({ ...business, plan })
   } catch (error: any) {
     // Don't catch redirect errors - let them propagate
     if (error?.digest?.startsWith('NEXT_REDIRECT')) {

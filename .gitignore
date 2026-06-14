@@ -48,6 +48,9 @@ user_migration_results.json
 user_migration_verification.json
 storage_migration_results.json
 
+# Supabase CLI local state (project ref, pooler url, version marker) — local only
+supabase/.temp/
+
 # SQL files - kept locally only
 *.sql
 

@@ -7,6 +7,7 @@ import SocialMediaManager from '@/components/admin/SocialMediaManager'
 import { useToast } from '@/components/admin/ui/Toast'
 import { inputClass } from '@/components/admin/ui/Field'
 import ContactCard from '@/components/admin/design/ContactCard'
+import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 
 interface BrandBusiness {
   id: string
@@ -52,6 +53,7 @@ export default function BrandTab({
     try {
       const { error } = await (supabase.from('businesses') as any).update({ name: trimmed }).eq('id', business.id)
       if (error) throw error
+      revalidatePublicMenu() // push the new name to the live menu now
       setEditing(false)
       onNameUpdated?.(trimmed)
       toast.success("Nom de l'établissement enregistré")

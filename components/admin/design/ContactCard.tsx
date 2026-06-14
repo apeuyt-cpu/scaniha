@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 import { useToast } from '@/components/admin/ui/Toast'
 import { inputClass } from '@/components/admin/ui/Field'
 import Toggle from '@/components/admin/ui/Toggle'
@@ -43,6 +44,7 @@ export default function ContactCard({ businessId }: { businessId: string }) {
         .update({ design_settings: { ...ds, contact: next } })
         .eq('id', businessId)
       if (error) throw error
+      revalidatePublicMenu() // push the updated contact info to the live menu now
       toast.success('Contact & horaires enregistrés')
     } catch (e: any) {
       toast.error(e.message || 'Échec de la mise à jour')

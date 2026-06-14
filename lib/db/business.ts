@@ -1,9 +1,116 @@
+import { unstable_cache } from 'next/cache'
 import { createServerClient } from '../supabase/server'
-import { createServiceRoleClient } from '../supabase/server'
+import { createServiceRoleClient, createPublicClient } from '../supabase/server'
 import type { Database } from '../supabase/database.types'
 import { menuImageUrl } from '../image-url'
 
 type Business = Database['public']['Tables']['businesses']['Row']
+
+// ---------------------------------------------------------------------------
+// PUBLIC, CACHED READS  (keep the free-tier Supabase usage down)
+// ---------------------------------------------------------------------------
+// Diner menu scans are the dominant read load. These wrappers serve repeat
+// views from Next's data cache instead of the database: on a cache HIT the
+// function body never runs, so Supabase sees ZERO calls. Entries are tagged
+// per-business so an owner edit can bust just that menu instantly (see
+// /api/revalidate); `PUBLIC_CACHE_TTL` is only the safety net if a bust is
+// missed. They use the cookieless public client (cookies are illegal inside
+// unstable_cache and would force a fresh fetch every time anyway).
+
+/** Safety-net TTL (seconds). Owner saves bust the tag for instant freshness. */
+const PUBLIC_CACHE_TTL = 1800 // 30 min
+
+/** Cache tag for one business's public data (its row + its menu). */
+export function businessCacheTag(slug: string): string {
+  return `business:${slug}`
+}
+
+async function fetchBusinessBySlugPublic(slug: string): Promise<Business | null> {
+  const supabase = await createPublicClient()
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('*')
+    .eq('slug', slug)
+    .in('status', ['active', 'paused'])
+    .maybeSingle()
+  if (error) return null
+  return data
+}
+
+/** Cached variant of getBusinessBySlug for PUBLIC pages (menu, profile). */
+export function getBusinessBySlugCached(slug: string): Promise<Business | null> {
+  return unstable_cache(
+    () => fetchBusinessBySlugPublic(slug),
+    ['business-by-slug', slug],
+    { revalidate: PUBLIC_CACHE_TTL, tags: ['businesses', businessCacheTag(slug)] }
+  )()
+}
+
+async function fetchMenuPublic(businessId: string) {
+  const supabase = await createPublicClient()
+  const { data: categories, error } = await supabase
+    .from('categories')
+    .select(`*, items (*)`)
+    .eq('business_id', businessId)
+    .order('position', { ascending: true })
+
+  if (error) throw error
+
+  if (categories) {
+    (categories as any[]).forEach((category: any) => {
+      category.image_url = menuImageUrl(category.image_url, 480)
+      if (category.items && Array.isArray(category.items)) {
+        category.items.forEach((item: any) => {
+          item.image_url = menuImageUrl(item.image_url, 640)
+        })
+        category.items.sort((a: any, b: any) => {
+          const posA = a.position !== null && a.position !== undefined ? a.position : 999999
+          const posB = b.position !== null && b.position !== undefined ? b.position : 999999
+          if (posA !== posB) return posA - posB
+          const dateA = new Date(a.created_at || 0).getTime()
+          const dateB = new Date(b.created_at || 0).getTime()
+          return dateA - dateB
+        })
+      }
+    })
+  }
+
+  return categories
+}
+
+/**
+ * Cached menu (categories + items) for a business. `slug` is only used for the
+ * cache tag so an owner edit busts the same entry the business row uses.
+ */
+export function getMenuCached(businessId: string, slug: string) {
+  return unstable_cache(
+    () => fetchMenuPublic(businessId),
+    ['menu-by-business', businessId],
+    { revalidate: PUBLIC_CACHE_TTL, tags: ['businesses', businessCacheTag(slug)] }
+  )()
+}
+
+async function fetchActiveBusinessesPublic(): Promise<Array<{ slug: string; created_at: string | null }>> {
+  const supabase = await createPublicClient()
+  const now = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('slug, created_at')
+    .eq('status', 'active')
+    .or(`expires_at.is.null,expires_at.gt.${now}`)
+    .order('created_at', { ascending: false })
+  if (error) return []
+  return (data || []) as Array<{ slug: string; created_at: string | null }>
+}
+
+/** Cached active-business list for the sitemap (low-churn → 1 h TTL). */
+export function getActiveBusinessesCached(): Promise<Array<{ slug: string; created_at: string | null }>> {
+  return unstable_cache(
+    fetchActiveBusinessesPublic,
+    ['active-businesses'],
+    { revalidate: 3600, tags: ['businesses'] }
+  )()
+}
 
 export async function getBusinessBySlug(slug: string): Promise<Business | null> {
   const supabase = await createServerClient()

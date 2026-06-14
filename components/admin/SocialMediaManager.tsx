@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 import { inputClass } from '@/components/admin/ui/Field'
 import { useToast } from '@/components/admin/ui/Toast'
 
@@ -82,6 +83,7 @@ export default function SocialMediaManager({ businessId }: SocialMediaManagerPro
         .eq('id', businessId)
 
       if (error) throw error
+      revalidatePublicMenu() // push the updated social links to the live menu now
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (err: any) {

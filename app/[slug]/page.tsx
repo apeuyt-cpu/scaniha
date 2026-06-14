@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getBusinessBySlug, getBusinessWithCategoriesAndItems } from '@/lib/db/business'
+import { getBusinessBySlugCached, getMenuCached } from '@/lib/db/business'
 import { menuImageUrl } from '@/lib/image-url'
 import { getBusinessSeo } from '@/lib/seo/business-seo'
 import { getTheme } from '@/lib/themes'
@@ -28,7 +28,7 @@ export default async function PublicMenuPage({
   const { slug } = await params
   let business
   try {
-    business = await getBusinessBySlug(slug)
+    business = await getBusinessBySlugCached(slug)
   } catch (error) {
     console.error('Error fetching business:', error)
     notFound()
@@ -57,7 +57,7 @@ export default async function PublicMenuPage({
   let categories: Category[] = []
   if (!isPaused) {
     try {
-      const fetchedCategories = await getBusinessWithCategoriesAndItems(business.id)
+      const fetchedCategories = await getMenuCached(business.id, slug)
       categories = (fetchedCategories as Category[]) || []
     } catch (error) {
       console.error('Error loading categories:', error)
@@ -151,7 +151,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://scaniha.com'
   try {
     const { slug } = await params
-    const business = await getBusinessBySlug(slug)
+    const business = await getBusinessBySlugCached(slug)
     if (!business) {
       return {
         metadataBase: new URL(baseUrl),

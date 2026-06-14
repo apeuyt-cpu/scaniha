@@ -37,6 +37,33 @@ export async function createServerClient() {
   )
 }
 
+let _publicClient: SupabaseClient<Database> | null = null
+
+/**
+ * Cookieless, anon-key Supabase client for PUBLIC reads (menus, sitemap, etc.).
+ *
+ * Because it never touches cookies, its calls are safe to run inside
+ * `unstable_cache` and the results can be cached + shared across every visitor
+ * — which is what keeps the public menu off the database on repeat scans. Core
+ * tables (businesses / categories / items) have no RLS, so the anon key reads
+ * them fine. Memoized as a process-wide singleton.
+ */
+export async function createPublicClient(): Promise<SupabaseClient<Database>> {
+  if (_publicClient) return _publicClient
+  const { createClient } = await import('@supabase/supabase-js')
+  _publicClient = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  )
+  return _publicClient
+}
+
 export async function createServiceRoleClient(): Promise<SupabaseClient<Database>> {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceRoleKey) {

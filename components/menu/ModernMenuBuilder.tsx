@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadItemImage, uploadCategoryImage, deleteImage } from '@/lib/storage'
+import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 import * as XLSX from 'xlsx'
 import type { Database } from '@/lib/supabase/database.types'
 import { useLocale } from '@/lib/i18n/LocaleContext'
@@ -82,6 +83,48 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
   const { formatPrice, currencyCode } = useCurrency()
   const toast = useToast()
   const [categories, setCategories] = useState<Category[]>(initialCategories)
+
+  // Every committed change (add / edit / delete / reorder / toggle) flows
+  // through `categories`. When it changes, bust the public menu cache so diners
+  // see the update immediately instead of waiting out the cache TTL. Debounced
+  // so bulk edits (e.g. an Excel import that inserts many rows) collapse into a
+  // single ping; skipped on the first render (nothing has changed yet).
+  const didMountRef = useRef(false)
+  const pendingRevalidateRef = useRef(false)
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true
+      return
+    }
+    pendingRevalidateRef.current = true
+    const id = setTimeout(() => {
+      pendingRevalidateRef.current = false
+      revalidatePublicMenu()
+    }, 1500)
+    return () => clearTimeout(id)
+  }, [categories])
+
+  // Safety net: if the owner leaves (closes/hides the tab) within the debounce
+  // window, flush the pending cache-bust immediately — `keepalive` on the fetch
+  // lets it complete during unload. Guarantees a changed menu/image is never
+  // left waiting on the 30-min TTL.
+  useEffect(() => {
+    const flush = () => {
+      if (!pendingRevalidateRef.current) return
+      pendingRevalidateRef.current = false
+      revalidatePublicMenu()
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
+
   // `saving` is only used by the add/edit forms (which await the server before
   // closing). It must NOT freeze the rest of the menu — toggles, moves and
   // deletes are optimistic and never disable other controls.

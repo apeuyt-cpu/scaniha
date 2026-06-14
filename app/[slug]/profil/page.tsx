@@ -1,13 +1,13 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { getBusinessBySlug } from '@/lib/db/business'
+import { getBusinessBySlugCached } from '@/lib/db/business'
 import { businessAccent } from '@/lib/db/game'
 import ProfileClient from '@/components/menu/ProfileClient'
 import BottomNav from '@/components/menu/BottomNav'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const business = await getBusinessBySlug(slug).catch(() => null)
+  const business = await getBusinessBySlugCached(slug).catch(() => null)
   const name = business?.name || 'Mon compte'
   return {
     title: { absolute: `Mon compte — ${name} | Scaniha` },
@@ -21,7 +21,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ slug: 
   const { slug } = await params
   let business
   try {
-    business = await getBusinessBySlug(slug)
+    business = await getBusinessBySlugCached(slug)
   } catch {
     notFound()
   }

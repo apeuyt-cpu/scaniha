@@ -9,6 +9,7 @@ const TABS = [
   { href: '/super-admin', label: 'Aperçu' },
   { href: '/super-admin/businesses', label: 'Comptes' },
   { href: '/super-admin/payments', label: 'Paiements', badge: true },
+  { href: '/super-admin/devis', label: 'Devis' },
   { href: '/super-admin/analytics', label: 'Stats' },
 ]
 

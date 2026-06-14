@@ -4,6 +4,7 @@ import { useState } from 'react'
 import ImageUploader from '@/components/ImageUploader'
 import { createClient } from '@/lib/supabase/client'
 import { getBusinessSeo } from '@/lib/seo/business-seo'
+import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 
 /**
  * Owner-editable SEO / social-share settings for the public menu.
@@ -57,6 +58,7 @@ export default function SeoSettings({
       const merged = { ...current, seo }
       const { error: dbError } = await (supabase.from('businesses') as any).update({ design_settings: merged }).eq('id', businessId)
       if (dbError) throw dbError
+      revalidatePublicMenu() // push the SEO change to the live menu now
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
       onUpdate?.()

@@ -1,10 +1,10 @@
 import { MetadataRoute } from 'next'
-import { getActiveBusinesses } from '@/lib/db/business'
+import { getActiveBusinessesCached } from '@/lib/db/business'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://scaniha.com'
   
-  const businesses = await getActiveBusinesses()
+  const businesses = await getActiveBusinessesCached()
   
   const staticPages: MetadataRoute.Sitemap = [
     {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadImage } from '@/lib/storage'
+import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 import {
   DESIGN_ACCENTS,
   DESIGN_EXTRAS,
@@ -156,6 +157,7 @@ export function useDesignSettings(
       if (!data || data.length === 0) throw new Error("Échec de l'enregistrement. Vérifiez vos accès.")
       // Lift the saved settings so the parent's map stays current for other designs.
       onSaved(designId, s)
+      revalidatePublicMenu() // push the design change to the live menu now
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (err: any) {
@@ -450,6 +452,7 @@ export function ClassicColorForm({ businessId }: { businessId: string }) {
     try {
       const { error: e } = await (supabase.from('businesses') as any).update({ primary_color: color || null }).eq('id', businessId)
       if (e) throw new Error(e.message)
+      revalidatePublicMenu() // push the colour change to the live menu now
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (err: any) {

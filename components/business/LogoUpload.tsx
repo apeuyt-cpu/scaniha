@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { deleteImage, uploadBusinessLogo } from '@/lib/storage'
+import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
 
 interface LogoUploadProps {
@@ -31,6 +32,7 @@ export default function LogoUpload({ businessId, currentLogoUrl, onLogoUpdated, 
       if (oldLogoUrl) {
         try { await deleteImage(oldLogoUrl) } catch {}
       }
+      revalidatePublicMenu() // push the logo removal to the live menu now
       setPreview(null)
       onLogoUpdated?.('')
     } catch (err: any) {
@@ -74,6 +76,7 @@ export default function LogoUpload({ businessId, currentLogoUrl, onLogoUpdated, 
         try { await deleteImage(preview) } catch {}
       }
 
+      revalidatePublicMenu() // push the new logo to the live menu now
       setPreview(logoUrl)
       onLogoUpdated?.(logoUrl)
     } catch (err: any) {

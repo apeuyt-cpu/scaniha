@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 import MenuDesignPicker, { type ThemeCtrl } from './MenuDesignPicker'
 import {
   ClassicColorForm,
@@ -63,6 +64,7 @@ export default function DesignStudio({ business }: { business: any }) {
         .select('id')
       if (error) throw new Error(error.message)
       if (!data || data.length === 0) throw new Error("La modification n'a pas pu être enregistrée. Vérifiez vos accès.")
+      revalidatePublicMenu() // a new design changes the whole menu — push it live now
       setThemeSavedId(id)
       setTimeout(() => setThemeSavedId((cur) => (cur === id ? null : cur)), 2000)
     } catch (err: any) {

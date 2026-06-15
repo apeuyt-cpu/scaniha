@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Tarifs | Scaniha - Créateur de menu QR',
   description: 'Choisissez le forfait idéal pour votre restaurant ou café. Commencez par un essai gratuit de 7 jours. Forfaits 6 mois, 1 an et à vie disponibles. Sans frais cachés.',
   openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }], 
     title: 'Tarifs | Scaniha - Créateur de menu QR',
     description: 'Des forfaits abordables pour les restaurants, cafés et commerces de restauration. Commencez gratuitement.',
     url: 'https://scaniha.com/pricing',
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
   twitter: {
+    images: ['/og-scaniha.jpg'], 
     card: 'summary_large_image',
     title: 'Tarifs | Scaniha - Créateur de menu QR',
     description: 'Des forfaits abordables pour les restaurants, cafés et commerces de restauration.',

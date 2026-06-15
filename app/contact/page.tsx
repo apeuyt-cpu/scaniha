@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Contact | Assistance menu QR Scaniha',
   description: 'Contactez Scaniha. Joignez notre équipe d\'assistance pour obtenir de l\'aide sur votre menu QR numérique. Écrivez-nous ou consultez notre centre d\'aide.',
-  openGraph: { title: 'Contact | Assistance menu QR Scaniha', description: 'Contactez l\'assistance Scaniha.', url: 'https://scaniha.com/contact', siteName: 'Scaniha', type: 'website' },
-  twitter: { card: 'summary_large_image', title: 'Contact | Assistance menu QR Scaniha', description: 'Contactez l\'assistance Scaniha.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'Contact | Assistance menu QR Scaniha', description: 'Contactez l\'assistance Scaniha.', url: 'https://scaniha.com/contact', siteName: 'Scaniha', type: 'website' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'Contact | Assistance menu QR Scaniha', description: 'Contactez l\'assistance Scaniha.' },
   alternates: { canonical: 'https://scaniha.com/contact' },
 }
 

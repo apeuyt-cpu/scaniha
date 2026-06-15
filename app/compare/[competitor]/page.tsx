@@ -24,6 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ competito
     description: `Comparez Scaniha avec ${comp.name}. Découvrez pourquoi Scaniha est le meilleur choix pour le menu numérique de votre restaurant.`,
     alternates: { canonical: `https://scaniha.com/compare/${competitor}` },
     openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }], 
       title: `Scaniha vs ${comp.name} | Comparatif`,
       description: `Découvrez pourquoi les restaurants choisissent Scaniha plutôt que ${comp.name}.`,
       url: `https://scaniha.com/compare/${competitor}`,
@@ -31,6 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<{ competito
       type: 'website',
     },
     twitter: {
+    images: ['/og-scaniha.jpg'], 
       card: 'summary_large_image',
       title: `Scaniha vs ${comp.name}`,
       description: `Découvrez pourquoi les restaurants choisissent Scaniha plutôt que ${comp.name}.`,

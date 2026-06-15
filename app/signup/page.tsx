@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: 'Inscription | Scaniha - Créateur de menus QR',
   description: 'Créez votre compte Scaniha gratuit et commencez à concevoir de superbes menus numériques QR pour votre restaurant, café ou commerce alimentaire en quelques minutes.',
   openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }], 
     title: 'Inscription | Scaniha - Créateur de menus QR',
     description: 'Créez gratuitement votre menu numérique QR pour votre restaurant ou café.',
     url: 'https://scaniha.com/signup',
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
   twitter: {
+    images: ['/og-scaniha.jpg'], 
     card: 'summary_large_image',
     title: 'Inscription | Scaniha - Créateur de menus QR',
     description: 'Créez gratuitement votre menu numérique QR pour votre restaurant ou café.',

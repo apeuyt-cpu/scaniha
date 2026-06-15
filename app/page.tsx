@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
-  description: 'Scaniha aide les restaurants et cafés à créer de superbes menus numériques avec QR code en quelques minutes. Simple, rapide, sans compétences techniques. Commencez gratuitement.',
+  description: 'Scaniha, l’application tunisienne de menu QR : créez un menu numérique élégant pour votre restaurant ou café en quelques minutes, sans application ni compétences techniques. Essai gratuit.',
   keywords: [
     'Scaniha', 'créateur de menu QR', 'menu numérique restaurant', 'menu QR restaurant',
     'menu QR', 'créer un menu QR', 'menu en ligne restaurant', 'créateur de menu numérique',
@@ -14,15 +14,17 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
-    description: 'Scaniha aide les restaurants et cafés à créer de superbes menus numériques avec QR code en quelques minutes. Simple, rapide, sans compétences techniques. Commencez gratuitement.',
+    description: 'Scaniha, l’application tunisienne de menu QR : créez un menu numérique élégant pour votre restaurant ou café en quelques minutes, sans application. Essai gratuit.',
     type: 'website',
     url: 'https://scaniha.com',
     siteName: 'Scaniha',
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Le menu QR numérique pour restaurants et cafés en Tunisie' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
-    description: 'Scaniha aide les restaurants et cafés à créer de superbes menus numériques avec QR code en quelques minutes. Commencez gratuitement.',
+    description: 'Scaniha, l’application tunisienne de menu QR : créez un menu numérique élégant pour votre restaurant ou café en quelques minutes. Essai gratuit.',
+    images: ['/og-scaniha.jpg'],
   },
   alternates: {
     canonical: 'https://scaniha.com',

@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Bonnes pratiques du code QR pour les restaurants | Maximisez les scans | Scaniha',
   description: 'Découvrez les bonnes pratiques du code QR pour les restaurants. Où placer les codes QR, comment les promouvoir et des conseils pour maximiser les scans et l’engagement client.',
-  openGraph: { title: 'Bonnes pratiques du code QR pour les restaurants | Maximisez les scans', description: 'Découvrez les bonnes pratiques du code QR pour les restaurants.', url: 'https://scaniha.com/blog/qr-code-best-practices-restaurants', siteName: 'Scaniha', type: 'article' },
-  twitter: { card: 'summary_large_image', title: 'Bonnes pratiques du code QR pour les restaurants', description: 'Découvrez les bonnes pratiques du code QR pour les restaurants.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'Bonnes pratiques du code QR pour les restaurants | Maximisez les scans', description: 'Découvrez les bonnes pratiques du code QR pour les restaurants.', url: 'https://scaniha.com/blog/qr-code-best-practices-restaurants', siteName: 'Scaniha', type: 'article' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'Bonnes pratiques du code QR pour les restaurants', description: 'Découvrez les bonnes pratiques du code QR pour les restaurants.' },
   alternates: { canonical: 'https://scaniha.com/blog/qr-code-best-practices-restaurants' },
 }
 

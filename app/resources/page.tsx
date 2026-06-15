@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Ressources | Scaniha - Guide du créateur de menu QR',
   description: 'Apprenez à créer et à optimiser votre menu QR numérique. Guides, conseils et bonnes pratiques pour les menus numériques de restaurant.',
   openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }], 
     title: 'Ressources | Scaniha - Guide du menu QR',
     description: 'Guides et bonnes pratiques pour les menus de restaurant numériques.',
     url: 'https://scaniha.com/resources',
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
   twitter: {
+    images: ['/og-scaniha.jpg'], 
     card: 'summary_large_image',
     title: 'Ressources | Scaniha - Guide du menu QR',
     description: 'Guides et bonnes pratiques pour les menus de restaurant numériques.',

@@ -197,7 +197,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
             </h1>
 
             <p className="hero-up mx-auto mt-6 max-w-md text-lg leading-relaxed text-zinc-600" style={{ ['--hero-delay' as string]: '240ms' }}>
-              Élégant, rapide, sans application — prêt en quelques minutes.
+              <strong className="font-semibold text-zinc-800">Scaniha</strong> crée le menu QR de votre restaurant ou café — élégant, rapide, sans application, prêt en quelques minutes.
             </p>
 
             {/* CTA buttons — desktop */}
@@ -542,6 +542,38 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
             </div>
             <p className="relative mt-7 text-sm font-medium text-white/90">
               Rejoint par des restaurants et cafés en Tunisie 🇹🇳
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Brand / SEO context — keyword-rich crawlable copy that anchors the
+          "Scaniha" name to its niche (menu QR, café, restaurant, Tunisie). */}
+      <section className="bg-[#FFF9F3] py-20 sm:py-24">
+        <div className="reveal mx-auto max-w-[900px] px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-500">Scaniha</p>
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
+              Le créateur de menu QR pensé pour la Tunisie
+            </h2>
+          </div>
+          <div className="mt-8 space-y-5 text-lg leading-relaxed text-zinc-600">
+            <p>
+              <strong className="text-zinc-900">Scaniha</strong> est l&apos;application tunisienne qui transforme la carte
+              de votre restaurant, café ou salon de thé en un <strong className="text-zinc-900">menu QR numérique</strong>{' '}
+              élégant. Vos clients scannent le QR code posé sur la table et découvrent vos plats, boissons et desserts en une
+              seconde — sans rien télécharger ni installer d&apos;application.
+            </p>
+            <p>
+              Créer votre <strong className="text-zinc-900">menu en ligne</strong> prend quelques minutes : ajoutez vos
+              catégories et vos articles, choisissez un design, puis générez votre <strong className="text-zinc-900">QR
+              code</strong>. Modifiez vos prix et vos photos quand vous voulez — votre carte numérique se met à jour
+              instantanément pour tous vos clients, sans réimpression.
+            </p>
+            <p>
+              Au-delà du menu, <strong className="text-zinc-900">Scaniha</strong> fait revenir vos clients grâce à la roue
+              de la chance et à un programme de points de fidélité. Un seul outil pour votre menu QR, votre QR Wi-Fi et
+              l&apos;engagement de votre salle — conçu pour les cafés et restaurants en Tunisie, et entièrement en français.
             </p>
           </div>
         </div>

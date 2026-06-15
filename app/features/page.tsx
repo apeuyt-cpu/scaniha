@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Fonctionnalités | Scaniha - Créateur de menu QR',
   description: 'Découvrez toutes les fonctionnalités du créateur de menu QR numérique Scaniha. Mises à jour en temps réel, statistiques de consultation, génération de QR codes, jeu de la roue de la chance et bien plus pour votre restaurant.',
   openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }], 
     title: 'Fonctionnalités | Scaniha - Créateur de menu QR',
     description: 'Des fonctionnalités puissantes pour les menus de restaurant numériques.',
     url: 'https://scaniha.com/features',
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
   twitter: {
+    images: ['/og-scaniha.jpg'], 
     card: 'summary_large_image',
     title: 'Fonctionnalités | Scaniha - Créateur de menu QR',
     description: 'Des fonctionnalités puissantes pour les menus de restaurant numériques.',

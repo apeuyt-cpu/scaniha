@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: '7 avantages des menus numériques pour les restaurants en 2026 | Scaniha',
   description: 'Découvrez pourquoi les restaurants passent aux menus numériques. Économies, mises à jour en temps réel, analyses clients et bien d’autres avantages pour votre restaurant.',
-  openGraph: { title: '7 avantages des menus numériques pour les restaurants en 2026', description: 'Découvrez pourquoi les restaurants passent aux menus numériques.', url: 'https://scaniha.com/blog/benefits-of-digital-menus', siteName: 'Scaniha', type: 'article' },
-  twitter: { card: 'summary_large_image', title: '7 avantages des menus numériques pour les restaurants', description: 'Découvrez pourquoi les restaurants passent aux menus numériques.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: '7 avantages des menus numériques pour les restaurants en 2026', description: 'Découvrez pourquoi les restaurants passent aux menus numériques.', url: 'https://scaniha.com/blog/benefits-of-digital-menus', siteName: 'Scaniha', type: 'article' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: '7 avantages des menus numériques pour les restaurants', description: 'Découvrez pourquoi les restaurants passent aux menus numériques.' },
   alternates: { canonical: 'https://scaniha.com/blog/benefits-of-digital-menus' },
 }
 

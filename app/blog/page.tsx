@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Blog Scaniha | Conseils menu QR & Guide de digitalisation des restaurants',
   description: 'Apprenez à créer des menus QR numériques pour votre restaurant. Conseils, bonnes pratiques et guides sur les menus à code QR, la restauration sans contact et la technologie en restauration.',
-  openGraph: { title: 'Blog Scaniha | Conseils menu QR & Guide de digitalisation des restaurants', description: 'Apprenez à créer des menus QR numériques. Conseils sur les menus à code QR et la restauration sans contact.', url: 'https://scaniha.com/blog', siteName: 'Scaniha', type: 'website' },
-  twitter: { card: 'summary_large_image', title: 'Blog Scaniha | Conseils menu QR', description: 'Apprenez à créer des menus QR numériques pour votre restaurant.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'Blog Scaniha | Conseils menu QR & Guide de digitalisation des restaurants', description: 'Apprenez à créer des menus QR numériques. Conseils sur les menus à code QR et la restauration sans contact.', url: 'https://scaniha.com/blog', siteName: 'Scaniha', type: 'website' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'Blog Scaniha | Conseils menu QR', description: 'Apprenez à créer des menus QR numériques pour votre restaurant.' },
   alternates: { canonical: 'https://scaniha.com/blog' },
 }
 

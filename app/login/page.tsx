@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   description: 'Connectez-vous à votre compte Scaniha pour gérer vos menus numériques, suivre vos statistiques et mettre à jour le menu de votre restaurant ou café.',
   robots: { index: false, follow: false },
   openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }], 
     title: 'Connexion | Scaniha - Créateur de menus QR',
     description: 'Connectez-vous pour gérer vos menus numériques de restaurant.',
     url: 'https://scaniha.com/login',
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
   twitter: {
+    images: ['/og-scaniha.jpg'], 
     card: 'summary_large_image',
     title: 'Connexion | Scaniha - Créateur de menus QR',
     description: 'Connectez-vous pour gérer vos menus numériques de restaurant.',

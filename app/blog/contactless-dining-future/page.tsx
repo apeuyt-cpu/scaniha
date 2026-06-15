@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'L’avenir de la restauration sans contact — Tendances pour 2026 | Scaniha',
   description: 'Explorez l’avenir de la restauration sans contact en 2026. Tendances des menus QR, commande mobile, transformation numérique des restaurants et attentes des clients.',
-  openGraph: { title: 'L’avenir de la restauration sans contact — Tendances pour 2026', description: 'Explorez l’avenir de la restauration sans contact et les tendances des menus QR.', url: 'https://scaniha.com/blog/contactless-dining-future', siteName: 'Scaniha', type: 'article' },
-  twitter: { card: 'summary_large_image', title: 'L’avenir de la restauration sans contact — Tendances pour 2026', description: 'Explorez l’avenir de la restauration sans contact et les tendances des menus QR.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'L’avenir de la restauration sans contact — Tendances pour 2026', description: 'Explorez l’avenir de la restauration sans contact et les tendances des menus QR.', url: 'https://scaniha.com/blog/contactless-dining-future', siteName: 'Scaniha', type: 'article' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'L’avenir de la restauration sans contact — Tendances pour 2026', description: 'Explorez l’avenir de la restauration sans contact et les tendances des menus QR.' },
   alternates: { canonical: 'https://scaniha.com/blog/contactless-dining-future' },
 }
 

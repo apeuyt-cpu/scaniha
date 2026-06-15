@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Menu numérique pour cafés | Menu QR pour salons de café | Scaniha',
   description: 'Créez un menu numérique pour votre café ou salon de café avec Scaniha. Superbe créateur de menu QR conçu pour les cafés. Présentez vos boissons, vos pâtisseries et vos plats du jour. Essai gratuit.',
-  openGraph: { title: 'Menu numérique pour cafés | Menu QR pour salons de café | Scaniha', description: 'Créez un menu numérique pour votre café avec Scaniha. Superbe menu QR pour les salons de café.', url: 'https://scaniha.com/cafe-digital-menu', siteName: 'Scaniha', type: 'website' },
-  twitter: { card: 'summary_large_image', title: 'Menu numérique pour cafés | Menu QR pour salons de café | Scaniha', description: 'Créez un menu numérique pour votre café avec Scaniha.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'Menu numérique pour cafés | Menu QR pour salons de café | Scaniha', description: 'Créez un menu numérique pour votre café avec Scaniha. Superbe menu QR pour les salons de café.', url: 'https://scaniha.com/cafe-digital-menu', siteName: 'Scaniha', type: 'website' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'Menu numérique pour cafés | Menu QR pour salons de café | Scaniha', description: 'Créez un menu numérique pour votre café avec Scaniha.' },
   alternates: { canonical: 'https://scaniha.com/cafe-digital-menu' },
 }
 

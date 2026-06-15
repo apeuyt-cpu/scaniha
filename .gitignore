@@ -63,6 +63,9 @@ supabase/.temp/
 # committed by accident. Delete manually once no longer needed.
 /TTT/
 
+# Local promo/poster image dump (~43 MB of source PNGs) — not app assets.
+/POSTES/
+
 # Runtime dev-server log
 dev-server.log
 

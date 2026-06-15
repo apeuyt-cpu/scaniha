@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Comment créer un menu QR pour votre restaurant | Guide étape par étape | Scaniha',
   description: 'Apprenez à créer un menu QR pour votre restaurant étape par étape. De l’inscription à l’impression des codes QR, ce guide complet vous accompagne à chaque étape.',
-  openGraph: { title: 'Comment créer un menu QR pour votre restaurant | Guide étape par étape', description: 'Apprenez à créer un menu QR pour votre restaurant étape par étape.', url: 'https://scaniha.com/blog/how-to-create-qr-menu-for-restaurant', siteName: 'Scaniha', type: 'article' },
-  twitter: { card: 'summary_large_image', title: 'Comment créer un menu QR pour votre restaurant', description: 'Apprenez à créer un menu QR pour votre restaurant étape par étape.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'Comment créer un menu QR pour votre restaurant | Guide étape par étape', description: 'Apprenez à créer un menu QR pour votre restaurant étape par étape.', url: 'https://scaniha.com/blog/how-to-create-qr-menu-for-restaurant', siteName: 'Scaniha', type: 'article' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'Comment créer un menu QR pour votre restaurant', description: 'Apprenez à créer un menu QR pour votre restaurant étape par étape.' },
   alternates: { canonical: 'https://scaniha.com/blog/how-to-create-qr-menu-for-restaurant' },
 }
 

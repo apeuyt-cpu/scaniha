@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Créateur de menu QR gratuit | Créez un menu QR gratuitement | Scaniha',
   description: 'Créez un menu QR gratuit pour votre restaurant ou café avec Scaniha. Aucune carte bancaire requise. Essai gratuit de 7 jours. Générez des QR codes et gérez votre menu en ligne sans frais.',
-  openGraph: { title: 'Créateur de menu QR gratuit | Créez un menu QR gratuitement | Scaniha', description: 'Créez un menu QR gratuit avec Scaniha. Aucune carte bancaire requise. Essai gratuit de 7 jours.', url: 'https://scaniha.com/free-qr-menu', siteName: 'Scaniha', type: 'website' },
-  twitter: { card: 'summary_large_image', title: 'Créateur de menu QR gratuit | Créez un menu QR gratuitement | Scaniha', description: 'Créez un menu QR gratuit avec Scaniha. Aucune carte bancaire requise.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'Créateur de menu QR gratuit | Créez un menu QR gratuitement | Scaniha', description: 'Créez un menu QR gratuit avec Scaniha. Aucune carte bancaire requise. Essai gratuit de 7 jours.', url: 'https://scaniha.com/free-qr-menu', siteName: 'Scaniha', type: 'website' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'Créateur de menu QR gratuit | Créez un menu QR gratuitement | Scaniha', description: 'Créez un menu QR gratuit avec Scaniha. Aucune carte bancaire requise.' },
   alternates: { canonical: 'https://scaniha.com/free-qr-menu' },
 }
 

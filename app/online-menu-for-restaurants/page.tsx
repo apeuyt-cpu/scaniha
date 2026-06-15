@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Menu en ligne pour restaurants | Menu de restaurant numérique | Scaniha',
   description: 'Créez un menu en ligne pour votre restaurant avec Scaniha. Partagez votre menu par QR code, lien ou réseaux sociaux. Mettez à jour en temps réel. Essai gratuit disponible.',
-  openGraph: { title: 'Menu en ligne pour restaurants | Menu de restaurant numérique | Scaniha', description: 'Créez un menu en ligne pour votre restaurant avec Scaniha. Partagez par QR code ou lien.', url: 'https://scaniha.com/online-menu-for-restaurants', siteName: 'Scaniha', type: 'website' },
-  twitter: { card: 'summary_large_image', title: 'Menu en ligne pour restaurants | Menu de restaurant numérique | Scaniha', description: 'Créez un menu en ligne pour votre restaurant avec Scaniha.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'Menu en ligne pour restaurants | Menu de restaurant numérique | Scaniha', description: 'Créez un menu en ligne pour votre restaurant avec Scaniha. Partagez par QR code ou lien.', url: 'https://scaniha.com/online-menu-for-restaurants', siteName: 'Scaniha', type: 'website' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'Menu en ligne pour restaurants | Menu de restaurant numérique | Scaniha', description: 'Créez un menu en ligne pour votre restaurant avec Scaniha.' },
   alternates: { canonical: 'https://scaniha.com/online-menu-for-restaurants' },
 }
 

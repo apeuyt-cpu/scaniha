@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Sécurité | Scaniha - Créateur de menu QR',
   description: 'Comment Scaniha protège vos données : connexions chiffrées (HTTPS/TLS), base de données Postgres avec isolation par compte, identifiants gérés par Supabase Auth, accès au moindre privilège et sauvegardes régulières.',
   openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }], 
     title: 'Sécurité | Scaniha - Créateur de menu QR',
     description: 'Comment Scaniha protège les données de votre menu numérique : chiffrement des connexions, isolation des données et accès au moindre privilège.',
     url: 'https://scaniha.com/security',
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
   twitter: {
+    images: ['/og-scaniha.jpg'], 
     card: 'summary_large_image',
     title: 'Sécurité | Scaniha - Créateur de menu QR',
     description: 'Comment Scaniha protège les données de votre menu numérique.',

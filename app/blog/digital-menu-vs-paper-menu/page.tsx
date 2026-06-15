@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Menu numérique ou menu papier — Pourquoi le numérique l’emporte | Scaniha',
   description: 'Comparez les menus numériques et les menus papier pour les restaurants. Coût, flexibilité, expérience client et impact environnemental — découvrez pourquoi le numérique est le meilleur choix.',
-  openGraph: { title: 'Menu numérique ou menu papier — Pourquoi le numérique l’emporte', description: 'Comparez les menus numériques et les menus papier pour les restaurants.', url: 'https://scaniha.com/blog/digital-menu-vs-paper-menu', siteName: 'Scaniha', type: 'article' },
-  twitter: { card: 'summary_large_image', title: 'Menu numérique ou menu papier — Pourquoi le numérique l’emporte', description: 'Comparez les menus numériques et les menus papier pour les restaurants.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'Menu numérique ou menu papier — Pourquoi le numérique l’emporte', description: 'Comparez les menus numériques et les menus papier pour les restaurants.', url: 'https://scaniha.com/blog/digital-menu-vs-paper-menu', siteName: 'Scaniha', type: 'article' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'Menu numérique ou menu papier — Pourquoi le numérique l’emporte', description: 'Comparez les menus numériques et les menus papier pour les restaurants.' },
   alternates: { canonical: 'https://scaniha.com/blog/digital-menu-vs-paper-menu' },
 }
 

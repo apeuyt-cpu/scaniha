@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Menu QR pour restaurants | Créateur de menu QR gratuit | Scaniha',
   description: 'Créez un menu QR gratuit pour votre restaurant avec Scaniha. Générez des QR codes, gérez vos articles en temps réel et offrez une expérience sans contact. Aucune application requise. Commencez maintenant.',
-  openGraph: { title: 'Menu QR pour restaurants | Créateur de menu QR gratuit | Scaniha', description: 'Créez un menu QR gratuit pour votre restaurant. Aucun téléchargement d\'application nécessaire.', url: 'https://scaniha.com/qr-menu-for-restaurants', siteName: 'Scaniha', type: 'website' },
-  twitter: { card: 'summary_large_image', title: 'Menu QR pour restaurants | Créateur de menu QR gratuit | Scaniha', description: 'Créez un menu QR gratuit pour votre restaurant. Générez des QR codes instantanément.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'Menu QR pour restaurants | Créateur de menu QR gratuit | Scaniha', description: 'Créez un menu QR gratuit pour votre restaurant. Aucun téléchargement d\'application nécessaire.', url: 'https://scaniha.com/qr-menu-for-restaurants', siteName: 'Scaniha', type: 'website' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'Menu QR pour restaurants | Créateur de menu QR gratuit | Scaniha', description: 'Créez un menu QR gratuit pour votre restaurant. Générez des QR codes instantanément.' },
   alternates: { canonical: 'https://scaniha.com/qr-menu-for-restaurants' },
 }
 

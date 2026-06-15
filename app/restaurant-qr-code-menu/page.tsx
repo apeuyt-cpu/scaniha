@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Menu QR code de restaurant | Menu numérique avec QR codes | Scaniha',
   description: 'Transformez le menu de votre restaurant en menu QR code. Les clients scannent et consultent instantanément. Aucun téléchargement d\'application. Essai gratuit disponible. Créez votre menu QR code de restaurant dès aujourd\'hui.',
-  openGraph: { title: 'Menu QR code de restaurant | Menu numérique avec QR codes | Scaniha', description: 'Transformez le menu de votre restaurant en menu QR code. Les clients scannent et consultent instantanément.', url: 'https://scaniha.com/restaurant-qr-code-menu', siteName: 'Scaniha', type: 'website' },
-  twitter: { card: 'summary_large_image', title: 'Menu QR code de restaurant | Menu numérique avec QR codes | Scaniha', description: 'Transformez le menu de votre restaurant en menu QR code avec Scaniha.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'Menu QR code de restaurant | Menu numérique avec QR codes | Scaniha', description: 'Transformez le menu de votre restaurant en menu QR code. Les clients scannent et consultent instantanément.', url: 'https://scaniha.com/restaurant-qr-code-menu', siteName: 'Scaniha', type: 'website' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'Menu QR code de restaurant | Menu numérique avec QR codes | Scaniha', description: 'Transformez le menu de votre restaurant en menu QR code avec Scaniha.' },
   alternates: { canonical: 'https://scaniha.com/restaurant-qr-code-menu' },
 }
 

@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'À propos | Scaniha - Créateur de menu QR',
   description: 'Découvrez Scaniha, le créateur de menu QR numérique pour les restaurants et les cafés. Fondé par Rakiza Group, dirigé par son PDG Hamed, pour transformer l\'expérience en restaurant.',
   openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }], 
     title: 'À propos | Scaniha - Créateur de menu QR',
     description: 'Transformer les menus de restaurant grâce à la technologie QR.',
     url: 'https://scaniha.com/about',
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
   twitter: {
+    images: ['/og-scaniha.jpg'], 
     card: 'summary_large_image',
     title: 'À propos | Scaniha - Créateur de menu QR',
     description: 'Transformer les menus de restaurant grâce à la technologie QR.',

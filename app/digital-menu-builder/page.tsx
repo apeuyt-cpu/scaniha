@@ -4,8 +4,10 @@ import Link from 'next/link'
 export const metadata: Metadata = {
   title: 'Créateur de menu numérique | Créez des menus de restaurant en ligne | Scaniha',
   description: 'Concevez de superbes menus numériques pour votre restaurant ou café avec Scaniha. Créateur de menu simple en glisser-déposer. Générez des QR codes, gérez les catégories et mettez à jour les prix en temps réel.',
-  openGraph: { title: 'Créateur de menu numérique | Créez des menus de restaurant en ligne | Scaniha', description: 'Concevez de superbes menus numériques pour votre restaurant. Créateur simple en glisser-déposer.', url: 'https://scaniha.com/digital-menu-builder', siteName: 'Scaniha', type: 'website' },
-  twitter: { card: 'summary_large_image', title: 'Créateur de menu numérique | Créez des menus de restaurant en ligne | Scaniha', description: 'Concevez de superbes menus numériques pour votre restaurant avec Scaniha.' },
+  openGraph: {
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }],  title: 'Créateur de menu numérique | Créez des menus de restaurant en ligne | Scaniha', description: 'Concevez de superbes menus numériques pour votre restaurant. Créateur simple en glisser-déposer.', url: 'https://scaniha.com/digital-menu-builder', siteName: 'Scaniha', type: 'website' },
+  twitter: {
+    images: ['/og-scaniha.jpg'],  card: 'summary_large_image', title: 'Créateur de menu numérique | Créez des menus de restaurant en ligne | Scaniha', description: 'Concevez de superbes menus numériques pour votre restaurant avec Scaniha.' },
   alternates: { canonical: 'https://scaniha.com/digital-menu-builder' },
 }
 

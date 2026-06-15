@@ -18,13 +18,15 @@ import { useEffect, useState } from 'react'
 type Kind = 'glow' | 'paper' | 'premium'
 type Product = {
   name: string
-  tagline: string
-  description: string
+  tagline?: string
+  description?: string
   kind: Kind
   value?: string
+  bullets?: string[]
   board?: { heading: string; items: { name: string; price: string }[] }[]
-  prices: { size: string; price: string }[]
+  prices?: { size: string; price: string }[]
 }
+type Catalog = { headline?: string; subheadline?: string; valueProp?: string; products: Product[] }
 
 const TBD = 'À définir'
 
@@ -71,54 +73,70 @@ function BoardPreview({ product }: { product: Product }) {
 }
 
 export default function LocalProductsSection() {
-  const [products, setProducts] = useState<Product[] | null>(null)
+  const [catalog, setCatalog] = useState<Catalog | null>(null)
   useEffect(() => {
     // Dev machine only — never even attempts the fetch in production.
     if (process.env.NODE_ENV !== 'development') return
     let cancelled = false
     fetch('/_local-products.json', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { if (!cancelled && j && Array.isArray(j.products)) setProducts(j.products) })
+      .then((j) => { if (!cancelled && j && Array.isArray(j.products)) setCatalog(j) })
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
 
   // Renders nothing in production, or anywhere the local JSON is absent.
   if (process.env.NODE_ENV !== 'development') return null
-  if (!products || products.length === 0) return null
+  if (!catalog || !catalog.products?.length) return null
 
   return (
     <section className="bg-zinc-950 px-4 py-16 text-zinc-100">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex items-center gap-3">
-          <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-400">Local uniquement</span>
-          <h2 className="text-2xl font-extrabold tracking-tight">Catalogue interne — produits physiques</h2>
-        </div>
-        <p className="mb-10 text-sm text-zinc-400">Visible uniquement sur ta machine (serveur de dev). Ni dans le dépôt, ni en ligne.</p>
+        <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-400">Local uniquement · catalogue interne</span>
+        <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
+          {catalog.headline || 'Produits physiques'}
+        </h2>
+        {catalog.subheadline && <p className="mt-3 max-w-2xl text-zinc-400">{catalog.subheadline}</p>}
+        {catalog.valueProp && (
+          <p className="mt-5 inline-block rounded-2xl border-2 border-amber-400/60 bg-amber-500/10 px-5 py-3 text-lg font-extrabold text-amber-300">
+            {catalog.valueProp}
+          </p>
+        )}
 
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((p, i) => (
+        <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {catalog.products.map((p, i) => (
             <article key={p.name} className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 shadow-xl">
               <BoardPreview product={p} />
               <div className="p-6">
                 <span className="text-xs font-bold text-amber-500">Produit {i + 1}</span>
                 <h3 className="mt-1 text-xl font-extrabold">{p.name}</h3>
-                <p className="text-sm italic text-zinc-400">{p.tagline}</p>
-                <p className="mt-3 text-sm leading-relaxed text-zinc-300">{p.description}</p>
+                {p.tagline && <p className="text-sm italic text-zinc-400">{p.tagline}</p>}
+                {p.description && <p className="mt-3 text-sm leading-relaxed text-zinc-300">{p.description}</p>}
                 {p.value && (
                   <div className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
                     <p className="text-sm font-semibold leading-relaxed text-amber-300">{p.value}</p>
                   </div>
                 )}
-                <div className="mt-5 space-y-2">
-                  {p.prices.map((pr) => (
-                    <div key={pr.size} className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5">
-                      <span className="text-sm text-zinc-400">{pr.size}</span>
-                      <span className={`text-base font-bold ${pr.price === TBD ? 'text-zinc-500 italic' : 'text-amber-400'}`}>{pr.price}</span>
-                    </div>
-                  ))}
-                  <p className="pt-1 text-xs text-zinc-500">Prix selon la taille / le format.</p>
-                </div>
+                {p.bullets && p.bullets.length > 0 && (
+                  <ul className="mt-4 space-y-1.5">
+                    {p.bullets.map((b) => (
+                      <li key={b} className="flex items-start gap-2 text-sm text-zinc-300">
+                        <span className="mt-0.5 font-bold text-amber-400">✓</span>
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {p.prices && p.prices.length > 0 && (
+                  <div className="mt-5 space-y-2">
+                    {p.prices.map((pr) => (
+                      <div key={pr.size} className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5">
+                        <span className="text-sm text-zinc-400">{pr.size}</span>
+                        <span className={`text-base font-bold ${pr.price === TBD ? 'text-zinc-500 italic' : 'text-amber-400'}`}>{pr.price}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </article>
           ))}

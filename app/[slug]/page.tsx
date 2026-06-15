@@ -139,7 +139,7 @@ export default async function PublicMenuPage({
         categories={categories}
         theme={theme}
       />
-      {!isPaused && <PoweredByScaniha />}
+      {!isPaused && <PoweredByScaniha liftForNav={isFidelityEnabled(business)} />}
       {!isPaused && isFidelityEnabled(business) && <BottomNav slug={business.slug} accent={businessAccent(business)} active="menu" />}
       <LogView businessId={business.id} slug={business.slug} />
       {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}

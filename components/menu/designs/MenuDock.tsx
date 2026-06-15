@@ -11,6 +11,7 @@
 import { useState } from 'react'
 import { SocialPopup, getSocials } from './SocialLinks'
 import { brandGradient } from './kit'
+import { isFidelityEnabled } from '@/lib/design-settings'
 
 export function MenuDock({
   business,
@@ -31,9 +32,13 @@ export function MenuDock({
   const socials = getSocials(business)
   if (socials.length === 0) return null
 
+  // Lift above the bottom nav only when it's actually there (fidelity on);
+  // otherwise sit in the normal bottom corner so there's no empty gap below.
+  const lift = isFidelityEnabled(business)
+
   return (
     <>
-      <div className="fixed bottom-[5.25rem] right-4 z-50 flex flex-col items-end gap-2.5" style={{ fontFamily: font }}>
+      <div className={`fixed ${lift ? 'bottom-[5.25rem]' : 'bottom-4'} right-4 z-50 flex flex-col items-end gap-2.5`} style={{ fontFamily: font }}>
         <button
           type="button"
           aria-label="Réseaux sociaux"

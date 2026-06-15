@@ -6,6 +6,10 @@ import { optimizeAndStore } from '@/lib/storage-server'
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']
 
+// sharp needs the Node runtime; give the high-effort AVIF/WebP encode headroom.
+export const runtime = 'nodejs'
+export const maxDuration = 30
+
 /**
  * POST /api/upload — multipart/form-data { file, folder? }
  *

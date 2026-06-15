@@ -16,14 +16,27 @@ import sharp from 'sharp'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export const STORAGE_BUCKET = 'menu-images'
-const MAX_DIMENSION = 1600
-const WEBP_QUALITY = 76
-const AVIF_QUALITY = 52
 
-/** Folders served as a raw origin (favicon) or kept maximally compatible → WebP only. */
-const WEBP_ONLY_PREFIXES = new Set(['logos', 'receipts'])
-function avifAllowed(folder: string): boolean {
-  return !WEBP_ONLY_PREFIXES.has(folder.split('/')[0])
+/**
+ * Per-folder optimization profiles. `max` is the long-edge cap in px — the
+ * single biggest lever on file size; `webp`/`avif` are encoder qualities
+ * (avif:null → WebP only, for logos/receipts that must stay maximally
+ * compatible). Tuned for the smallest file that still looks good, so the
+ * Supabase free-tier storage + bandwidth go as far as possible.
+ */
+interface Profile { max: number; webp: number; avif: number | null }
+const PROFILES: Record<string, Profile> = {
+  logos:      { max: 512,  webp: 82, avif: null }, // small on screen; crisp + WebP-compatible
+  items:      { max: 1080, webp: 74, avif: 48 },   // menu item photos
+  categories: { max: 1080, webp: 74, avif: 48 },
+  covers:     { max: 1500, webp: 74, avif: 50 },   // wide hero / cover
+  receipts:   { max: 1500, webp: 72, avif: null }, // legibility over beauty; WebP-compatible
+  uploads:    { max: 1200, webp: 74, avif: 50 },   // default bucket
+}
+const DEFAULT_PROFILE: Profile = PROFILES.uploads
+
+function profileFor(folder: string): Profile {
+  return PROFILES[folder.split('/')[0]] ?? DEFAULT_PROFILE
 }
 
 export interface StoredImage {
@@ -43,23 +56,25 @@ interface Encoded {
 
 /**
  * Re-encode to the smallest of AVIF / WebP (WebP only for animated GIFs and
- * the WEBP_ONLY folders). Rotates by EXIF, downscales to MAX_DIMENSION, strips
- * metadata. Shared by the upload route and scripts/optimize-images.mjs.
+ * profiles with avif:null). Rotates by EXIF, downscales to the folder profile's
+ * max edge, strips metadata. High `effort` squeezes out extra bytes at no
+ * quality cost — uploads are infrequent, so the slower encode is worth it.
  */
 export async function encodeOptimized(input: Buffer, mime: string, folder: string): Promise<Encoded> {
+  const { max, webp: webpQ, avif: avifQ } = profileFor(folder)
   const animated = mime === 'image/gif'
   const base = sharp(input, { animated, limitInputPixels: 64_000_000 })
     .rotate()
-    .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: 'inside', withoutEnlargement: true })
+    .resize({ width: max, height: max, fit: 'inside', withoutEnlargement: true })
 
   if (animated) {
-    const buf = await base.webp({ quality: 70, effort: 4 }).toBuffer()
+    const buf = await base.webp({ quality: 68, effort: 4 }).toBuffer()
     return { buf, ext: 'webp', contentType: 'image/webp' }
   }
 
-  const webp = await base.clone().webp({ quality: WEBP_QUALITY, effort: 4, smartSubsample: true }).toBuffer()
-  if (avifAllowed(folder)) {
-    const avif = await base.clone().avif({ quality: AVIF_QUALITY, effort: 4 }).toBuffer().catch(() => null)
+  const webp = await base.clone().webp({ quality: webpQ, effort: 6, smartSubsample: true }).toBuffer()
+  if (avifQ != null) {
+    const avif = await base.clone().avif({ quality: avifQ, effort: 5 }).toBuffer().catch(() => null)
     if (avif && avif.length < webp.length) return { buf: avif, ext: 'avif', contentType: 'image/avif' }
   }
   return { buf: webp, ext: 'webp', contentType: 'image/webp' }
@@ -94,7 +109,7 @@ export async function optimizeAndStore(input: Buffer, mime: string, folder: stri
 
   const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path)
 
-  const scale = Math.min(1, MAX_DIMENSION / Math.max(meta.width || 1, meta.height || 1))
+  const scale = Math.min(1, profileFor(safeFolder).max / Math.max(meta.width || 1, meta.height || 1))
   return {
     url: data.publicUrl,
     path,

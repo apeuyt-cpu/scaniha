@@ -18,7 +18,10 @@ export async function compressImage(file: File): Promise<File> {
     if (file.size < SKIP_BELOW_BYTES) return file
     if (typeof createImageBitmap !== 'function') return file
 
-    const bitmap = await createImageBitmap(file)
+    // `from-image` bakes EXIF orientation into the pixels — without it the
+    // canvas re-encode strips the orientation tag and portrait phone photos
+    // would upload sideways. Unsupported browsers ignore the option harmlessly.
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
     const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height))
     const w = Math.max(1, Math.round(bitmap.width * scale))
     const h = Math.max(1, Math.round(bitmap.height * scale))

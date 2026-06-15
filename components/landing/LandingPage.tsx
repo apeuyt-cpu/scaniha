@@ -9,7 +9,8 @@ import ClientsSection from '@/components/landing/ClientsSection'
 import AnimatedShapes from '@/components/landing/AnimatedShapes'
 import logoIcon from '../../public/logo.png'
 import logoFull from '../../public/logo2.png'
-import heroDesktop from '../../public/hero/hero-desktop.webp'
+import heroPhones from '../../public/hero/hero-phones.webp'
+import qrStands from '../../public/qr-stands.webp'
 import feature1 from '../../public/features/feature-1.webp'
 import feature2 from '../../public/features/feature-2.webp'
 import feature3 from '../../public/features/feature-3.webp'
@@ -230,15 +231,15 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
 
           {/* Visual — under the text on every breakpoint */}
           <div className="hero-up mt-10 lg:mt-8" style={{ ['--hero-delay' as string]: '200ms' }}>
-            <div className="relative mx-auto w-full max-w-[880px] lg:max-w-[640px]">
+            <div className="relative mx-auto w-full max-w-[880px] lg:max-w-[960px]">
               <div className="hero-aura" aria-hidden="true">
                 <div className="rays" />
                 <div className="glow" />
               </div>
               <Image
-                src={heroDesktop}
-                alt="Le menu QR Scaniha sur smartphone et ses présentoirs QR de table"
-                sizes="(min-width: 1024px) 640px, 100vw"
+                src={heroPhones}
+                alt="Le menu numérique Scaniha affiché sur plusieurs smartphones"
+                sizes="(min-width: 1024px) 960px, 100vw"
                 priority
                 className="float-img relative z-10 mx-auto block h-auto w-full"
               />
@@ -268,6 +269,55 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
                   </Link>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* QR table stands — the physical product, right under the hero */}
+      <section className="bg-white py-20 sm:py-24 lg:py-28">
+        <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
+          <div className="reveal grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            {/* QR stands photo */}
+            <div className="flex justify-center">
+              <Image
+                src={qrStands}
+                alt="Présentoirs QR Scaniha sur table — finitions aluminium, acrylique noir, bois clair et bois foncé"
+                sizes="(min-width: 1024px) 560px, 100vw"
+                className="h-auto w-full max-w-[560px]"
+              />
+            </div>
+
+            {/* Copy */}
+            <div className="text-center lg:text-left">
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-500">Sur chaque table</p>
+              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
+                Un support, <span className="text-orange-500">deux QR codes</span>
+              </h2>
+              <p className="mx-auto mt-4 max-w-md text-lg leading-relaxed text-zinc-600 lg:mx-0">
+                Le menu d&apos;un côté, le Wi-Fi de l&apos;autre. Vos clients se connectent et commandent en deux scans —
+                fini le « c&apos;est quoi le mot de passe ? ».
+              </p>
+              <ul className="mx-auto mt-6 max-w-md space-y-3 text-left lg:mx-0">
+                <li className="flex items-start gap-3 text-zinc-700">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">1</span>
+                  <span><strong className="text-zinc-900">QR menu</strong> — généré automatiquement avec votre compte.</span>
+                </li>
+                <li className="flex items-start gap-3 text-zinc-700">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">2</span>
+                  <span><strong className="text-zinc-900">QR Wi-Fi</strong> — créez-le en 10 secondes depuis votre tableau de bord, le mot de passe reste chez vous.</span>
+                </li>
+                <li className="flex items-start gap-3 text-zinc-700">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">3</span>
+                  <span><strong className="text-zinc-900">Support en bois ou acrylique</strong> — un par table, commandé avec votre abonnement.</span>
+                </li>
+              </ul>
+              <Link
+                href={dashboardUrl || '/signup'}
+                className="btn-shine mt-8 inline-block rounded-xl bg-orange-500 px-7 py-3.5 text-base font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
+              >
+                Équiper mes tables →
+              </Link>
             </div>
           </div>
         </div>
@@ -396,75 +446,6 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
                   <li><span className="font-bold text-orange-500">✓</span> Solde et historique consultables par le client</li>
                 </ul>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Dual-QR stand showcase — menu + Wi-Fi */}
-      <section className="bg-white py-20 sm:py-24 lg:py-28">
-        <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
-          <div className="reveal grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-            {/* Stand mockup */}
-            <div className="flex justify-center">
-              <div className="relative">
-                {/* tent card */}
-                <div className="relative w-72 rounded-2xl bg-gradient-to-b from-[#FFFDFB] to-[#FBF4EC] p-6 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.25)] ring-1 ring-zinc-200 sm:w-80">
-                  <p className="text-center text-sm font-extrabold tracking-wide text-zinc-900">{`Bienvenue chez vous ☕`}</p>
-                  <div className="mt-5 grid grid-cols-2 gap-4">
-                    <div className="rounded-xl bg-white p-3 text-center ring-1 ring-zinc-100">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/qr-demo-menu.png" alt="QR du menu de démonstration" className="mx-auto h-20 w-20" />
-                      <p className="mt-2 text-xs font-bold text-zinc-900">🍽️ Notre menu</p>
-                      <p className="text-[10px] text-zinc-400">Scannez pour découvrir</p>
-                    </div>
-                    <div className="rounded-xl bg-white p-3 text-center ring-1 ring-zinc-100">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src="/qr-demo-wifi.png" alt="QR Wi-Fi de démonstration" className="mx-auto h-20 w-20" />
-                      <p className="mt-2 text-xs font-bold text-zinc-900">📶 Wi-Fi gratuit</p>
-                      <p className="text-[10px] text-zinc-400">Scannez pour vous connecter</p>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-500">
-                    Scaniha
-                  </p>
-                </div>
-                {/* stand base */}
-                <div className="mx-auto -mt-1 h-3 w-40 rounded-b-2xl bg-zinc-800/90 shadow-lg" />
-                <div className="mx-auto h-2 w-52 rounded-full bg-zinc-200/80 blur-[2px]" />
-              </div>
-            </div>
-
-            {/* Copy */}
-            <div className="text-center lg:text-left">
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-500">Sur chaque table</p>
-              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
-                Un support, <span className="text-orange-500">deux QR codes</span>
-              </h2>
-              <p className="mx-auto mt-4 max-w-md text-lg leading-relaxed text-zinc-600 lg:mx-0">
-                Le menu d&apos;un côté, le Wi-Fi de l&apos;autre. Vos clients se connectent et commandent en deux scans —
-                fini le « c&apos;est quoi le mot de passe ? ».
-              </p>
-              <ul className="mx-auto mt-6 max-w-md space-y-3 text-left lg:mx-0">
-                <li className="flex items-start gap-3 text-zinc-700">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">1</span>
-                  <span><strong className="text-zinc-900">QR menu</strong> — généré automatiquement avec votre compte.</span>
-                </li>
-                <li className="flex items-start gap-3 text-zinc-700">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">2</span>
-                  <span><strong className="text-zinc-900">QR Wi-Fi</strong> — créez-le en 10 secondes depuis votre tableau de bord, le mot de passe reste chez vous.</span>
-                </li>
-                <li className="flex items-start gap-3 text-zinc-700">
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">3</span>
-                  <span><strong className="text-zinc-900">Support en bois ou acrylique</strong> — un par table, commandé avec votre abonnement.</span>
-                </li>
-              </ul>
-              <Link
-                href={dashboardUrl || '/signup'}
-                className="btn-shine mt-8 inline-block rounded-xl bg-orange-500 px-7 py-3.5 text-base font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
-              >
-                Équiper mes tables →
-              </Link>
             </div>
           </div>
         </div>

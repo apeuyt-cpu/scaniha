@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { loadGameConfig, playGame, loadQrGate, dailyLimitBlocked } from '@/lib/db/game'
+import { loadGameConfig, playGame, loadQrGate, playLimitBlocked } from '@/lib/db/game'
 import { dinerSession } from '@/lib/db/account'
 import { scanCookieName, verifyScan } from '@/lib/qr-session'
 
@@ -17,9 +17,9 @@ import { scanCookieName, verifyScan } from '@/lib/qr-session'
 const ERR: Record<string, { status: number; msg: string }> = {
   no_business: { status: 404, msg: 'Établissement introuvable.' },
   no_game: { status: 404, msg: 'Aucun jeu actif ici pour le moment.' },
-  no_prizes: { status: 409, msg: 'Plus de lots disponibles aujourd’hui.' },
-  device_limit: { status: 429, msg: 'Vous avez déjà joué aujourd’hui — revenez demain !' },
-  phone_limit: { status: 429, msg: 'Ce numéro a déjà joué aujourd’hui — revenez demain !' },
+  no_prizes: { status: 409, msg: 'Plus de lots disponibles pour le moment.' },
+  device_limit: { status: 429, msg: 'Cet appareil a déjà joué — revenez bientôt pour rejouer !' },
+  phone_limit: { status: 429, msg: 'Ce numéro a déjà joué — revenez bientôt pour rejouer !' },
   setup: { status: 503, msg: 'Le jeu est en cours de configuration.' },
 }
 
@@ -72,19 +72,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     }
   }
 
-  // Daily-limit guard in Node — also blocks if the deployed play_game RPC is
-  // outdated (the usual reason a diner "can still spin a lot"). The RPC remains
-  // the authoritative, race-safe check.
-  const limited = await dailyLimitBlocked(slug, deviceId, phone)
+  // Rolling-cooldown limit guard in Node — also blocks if the deployed play_game
+  // RPC is outdated (the usual reason a diner "can still spin a lot"). The RPC
+  // remains the authoritative, race-safe check. nextPlayAt drives the countdown.
+  const limited = await playLimitBlocked(slug, deviceId, phone)
   if (limited) {
-    const e = ERR[limited]
-    return NextResponse.json({ success: false, error: e.msg }, { status: e.status })
+    const e = ERR[limited.reason]
+    return NextResponse.json({ success: false, error: e.msg, nextPlayAt: limited.nextPlayAt }, { status: e.status })
   }
 
   const result = await playGame(slug, deviceId, phone)
   if (!result.ok) {
     const e = ERR[result.error] || { status: 500, msg: 'Le jeu est momentanément indisponible.' }
-    return NextResponse.json({ success: false, error: e.msg }, { status: e.status })
+    return NextResponse.json({ success: false, error: e.msg, nextPlayAt: result.nextPlayAt ?? null }, { status: e.status })
   }
 
   return NextResponse.json({
@@ -95,5 +95,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     expiresAt: result.expiresAt,
     pointsEarned: result.pointsEarned,
     balance: result.balance,
+    nextPlayAt: result.nextPlayAt ?? null,
   })
 }

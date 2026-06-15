@@ -83,6 +83,29 @@ export const DEFAULT_QR_GATE: QrGateConfig = {
   alsoRedeem: false,
 }
 
+// ─── Play cooldown — the rolling window between plays ────────────────────────
+// Stored in games.config.cooldownHours (jsonb, so no schema migration). A phone
+// or device may play `daily_limit` times within any window of this length, and
+// the window SLIDES from each play — a true "once per 24h / week", not a
+// calendar-day reset (which let a player spin at 23:59 and again at 00:01).
+export const DEFAULT_COOLDOWN_HOURS = 24
+
+/** Read + clamp the cooldown (hours) from a game config. Default 24h. */
+export function gameCooldownHours(config: any): number {
+  const h = Number(config?.cooldownHours)
+  if (!Number.isFinite(h) || h < 1) return DEFAULT_COOLDOWN_HOURS
+  return Math.min(8760, Math.round(h)) // cap at a year
+}
+
+/** Cooldown presets offered to the owner in the admin. */
+export const COOLDOWN_OPTIONS: { hours: number; label: string }[] = [
+  { hours: 12, label: 'Toutes les 12 heures' },
+  { hours: 24, label: 'Une fois par jour' },
+  { hours: 48, label: 'Tous les 2 jours' },
+  { hours: 168, label: 'Une fois par semaine' },
+  { hours: 720, label: 'Une fois par mois' },
+]
+
 /** Catalogue of gate types + whether each opens a link or shows the inline survey. */
 export const GATE_TYPES: { type: GateType; label: string; isLink: boolean; emoji: string }[] = [
   { type: 'instagram', label: 'Instagram', isLink: true, emoji: '📸' },
@@ -141,8 +164,8 @@ export interface ActiveCode {
 
 // ─── RPC result shapes (mirror supabase/game.sql functions) ──────────
 export type PlayResult =
-  | { ok: true; prizeIndex: number; prizeLabel: string; code: string; expiresAt: string; pointsEarned: number; balance: number }
-  | { ok: false; error: string; missing?: number }
+  | { ok: true; prizeIndex: number; prizeLabel: string; code: string; expiresAt: string; pointsEarned: number; balance: number; nextPlayAt?: string | null }
+  | { ok: false; error: string; missing?: number; nextPlayAt?: string | null }
 
 export type RedeemResult =
   | { ok: true; code: string; rewardLabel: string; expiresAt: string; balance: number }

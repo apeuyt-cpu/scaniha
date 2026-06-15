@@ -19,6 +19,8 @@ interface SpinResult {
   expiresAt: string
   pointsEarned?: number
   balance?: number
+  /** When the next play unlocks (rolling cooldown); null → plays still remain. */
+  nextPlayAt?: string | null
 }
 
 const KEY = (slug: string) => 'scaniha_diner_' + slug
@@ -67,6 +69,9 @@ export default function GameClient({ slug }: { slug: string }) {
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rescan, setRescan] = useState<string | null>(null)
+  // When the server blocks/uses a play, it returns when the next play unlocks
+  // (rolling cooldown). null → unknown (countdown falls back to a local guess).
+  const [nextPlayAt, setNextPlayAt] = useState<string | null>(null)
   const [storeOpen, setStoreOpen] = useState(false)
   const [winModalOpen, setWinModalOpen] = useState(false)
   const [pendingSpin, setPendingSpin] = useState(false)
@@ -236,12 +241,14 @@ export default function GameClient({ slug }: { slug: string }) {
           setRescan(typeof json.error === 'string' ? json.error : '')
           return
         }
+        if (res.status === 429) setNextPlayAt(typeof json.nextPlayAt === 'string' ? json.nextPlayAt : null)
         setPhase(res.status === 429 ? 'blocked' : 'ready')
         setError(json.error || 'Une erreur est survenue. Réessayez.')
         return
       }
       const w: SpinResult = json
       setResult(w)
+      setNextPlayAt(typeof json.nextPlayAt === 'string' ? json.nextPlayAt : null)
       try {
         localStorage.setItem(`scaniha_win_${slug}`, JSON.stringify(w))
       } catch {}
@@ -467,7 +474,7 @@ export default function GameClient({ slug }: { slug: string }) {
                 {error && (
                   <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">{error}</p>
                 )}
-                <NextSpinCountdown accent={accent} />
+                <NextSpinCountdown accent={accent} until={nextPlayAt} />
               </>
             )}
             <div className="flex flex-col gap-2.5">
@@ -660,7 +667,7 @@ function WinModal({
             small loyalty bonus. */}
 
         {/* The next-play countdown — now front-and-centre, not a tiny footer line. */}
-        <NextSpinCountdown accent={accent} />
+        <NextSpinCountdown accent={accent} until={result.nextPlayAt ?? null} />
 
         <div className="mt-5 flex flex-col gap-2.5">
           <Link
@@ -690,13 +697,22 @@ function WinModal({
   )
 }
 
-/* ── Next-spin countdown — the daily limit resets at midnight (Africa/Tunis) ── */
+/* ── Next-spin countdown — counts to the server's nextPlayAt (rolling cooldown).
+   Falls back to the local midnight guess only when the server didn't send one
+   (e.g. the play_game RPC hasn't been updated yet). ── */
 function msUntilTunisReset(): number {
   const now = new Date()
   const tunisNow = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Tunis' }))
   const mid = new Date(tunisNow)
   mid.setHours(24, 0, 0, 0)
   return Math.max(0, mid.getTime() - tunisNow.getTime())
+}
+function msUntilNext(until?: string | null): number {
+  if (until) {
+    const t = new Date(until).getTime()
+    if (Number.isFinite(t)) return Math.max(0, t - Date.now())
+  }
+  return msUntilTunisReset()
 }
 function fmtCountdown(ms: number): string {
   const s = Math.floor(ms / 1000)
@@ -707,13 +723,13 @@ function fmtCountdown(ms: number): string {
   if (m > 0) return `${m}m ${sec.toString().padStart(2, '0')}s`
   return `${sec}s`
 }
-function NextSpinCountdown({ accent, compact = false }: { accent: string; compact?: boolean }) {
+function NextSpinCountdown({ accent, until = null, compact = false }: { accent: string; until?: string | null; compact?: boolean }) {
   const [ms, setMs] = useState<number | null>(null)
   useEffect(() => {
-    setMs(msUntilTunisReset())
-    const id = setInterval(() => setMs(msUntilTunisReset()), 1000)
+    setMs(msUntilNext(until))
+    const id = setInterval(() => setMs(msUntilNext(until)), 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [until])
   if (ms === null) return null
   if (compact) {
     return (
@@ -726,7 +742,7 @@ function NextSpinCountdown({ accent, compact = false }: { accent: string; compac
     <div className="mt-5 rounded-2xl border bg-white px-4 py-4 text-center" style={{ borderColor: '#ECE7DF', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
       <p className="text-[11px] font-medium uppercase tracking-wide text-[#8A8178]">Prochaine partie dans</p>
       <p className="mt-1 text-3xl font-medium tabular-nums" style={{ color: accent }}>{fmtCountdown(ms)}</p>
-      <p className="mt-1 text-[11px] text-[#8A8178]">Revenez demain pour rejouer&nbsp;!</p>
+      <p className="mt-1 text-[11px] text-[#8A8178]">Revenez bientôt pour rejouer&nbsp;!</p>
     </div>
   )
 }

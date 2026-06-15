@@ -5,7 +5,7 @@
  */
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getDesignSettings, resolveAccent, resolveGradient, isDesignId, isFidelityEnabled, type DesignId } from '@/lib/design-settings'
-import { DEFAULT_QR_GATE } from '@/lib/game'
+import { DEFAULT_QR_GATE, gameCooldownHours } from '@/lib/game'
 import type { PlayResult, GameGate, QrGateConfig, QrGateSummary } from '@/lib/game'
 
 export const FALLBACK_ACCENT = '#F47B20'
@@ -165,58 +165,62 @@ export async function playGame(slug: string, deviceId: string | null, phone: str
 }
 
 /**
- * Start of "today" in Tunisia (UTC+1, no DST), as an ISO instant — the daily
- * window. Mirrors the SQL `date_trunc('day', now() at time zone 'Africa/Tunis')`
- * so the Node guard and the RPC agree on when "today" began.
- */
-function tunisDayStartISO(): string {
-  const ymd = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Africa/Tunis',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
-  return new Date(`${ymd}T00:00:00+01:00`).toISOString()
-}
-
-/**
- * Defence-in-depth daily-limit check in Node. The authoritative, race-safe check
+ * Defence-in-depth play-limit check in Node. The authoritative, race-safe check
  * is inside the play_game RPC (serialized by a row lock); this ALSO enforces the
  * limit when the deployed RPC is out of date (the common cause of "I can still
- * spin a lot"). Returns the block reason, or null when within the limit.
+ * spin a lot") and tells the client exactly when the next play unlocks.
+ *
+ * Model: a ROLLING cooldown window (config.cooldownHours, default 24) — a phone
+ * or device may play `daily_limit` times within any window of that length, and
+ * the window slides from each play. So it's a true "once per 24h / week", not a
+ * calendar-day reset. Returns { reason, nextPlayAt } when blocked, else null.
  * Fails OPEN on a transient error so a legit spin is never wrongly blocked.
  */
-export async function dailyLimitBlocked(
+export async function playLimitBlocked(
   slug: string,
   deviceId: string | null,
   phone: string | null
-): Promise<'phone_limit' | 'device_limit' | null> {
+): Promise<{ reason: 'phone_limit' | 'device_limit'; nextPlayAt: string | null } | null> {
   try {
     const supabase: any = await createServiceRoleClient()
     const { data: business } = await supabase
       .from('businesses').select('id').eq('slug', slug).eq('status', 'active').maybeSingle()
     if (!business) return null
     const { data: game } = await supabase
-      .from('games').select('id, daily_limit')
+      .from('games').select('id, daily_limit, config')
       .eq('business_id', business.id).eq('type', 'roulette').eq('active', true).maybeSingle()
     if (!game) return null
     const limit = Math.max(1, Number(game.daily_limit) || 1)
-    const since = tunisDayStartISO()
+    const cooldownMs = gameCooldownHours(game.config) * 3600_000
+    const sinceMs = Date.now() - cooldownMs
+    const since = new Date(sinceMs).toISOString()
+
+    // null → within the limit; otherwise the ISO time the next play unlocks.
+    const nextUnlock = async (column: 'customer_phone' | 'device_id', value: string): Promise<string | null> => {
+      const { data: rows } = await supabase
+        .from('plays').select('created_at')
+        .eq('game_id', game.id).eq(column, value).gte('created_at', since)
+        .order('created_at', { ascending: true })
+      const count = rows?.length || 0
+      if (count < limit) return null
+      // The play at index (count - limit) is the one whose expiry from the window
+      // drops the running count below the limit → that's when the next play opens.
+      const pivot = rows[count - limit]?.created_at
+      const base = pivot ? new Date(pivot).getTime() : sinceMs
+      return new Date(base + cooldownMs).toISOString()
+    }
+
     if (phone) {
-      const { count } = await supabase
-        .from('plays').select('id', { count: 'exact', head: true })
-        .eq('game_id', game.id).eq('customer_phone', phone).gte('created_at', since)
-      if ((count || 0) >= limit) return 'phone_limit'
+      const next = await nextUnlock('customer_phone', phone)
+      if (next !== null) return { reason: 'phone_limit', nextPlayAt: next }
     }
     if (deviceId) {
-      const { count } = await supabase
-        .from('plays').select('id', { count: 'exact', head: true })
-        .eq('game_id', game.id).eq('device_id', deviceId).gte('created_at', since)
-      if ((count || 0) >= limit) return 'device_limit'
+      const next = await nextUnlock('device_id', deviceId)
+      if (next !== null) return { reason: 'device_limit', nextPlayAt: next }
     }
     return null
   } catch (e: any) {
-    console.error('dailyLimitBlocked:', e?.message)
+    console.error('playLimitBlocked:', e?.message)
     return null
   }
 }

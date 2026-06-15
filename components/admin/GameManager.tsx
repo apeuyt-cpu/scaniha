@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { type GameRow, type PrizeRow } from '@/lib/game'
+import { type GameRow, type PrizeRow, gameCooldownHours, COOLDOWN_OPTIONS } from '@/lib/game'
 import Toggle from '@/components/admin/ui/Toggle'
 import Button from '@/components/admin/ui/Button'
 import Field, { inputClass } from '@/components/admin/ui/Field'
@@ -414,7 +414,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
           <div className="rounded-2xl border border-zinc-200 bg-white p-5">
             <h4 className="font-semibold text-zinc-900">Réglages</h4>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Field label="Parties par jour" hint="Par client (téléphone) et par appareil.">
+              <Field label="Parties autorisées" hint="Par client (téléphone) et par appareil, sur la période choisie.">
                 <input
                   type="number"
                   min={1}
@@ -422,6 +422,17 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                   onChange={(e) => updateGame({ daily_limit: Math.max(1, Number(e.target.value)) })}
                   className={inputClass}
                 />
+              </Field>
+              <Field label="Fréquence" hint="Délai avant de pouvoir rejouer — compté depuis la dernière partie.">
+                <select
+                  value={gameCooldownHours(game.config)}
+                  onChange={(e) => updateGame({ config: { ...(game.config || {}), cooldownHours: Number(e.target.value) } })}
+                  className={inputClass}
+                >
+                  {COOLDOWN_OPTIONS.map((o) => (
+                    <option key={o.hours} value={o.hours}>{o.label}</option>
+                  ))}
+                </select>
               </Field>
               <Field label="Validité d’un gain (heures)" hint="Délai pour récupérer un lot avant expiration.">
                 <input

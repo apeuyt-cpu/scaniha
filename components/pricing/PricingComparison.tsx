@@ -161,13 +161,13 @@ export default function PricingComparison() {
         ))}
       </div>
 
-      {/* Scope note — software only */}
-      <p className="mt-8 text-center text-sm text-zinc-500">
-        <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-1.5 font-medium">
-          <span aria-hidden="true">ℹ️</span>
-          Tarifs de la plateforme uniquement — supports de table et stickers QR non inclus (en option lors de l&apos;abonnement).
-        </span>
-      </p>
+      {/* Scope note — software only (highlighted so it can't be missed) */}
+      <div className="mx-auto mt-8 flex max-w-2xl items-start gap-3 rounded-2xl border-2 border-orange-300 bg-orange-50 px-5 py-4 text-left shadow-sm">
+        <span aria-hidden="true" className="mt-0.5 text-lg leading-none">ℹ️</span>
+        <p className="text-sm font-semibold leading-relaxed text-orange-900">
+          Tarifs de la plateforme uniquement — <span className="font-extrabold underline decoration-orange-400 decoration-2 underline-offset-2">supports de table et stickers QR non inclus</span> (en option lors de l&apos;abonnement).
+        </p>
+      </div>
     </div>
   )
 }

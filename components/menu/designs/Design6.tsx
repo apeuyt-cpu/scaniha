@@ -101,7 +101,7 @@ export default function Design6({ business, categories }: { business: any; categ
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-md pb-12 lg:max-w-3xl" style={{ backgroundColor: PAGE, color: INK, fontFamily: SERIF }}>
+    <div className="mx-auto min-h-screen max-w-md pb-12 lg:max-w-4xl" style={{ backgroundColor: PAGE, color: INK, fontFamily: SERIF }}>
       {/* Header */}
       <header className="px-6 pt-12 text-center">
         {settings.showLogo && business?.logo_url && (
@@ -211,9 +211,9 @@ export default function Design6({ business, categories }: { business: any; categ
                   </div>
                 </div>
 
-                <ul className="mt-6">
+                <ul className="mt-6 lg:grid lg:grid-cols-2 lg:gap-x-10">
                   {cat.items.map((it: KitItem, i: number) => (
-                    <li key={it.id} className="border-t first:border-t-0" style={{ borderColor: DIVIDER }}>
+                    <li key={it.id} className="border-t first:border-t-0 lg:[&:nth-child(2)]:border-t-0" style={{ borderColor: DIVIDER }}>
                       <button
                         type="button"
                         onClick={() => setSelected(it)}

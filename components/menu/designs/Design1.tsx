@@ -87,7 +87,7 @@ export default function Design1({ business, categories }: { business: any; categ
   const midIndex = showDiscover ? Math.floor(displayedItems.length / 2) - 1 : -1
 
   return (
-    <div className="relative mx-auto min-h-screen max-w-md pb-12 lg:max-w-2xl" style={{ backgroundColor: PAGE, color: INK, fontFamily: FONT }}>
+    <div className="relative mx-auto min-h-screen max-w-md pb-12 lg:max-w-4xl" style={{ backgroundColor: PAGE, color: INK, fontFamily: FONT }}>
       <Animations />
       <InteractiveStyles />
 
@@ -181,7 +181,7 @@ export default function Design1({ business, categories }: { business: any; categ
         ) : displayedItems.length === 0 ? (
           <p className="py-14 text-center text-sm" style={{ color: MUTED }}>Aucun plat ne correspond à votre recherche.</p>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-4 lg:gap-y-2.5 lg:space-y-0">
             {displayedItems.map((item, idx) => {
               const { num, ok } = priceParts(item.price)
               return (
@@ -223,7 +223,7 @@ export default function Design1({ business, categories }: { business: any; categ
                   </button>
 
                   {idx === midIndex && (
-                    <div className="py-3">
+                    <div className="py-3 lg:col-span-2">
                       <Showcase
                         items={discoverItems}
                         pool={photoItems}

@@ -106,7 +106,7 @@ export default function Design11({ business, categories }: { business: any; cate
   }, [activeCat])
 
   return (
-    <div className="mx-auto min-h-screen max-w-md pb-12 lg:max-w-3xl" style={{ backgroundColor: PAGE, color: INK, fontFamily: FONT }}>
+    <div className="mx-auto min-h-screen max-w-md pb-12 lg:max-w-4xl" style={{ backgroundColor: PAGE, color: INK, fontFamily: FONT }}>
       <InteractiveStyles />
       <style jsx global>{`
         @keyframes d11-rise { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: translateY(0) } }
@@ -277,7 +277,7 @@ export default function Design11({ business, categories }: { business: any; cate
                   <h2 className="text-[20px] font-extrabold tracking-tight">{cat.name}</h2>
                   <span className="text-[12.5px] font-semibold" style={{ color: MUTED }}>{cat.items.length}</span>
                 </div>
-                <div className="space-y-2.5">
+                <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-2.5 lg:space-y-0">
                   {cat.items.map((it: KitItem, i: number) => {
                     const { num, ok } = priceParts(it.price)
                     const soldOut = it.available === false

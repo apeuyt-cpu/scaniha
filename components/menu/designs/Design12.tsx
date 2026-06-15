@@ -108,7 +108,7 @@ export default function Design12({ business, categories }: { business: any; cate
   )
 
   return (
-    <div className="mx-auto min-h-screen max-w-md pb-20 lg:max-w-2xl" style={{ backgroundColor: PAGE, color: INK, fontFamily: SANS }}>
+    <div className="mx-auto min-h-screen max-w-md pb-20 lg:max-w-4xl" style={{ backgroundColor: PAGE, color: INK, fontFamily: SANS }}>
       <InteractiveStyles />
 
       {/* ===== Top bar — slim brand accent strip ===== */}
@@ -183,7 +183,7 @@ export default function Design12({ business, categories }: { business: any; cate
                     <span className="inline-block h-1 w-5 rounded-full" style={{ backgroundImage: gradient }} />
                     {cat.name}
                   </h2>
-                  <div className="space-y-3">
+                  <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-3 lg:space-y-0">
                     {cat.items.map((it) => <ItemCard key={it.id} it={it} catName={cat.name} />)}
                   </div>
                 </div>
@@ -254,7 +254,7 @@ export default function Design12({ business, categories }: { business: any; cate
                 <span className="shrink-0 text-[12px] font-semibold" style={{ color: MUTED }}>{items.length} plat{items.length > 1 ? 's' : ''}</span>
               </div>
 
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 space-y-3 lg:grid lg:grid-cols-2 lg:gap-x-4 lg:gap-y-3 lg:space-y-0">
                 {items.map((it) => <ItemCard key={it.id} it={it} />)}
               </div>
             </section>

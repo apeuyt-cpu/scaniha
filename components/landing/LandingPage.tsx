@@ -7,6 +7,7 @@ import { useLocale, useTranslation } from '@/lib/i18n/LocaleContext'
 import PricingComparison from '@/components/pricing/PricingComparison'
 import ClientsSection from '@/components/landing/ClientsSection'
 import AnimatedShapes from '@/components/landing/AnimatedShapes'
+import LocalProductsSection from '@/components/landing/LocalProductsSection'
 import logoIcon from '../../public/logo.png'
 import logoFull from '../../public/logo2.png'
 import heroPhones from '../../public/hero/hero-phones.webp'
@@ -560,6 +561,10 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
           </div>
         </div>
       </section>
+
+      {/* Local-only internal catalog — renders only under `next dev` with the
+          gitignored public/_local-products.json present. Invisible in prod. */}
+      <LocalProductsSection />
 
       {/* Simple Footer (kept dark — the footer logo is a light lockup) */}
       <footer className="bg-zinc-900 text-zinc-400 py-12">

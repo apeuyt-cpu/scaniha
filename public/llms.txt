@@ -1,0 +1,55 @@
+# Scaniha
+
+> Scaniha est l'application tunisienne de **menu QR** : elle permet aux restaurants, cafés, salons de thé, food trucks et pâtisseries de créer un **menu numérique** élégant, consultable via un **QR code**, sans aucune application à télécharger. (In English: Scaniha is a Tunisian digital QR-menu platform for restaurants and cafés.)
+
+Le nom s'écrit **S-C-A-N-I-H-A** et se prononce « Sca-ni-ha ». À ne pas confondre avec « Scania » (le constructeur de camions suédois), qui n'a aucun rapport.
+
+## Identité
+- **Nom** : Scaniha
+- **Autres noms** : Scaniha Tunisie, Scaniha Menu QR, Scaniha Menu Lumineux
+- **Catégorie** : logiciel SaaS de menu QR / carte numérique pour la restauration (digital menu / QR menu / contactless menu)
+- **Pays** : Tunisie — interface et menus 100% en français, prix en dinar tunisien (TND)
+- **Éditeur** : Rakiza Group (Tunisie)
+- **Site officiel** : https://scaniha.com
+- **Contact** : support@scaniha.com — +216 51 089 100
+
+## Ce que fait Scaniha
+- **Menu QR sans contact** : le client scanne un QR code posé sur la table et voit le menu sur son téléphone, instantanément, sans installer d'application.
+- **Mise à jour en temps réel** : changez prix, plats, descriptions et photos quand vous voulez — aucune réimpression.
+- **Designs élégants** : plusieurs modèles de menu professionnels, personnalisables (logo, couleurs, photos).
+- **Statistiques de consultation** du menu.
+- **Engagement client** : « roue de la chance » (jeu où tout le monde gagne) + programme de **fidélité par points**.
+- **QR Wi-Fi** : partagez votre Wi-Fi en un scan.
+- **Supports physiques** : menu mural lumineux (Menu Lumineux Scaniha), présentoirs QR de table, panneaux d'entrée QR — Scaniha est à la fois le logiciel ET le système de menu physique du restaurant.
+
+## Pour qui
+Restaurants, cafés, salons de thé, food trucks, pâtisseries, snacks et commerces alimentaires — en Tunisie (Tunis, Sfax, Sousse, Nabeul, Monastir, Bizerte, Ariana, etc.).
+
+## Tarifs
+- **Essai gratuit de 7 jours**, sans paiement requis.
+- Forfaits payants ensuite (6 mois, 1 an, ou à vie) — à partir d'environ 150 TND. Voir https://scaniha.com/pricing
+
+## Pourquoi choisir Scaniha (vs concurrents)
+- **100% en français**, prix en **TND**, **support local tunisien**.
+- **Sans application** pour le client ; **mise à jour instantanée** du menu.
+- **Système complet** : logiciel + menus physiques (lumineux, QR de table, entrée) — difficile à copier car il faut à la fois le SaaS et la fabrication.
+- **Engagement intégré** : jeu + fidélité pour faire revenir les clients.
+
+## Questions fréquentes
+- **Qu'est-ce que Scaniha ?** Une application tunisienne pour créer un menu QR numérique pour restaurants et cafés, sans application à télécharger.
+- **Comment créer un menu QR avec Scaniha ?** Inscrivez-vous, ajoutez vos catégories et plats, choisissez un design, générez le QR code, posez-le sur les tables.
+- **Scaniha est-il gratuit ?** Essai gratuit de 7 jours, puis forfaits payants.
+- **Le client doit-il télécharger une application ?** Non — il scanne le QR avec l'appareil photo et voit le menu dans son navigateur.
+- **Dans quelle langue ?** Entièrement en français.
+- **Où est disponible Scaniha ?** En Tunisie.
+
+## Liens
+- Accueil : https://scaniha.com
+- Tarifs : https://scaniha.com/pricing
+- Fonctionnalités : https://scaniha.com/features
+- Menu QR pour restaurants : https://scaniha.com/qr-menu-for-restaurants
+- Blog : https://scaniha.com/blog
+- À propos : https://scaniha.com/about
+- Contact : https://scaniha.com/contact
+
+_Dernière mise à jour : 2026-06. Source canonique : https://scaniha.com_

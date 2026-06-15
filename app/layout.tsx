@@ -119,6 +119,11 @@ export default function RootLayout({
               "parentOrganization": { "@type": "Organization", "name": "Rakiza Group", "url": "https://rakiza.group" },
               "employee": { "@type": "Person", "name": "Hamed", "jobTitle": "PDG" },
               "areaServed": { "@type": "Country", "name": "Tunisie" },
+              "knowsAbout": [
+                "menu QR", "menu numérique", "carte de restaurant numérique", "QR code restaurant",
+                "menu sans contact", "menu en ligne", "digitalisation de la restauration",
+                "fidélité restaurant", "menu lumineux", "carte digitale café"
+              ],
               "address": { "@type": "PostalAddress", "addressCountry": "TN" },
               "contactPoint": {
                 "@type": "ContactPoint",

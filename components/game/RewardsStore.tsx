@@ -157,40 +157,38 @@ export default function RewardsStore({
                   Aucune récompense pour le moment.
                 </p>
               ) : (
-                <div className="space-y-2.5">
+                <div className="grid grid-cols-2 gap-2.5">
                   {rewards.map((r) => {
                     const affordable = session != null && balance >= r.points_cost
                     const busy = busyId === r.id
                     const pct = r.points_cost > 0 ? Math.min(100, Math.round((balance / r.points_cost) * 100)) : 100
                     return (
-                      <div key={r.id} className="rounded-2xl border bg-white p-4" style={{ borderColor: '#ECE7DF' }}>
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${accent}14`, color: accent }}>
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8" /><rect x="2" y="7" width="20" height="5" rx="1" /><path d="M12 21V7" /></svg>
-                            </span>
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold text-[#1B1714]">{r.label}</p>
-                              <p className="text-xs font-semibold" style={{ color: accent }}>{r.points_cost} points</p>
-                            </div>
-                          </div>
+                      <div
+                        key={r.id}
+                        className="flex flex-col rounded-2xl border p-3.5 transition"
+                        style={{ borderColor: affordable ? `${accent}59` : '#ECE7DF', backgroundColor: affordable ? `${accent}0d` : '#fff' }}
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: `${accent}14`, color: accent }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8" /><rect x="2" y="7" width="20" height="5" rx="1" /><path d="M12 21V7" /></svg>
+                        </span>
+                        <p className="mt-2.5 line-clamp-2 min-h-[2.4em] text-[13px] font-semibold leading-snug text-[#1B1714]">{r.label}</p>
+                        <p className="mt-1 text-xs font-bold" style={{ color: affordable ? accent : '#B8AFA4' }}>{r.points_cost} pts</p>
+                        {affordable || !session ? (
                           <button
                             type="button"
                             onClick={() => redeem(r)}
-                            disabled={busy || (session != null && !affordable)}
-                            className="shrink-0 rounded-xl px-4 py-2 text-xs font-bold transition active:scale-[0.97] disabled:cursor-not-allowed"
-                            style={affordable || !session ? { backgroundColor: accent, color: '#fff' } : { backgroundColor: '#F3F1EE', color: '#B8AFA4' }}
+                            disabled={busy}
+                            className="mt-3 w-full rounded-xl py-2 text-xs font-bold text-white transition active:scale-[0.97] disabled:opacity-60"
+                            style={{ backgroundColor: accent }}
                           >
-                            {busy ? '…' : affordable || !session ? 'Échanger' : 'Bientôt'}
+                            {busy ? '…' : 'Échanger'}
                           </button>
-                        </div>
-                        {/* Slim progress toward this reward (only when logged in & not yet affordable) */}
-                        {session && !affordable && (
-                          <div className="mt-3">
+                        ) : (
+                          <div className="mt-auto pt-3">
                             <div className="h-1.5 overflow-hidden rounded-full bg-[#F0EDE8]">
                               <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: accent }} />
                             </div>
-                            <p className="mt-1.5 text-[11px] text-[#8A8178]">Encore {r.points_cost - balance} pts</p>
+                            <p className="mt-1.5 text-[10px] font-medium text-[#8A8178]">Encore {r.points_cost - balance} pts</p>
                           </div>
                         )}
                       </div>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import DinerAuth, { type DinerSession } from '@/components/game/DinerAuth'
+import RewardsStore from '@/components/game/RewardsStore'
 import type { CustomerSummary } from '@/lib/game'
 
 interface Reward { id: string; label: string; points_cost: number }
@@ -18,16 +19,24 @@ function fmt(iso: string) {
  * the points balance, claimable codes ("bons"), the rewards store, and history.
  * Scaniha-branded orange (the loyalty/game is a Scaniha feature).
  */
-export default function ProfileClient({ slug, businessName }: { slug: string; businessName: string }) {
-  const accent = '#F47B20'
-  const gradient = 'linear-gradient(135deg, #F47B20, #F5B82E)'
+export default function ProfileClient({
+  slug,
+  businessName,
+  accent = '#F47B20',
+  gradient = 'linear-gradient(135deg, #F47B20, #F5B82E)',
+}: {
+  slug: string
+  businessName: string
+  /** Owner's menu theme — the profile matches the menu, not fixed Scaniha orange. */
+  accent?: string
+  gradient?: string
+}) {
   const [phase, setPhase] = useState<'loading' | 'auth' | 'ready'>('loading')
   const [session, setSession] = useState<DinerSession | null>(null)
   const [loyaltyActive, setLoyaltyActive] = useState(false)
   const [rewards, setRewards] = useState<Reward[]>([])
   const [summary, setSummary] = useState<CustomerSummary>(EMPTY)
-  const [busyId, setBusyId] = useState<string | null>(null)
-  const [redeemed, setRedeemed] = useState<{ code: string; rewardLabel: string } | null>(null)
+  const [storeOpen, setStoreOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Validate any stored session on mount.
@@ -65,19 +74,7 @@ export default function ProfileClient({ slug, businessName }: { slug: string; bu
     const token = session?.token
     try { localStorage.removeItem('scaniha_diner_' + slug) } catch {}
     if (token) { try { await fetch('/api/account/' + slug, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout', token }) }) } catch {} }
-    setSession(null); setSummary(EMPTY); setRedeemed(null); setPhase('auth')
-  }
-
-  async function redeem(rw: Reward) {
-    if (!session) return
-    setBusyId(rw.id); setError(null)
-    try {
-      const r = await fetch('/api/loyalty/' + slug, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: session.phone, rewardId: rw.id }) })
-      const j = await r.json()
-      if (!r.ok || !j.success) throw new Error(j.error || 'Échange impossible.')
-      setRedeemed({ code: j.code, rewardLabel: j.rewardLabel })
-      await loadAccount(session.phone)
-    } catch (e: any) { setError(e?.message || 'Échange impossible.') } finally { setBusyId(null) }
+    setSession(null); setSummary(EMPTY); setStoreOpen(false); setPhase('auth')
   }
 
   const balance = summary.balance ?? 0
@@ -130,13 +127,36 @@ export default function ProfileClient({ slug, businessName }: { slug: string; bu
           </div>
         </div>
 
-        {redeemed && (
-          <div className="rounded-2xl border bg-white p-5 text-center" style={{ borderColor: '#ECE7DF' }}>
-            <p className="font-semibold text-[#1B1714]">{redeemed.rewardLabel}</p>
-            <div className="mx-auto mt-3 w-fit rounded-xl border bg-[#FAFAF9] px-5 py-2.5 font-mono text-xl font-bold tracking-[0.2em] text-[#1B1714]" style={{ borderColor: '#ECE7DF' }}>{redeemed.code}</div>
-            <p className="mt-2 text-xs text-[#8A8178]">Montrez ce code au personnel pour récupérer votre récompense.</p>
-          </div>
-        )}
+        {/* Actions — play the wheel + open the points store */}
+        <div className="space-y-2.5">
+          <Link
+            href={`/${slug}/jeu`}
+            className="flex items-center justify-center gap-2.5 rounded-2xl py-3.5 text-sm font-bold text-white transition active:scale-[0.99]"
+            style={{ backgroundImage: gradient, boxShadow: `0 10px 24px -12px ${accent}cc` }}
+          >
+            <svg viewBox="0 0 40 40" width="20" height="20" aria-hidden="true">
+              <circle cx="20" cy="20" r="15" fill="none" stroke="#fff" strokeWidth="2.4" />
+              <g stroke="#fff" strokeWidth="1.6" strokeLinecap="round">
+                <line x1="20" y1="20" x2="20" y2="7" /><line x1="20" y1="20" x2="31" y2="13.5" /><line x1="20" y1="20" x2="31" y2="26.5" /><line x1="20" y1="20" x2="20" y2="33" /><line x1="20" y1="20" x2="9" y2="26.5" /><line x1="20" y1="20" x2="9" y2="13.5" />
+              </g>
+              <circle cx="20" cy="20" r="3" fill="#fff" />
+            </svg>
+            Tourner la roue
+          </Link>
+          {loyaltyActive && rewards.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setStoreOpen(true)}
+              className="flex w-full items-center justify-center gap-2.5 rounded-2xl border bg-white py-3.5 text-sm font-bold text-[#1B1714] transition hover:bg-[#FAFAF9] active:scale-[0.99]"
+              style={{ borderColor: '#ECE7DF' }}
+            >
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ color: accent }}>
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+              Boutique — échanger mes points
+            </button>
+          )}
+        </div>
 
         {error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p>}
 
@@ -159,34 +179,6 @@ export default function ProfileClient({ slug, businessName }: { slug: string; bu
             <p className="mt-3 rounded-2xl border bg-[#FAFAF9] px-4 py-5 text-center text-sm text-[#8A8178]" style={{ borderColor: '#ECE7DF' }}>Aucun bon pour le moment. Tournez la roue pour gagner&nbsp;!</p>
           )}
         </section>
-
-        {/* Boutique — rewards */}
-        {loyaltyActive && rewards.length > 0 && (
-          <section>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-[#8A8178]">Récompenses</h2>
-            <div className="mt-3 space-y-2">
-              {rewards.map((r) => {
-                const affordable = balance >= r.points_cost
-                const busy = busyId === r.id
-                return (
-                  <div key={r.id} className="flex items-center justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: '#ECE7DF', backgroundColor: affordable ? '#fff' : '#FAFAF9' }}>
-                    <div className="min-w-0">
-                      <p className={`font-medium ${affordable ? 'text-[#1B1714]' : 'text-[#8A8178]'}`}>{r.label}</p>
-                      <p className="text-xs font-medium" style={{ color: affordable ? accent : '#B8AFA4' }}>{r.points_cost} points</p>
-                    </div>
-                    {affordable ? (
-                      <button type="button" onClick={() => redeem(r)} disabled={busy} className="shrink-0 rounded-xl px-4 py-2 text-xs font-bold text-white transition active:scale-[0.97] disabled:opacity-60" style={{ backgroundColor: accent }}>{busy ? '…' : 'Échanger'}</button>
-                    ) : (
-                      <span className="shrink-0 text-[#C8C0B5]" title={`Encore ${r.points_cost - balance} pts`} aria-label={`Encore ${r.points_cost - balance} points`}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-                      </span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        )}
 
         {/* Historique */}
         <section>
@@ -212,6 +204,18 @@ export default function ProfileClient({ slug, businessName }: { slug: string; bu
           <button type="button" onClick={logout} className="text-xs font-medium text-[#8A8178] underline-offset-2 hover:underline">Se déconnecter</button>
         </div>
       </div>
+
+      {/* Points store — a clean popup (grid), opened from the Boutique button */}
+      {storeOpen && session && (
+        <RewardsStore
+          slug={slug}
+          session={session}
+          accent={accent}
+          gradient={gradient}
+          onClose={() => { setStoreOpen(false); if (session) loadAccount(session.phone) }}
+          onRequireLogin={() => setStoreOpen(false)}
+        />
+      )}
     </div>
   )
 }

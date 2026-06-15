@@ -9,6 +9,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Stop mobile Safari from auto-zooming when a form field gains focus.
+   iOS zooms in whenever a focused control's font-size is BELOW 16px, so on
+   touch devices we pin form controls to exactly 16px. Desktop keeps its
+   designed sizes, and pinch-to-zoom stays enabled (no viewport maximum-scale
+   hack that would block readers from zooming the menu). !important is required
+   to beat Tailwind's text-sm / text-[13px] utilities on the same elements. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 
 :root {
   --foreground-rgb: 0, 0, 0;

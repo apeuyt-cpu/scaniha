@@ -34,6 +34,10 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
   // Prize NAME persists on a short debounce (not only on blur) so a typed name is
   // never lost if the owner switches tab or navigates before the input blurs.
   const labelTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+  // Slider odds persist on a short debounce so dragging stays smooth (one write
+  // per settle, not one per pixel). pendingWeights collects the final value per lot.
+  const weightTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingWeights = useRef<Map<string, number>>(new Map())
 
   const load = useCallback(async () => {
     setError(null)
@@ -73,6 +77,9 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
     load()
   }, [load])
 
+  // Flush nothing on unmount, just drop the pending timer to avoid a late setState.
+  useEffect(() => () => { if (weightTimer.current) clearTimeout(weightTimer.current) }, [])
+
   const SAVE_MSG = 'Impossible d\'enregistrer. Réessayez.'
 
   // Writes go through the server (requireOwner + service role) so a stale browser
@@ -110,6 +117,65 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
     if (!ok) { console.error('GameManager updatePrize error:', json.error); setError(json.error || SAVE_MSG) }
   }
 
+  // Persist a single field without touching local state (state is already set by
+  // the caller) — used by the odds slider so dragging doesn't churn React state.
+  async function persistPrize(id: string, patch: Partial<PrizeRow>) {
+    const { ok, json } = await gameApi('updatePrize', { prizeId: id, patch })
+    if (!ok) { console.error('GameManager persistPrize error:', json.error); setError(json.error || SAVE_MSG) }
+  }
+
+  // Debounced batch-save of slider weights: drag updates state instantly, the DB
+  // write fires ~450ms after the owner stops moving the slider.
+  function queueWeightSave(updates: Map<string, number>) {
+    updates.forEach((w, id) => pendingWeights.current.set(id, w))
+    if (weightTimer.current) clearTimeout(weightTimer.current)
+    weightTimer.current = setTimeout(async () => {
+      const entries = Array.from(pendingWeights.current.entries())
+      pendingWeights.current.clear()
+      for (const [id, w] of entries) await persistPrize(id, { weight: w })
+    }, 450)
+  }
+
+  // The odds are stored as weights that sum to 100, so weight reads as "% of spins".
+  // Setting one lot to t% scales the OTHER active lots proportionally to fill the
+  // remaining (100 − t)%, each keeping at least 1% — the total is always exactly 100.
+  function setPct(id: string, target: number) {
+    const active = prizes.filter((p) => p.active)
+    if (active.length <= 1) return // a single active lot is pinned at 100%
+    const others = active.filter((p) => p.id !== id)
+    const t = Math.max(1, Math.min(100 - others.length, Math.round(target)))
+    const otherInts = splitInt(others.map((p) => Math.max(0, p.weight || 0)), 100 - t, 1)
+    const next = new Map<string, number>()
+    next.set(id, t)
+    others.forEach((p, i) => next.set(p.id, otherInts[i]))
+    setPrizes((cur) => cur.map((p) => (next.has(p.id) ? { ...p, weight: next.get(p.id)! } : p)))
+    queueWeightSave(next)
+  }
+
+  // Re-spread the active lots' weights to sum to 100 after the active set changes
+  // (add / delete / activate / deactivate). Keeps the slider %s honest and ensures
+  // every active lot stays winnable (weight ≥ 1).
+  async function renormalizeActive(list: PrizeRow[]) {
+    const active = list.filter((p) => p.active)
+    if (active.length === 0) return
+    const ints = splitInt(active.map((p) => Math.max(0, p.weight || 0)), 100, 1)
+    const changed: [string, number][] = []
+    active.forEach((p, i) => { if (ints[i] !== p.weight) changed.push([p.id, ints[i]]) })
+    if (changed.length === 0) return
+    setPrizes((cur) => cur.map((p) => {
+      const c = changed.find(([cid]) => cid === p.id)
+      return c ? { ...p, weight: c[1] } : p
+    }))
+    for (const [id, w] of changed) await persistPrize(id, { weight: w })
+  }
+
+  function togglePrizeActive(p: PrizeRow) {
+    const next = prizes.map((x) => (x.id === p.id ? { ...x, active: !x.active } : x))
+    setPrizes(next)
+    persistPrize(p.id, { active: !p.active })
+    renormalizeActive(next)
+  }
+
   function saveLabelDebounced(id: string, label: string) {
     clearTimeout(labelTimers.current[id])
     labelTimers.current[id] = setTimeout(() => updatePrize(id, { label }), 600)
@@ -118,14 +184,18 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
   async function addPrize() {
     if (!game) return
     const { ok, json } = await gameApi('addPrize', { gameId: game.id, position: prizes.length })
-    if (!ok || !json.prize) { console.error('GameManager addPrize error:', json.error); setError(json.error || SAVE_MSG) }
-    else setPrizes((cur) => [...cur, json.prize])
+    if (!ok || !json.prize) { console.error('GameManager addPrize error:', json.error); setError(json.error || SAVE_MSG); return }
+    const next = [...prizes, json.prize as PrizeRow]
+    setPrizes(next)
+    renormalizeActive(next) // give the new lot a fair share, keep the total at 100%
   }
 
   async function deletePrize(id: string) {
     const { ok, json } = await gameApi('deletePrize', { prizeId: id })
-    if (!ok) { console.error('GameManager deletePrize error:', json.error); setError(json.error || SAVE_MSG) }
-    else setPrizes((cur) => cur.filter((p) => p.id !== id))
+    if (!ok) { console.error('GameManager deletePrize error:', json.error); setError(json.error || SAVE_MSG); return }
+    const next = prizes.filter((p) => p.id !== id)
+    setPrizes(next)
+    renormalizeActive(next) // re-spread the freed-up odds across the remaining lots
   }
 
   if (loading) {
@@ -146,31 +216,20 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
     )
   }
 
-  const activePrizes = prizes.filter((p) => p.active && p.weight > 0).length
-
-  // Drop chance = a prize's weight as a share of all active weight, so the owner
-  // tunes the odds directly (and, with the cost field, can budget the giveaway).
-  const totalWeight = prizes.reduce((s, p) => (p.active ? s + Math.max(0, p.weight || 0) : s), 0)
-  const chancePct = (w: number | null | undefined) =>
-    totalWeight > 0 ? (Math.max(0, w || 0) / totalWeight) * 100 : 0
-  const avgCostPerPlay =
-    totalWeight > 0
-      ? prizes.reduce(
-          (s, p) => (p.active ? s + (Math.max(0, p.weight || 0) / totalWeight) * (Number(p.cost) || 0) : s),
-          0
-        )
-      : 0
-
-  // One-tap: scale active weights so they sum to 100 → weight reads as the % directly.
-  async function balanceTo100() {
-    const active = prizes.filter((p) => p.active && p.weight > 0)
-    const tot = active.reduce((s, p) => s + p.weight, 0)
-    if (tot <= 0) return
-    for (const p of active) {
-      const w = Math.max(1, Math.round((p.weight / tot) * 100))
-      if (w !== p.weight) await updatePrize(p.id, { weight: w })
-    }
-  }
+  // Display odds: each active lot's share rounded to whole %s that ALWAYS sum to
+  // 100 (largest-remainder), so the live bar and the readouts never lie by ±1.
+  const activeList = prizes.filter((p) => p.active)
+  const activePcts = splitInt(activeList.map((p) => Math.max(0, p.weight || 0)), 100, activeList.length ? 1 : 0)
+  const pctById: Record<string, number> = {}
+  activeList.forEach((p, i) => { pctById[p.id] = activePcts[i] })
+  const activePrizes = activeList.length
+  // A lot can take at most this %, leaving every other active lot at least 1%.
+  const sliderMax = Math.max(1, 100 - (activeList.length - 1))
+  // Stable warm colour per lot (by row order) — shared by the live bar and dots.
+  const colorById: Record<string, string> = {}
+  prizes.forEach((p, i) => { colorById[p.id] = PRIZE_COLORS[i % PRIZE_COLORS.length] })
+  // Average giveaway cost per spin, from the displayed odds (advanced/budget only).
+  const avgCostPerPlay = activeList.reduce((s, p) => s + ((pctById[p.id] || 0) / 100) * (Number(p.cost) || 0), 0)
 
   return (
     <div className="space-y-4">
@@ -205,16 +264,39 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
           <div>
             <h4 className="font-semibold text-zinc-900">Lots de la roue</h4>
             <p className="mt-0.5 text-xs text-zinc-400">
-              Ajoutez vos lots et leur chance de tomber. Tout le monde gagne quelque chose.
+              Glissez pour régler la chance de chaque lot — le total reste toujours à 100&nbsp;%.
             </p>
           </div>
           <Button variant="neutral" onClick={addPrize} className="!min-h-0 shrink-0 px-3 py-2 text-xs">+ Lot</Button>
         </div>
+
+        {/* Live odds bar — each active lot's share at a glance; the per-row dots are its legend */}
+        {activeList.length > 0 && (
+          <div className="mt-4">
+            <div className="flex h-3 w-full overflow-hidden rounded-full bg-zinc-100">
+              {activeList.map((p) => (
+                <div
+                  key={p.id}
+                  className="h-full transition-[width] duration-150"
+                  style={{ width: `${pctById[p.id]}%`, backgroundColor: colorById[p.id], boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.65)' }}
+                  title={`${p.label || 'Lot'} · ${pctById[p.id]}%`}
+                />
+              ))}
+            </div>
+            <p className="mt-2 text-center text-[11px] text-zinc-400">Tout le monde gagne — les chances font toujours 100&nbsp;%.</p>
+          </div>
+        )}
+
         <div className="mt-4 space-y-2.5">
           {prizes.map((p) => (
             <div key={p.id} className={`rounded-xl border border-zinc-100 bg-zinc-50/60 p-3 ${p.active ? '' : 'opacity-60'}`}>
               {/* Row 1: name · active · delete */}
               <div className="flex items-center gap-2">
+                <span
+                  className="h-3 w-3 shrink-0 rounded-full"
+                  style={{ backgroundColor: p.active ? colorById[p.id] : '#D4D4D8' }}
+                  aria-hidden="true"
+                />
                 <input
                   value={p.label}
                   onChange={(e) => { const v = e.target.value; setPrizes((cur) => cur.map((x) => (x.id === p.id ? { ...x, label: v } : x))); saveLabelDebounced(p.id, v) }}
@@ -224,7 +306,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                 />
                 <button
                   type="button"
-                  onClick={() => updatePrize(p.id, { active: !p.active })}
+                  onClick={() => togglePrizeActive(p)}
                   aria-pressed={p.active}
                   className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition ${p.active ? 'bg-green-100 text-green-700' : 'bg-zinc-200 text-zinc-500'}`}
                 >
@@ -240,22 +322,27 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                   ✕
                 </button>
               </div>
-              {/* Row 2: win chance (weight) + the real % it represents */}
-              <div className="mt-2.5 flex items-center gap-3">
-                <label className="flex items-center gap-2 text-[11px] font-semibold text-zinc-500">
-                  <span>Chance</span>
+              {/* Row 2: chance-of-winning slider — moving one auto-balances the rest to 100% */}
+              {p.active ? (
+                <div className="mt-3 flex items-center gap-3">
                   <input
-                    type="number"
-                    min={0}
-                    value={p.weight}
-                    onChange={(e) => updatePrize(p.id, { weight: Math.max(0, Number(e.target.value)) })}
-                    className="w-16 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
+                    type="range"
+                    min={1}
+                    max={sliderMax}
+                    step={1}
+                    value={pctById[p.id] ?? 0}
+                    disabled={activeList.length <= 1}
+                    onChange={(e) => setPct(p.id, Number(e.target.value))}
+                    aria-label={`Chance de gagner « ${p.label || 'lot'} »`}
+                    className="h-6 flex-1 cursor-pointer accent-orange-500 disabled:cursor-default disabled:opacity-50"
                   />
-                </label>
-                <span className={`text-xs font-bold ${p.active ? 'text-green-600' : 'text-zinc-400'}`}>
-                  ≈ {chancePct(p.weight).toFixed(0)}% des tours
-                </span>
-              </div>
+                  <span className="w-12 shrink-0 text-right text-base font-bold tabular-nums" style={{ color: colorById[p.id] }}>
+                    {pctById[p.id] ?? 0}%
+                  </span>
+                </div>
+              ) : (
+                <p className="mt-2 text-[11px] text-zinc-400">Désactivé — n&apos;apparaît pas sur la roue.</p>
+              )}
               {/* Advanced: cost (feeds the budget) + stock cap */}
               {advanced && (
                 <div className="mt-2.5 grid grid-cols-2 gap-2">
@@ -289,20 +376,10 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
           {prizes.length === 0 && <p className="py-6 text-center text-sm text-zinc-400">Aucun lot — ajoutez-en au moins deux.</p>}
         </div>
 
-        {/* Odds total + giveaway budget — advanced only */}
-        {advanced && prizes.length > 0 && (
+        {/* Giveaway budget — advanced only (odds now live on the sliders above) */}
+        {advanced && activeList.length > 0 && (
           <div className="mt-4 space-y-2 rounded-xl bg-zinc-50 p-3 text-xs">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-semibold text-zinc-600">
-                Total des chances : <span className="text-zinc-900">{totalWeight}</span>
-              </span>
-              {totalWeight > 0 && totalWeight !== 100 && (
-                <button type="button" onClick={balanceTo100} className="font-semibold text-orange-600 hover:underline">
-                  Répartir sur 100&nbsp;%
-                </button>
-              )}
-            </div>
-            <div className="flex items-center justify-between gap-2 border-t border-zinc-200 pt-2">
+            <div className="flex items-center justify-between gap-2">
               <span className="font-semibold text-zinc-600">Coût moyen par partie</span>
               <span className="font-bold text-zinc-900">{avgCostPerPlay.toFixed(2)} TND</span>
             </div>
@@ -395,4 +472,36 @@ function Stat({ label, value }: { label: string; value: number }) {
       <p className="mt-0.5 text-[11px] leading-tight text-zinc-500">{label}</p>
     </div>
   )
+}
+
+/* Warm, on-brand palette (orange → amber) for the odds bar + per-lot dots. */
+const PRIZE_COLORS = ['#F47B20', '#FB923C', '#F59E0B', '#FDBA74', '#FBBF24', '#EA580C', '#FCD34D', '#FED7AA']
+
+/**
+ * Split `total` across `parts` proportionally, as whole numbers that sum EXACTLY
+ * to `total`, each at least `min` (largest-remainder method). Used to turn lot
+ * weights into clean percentages that always add up to 100.
+ */
+function splitInt(parts: number[], total: number, min = 1): number[] {
+  const n = parts.length
+  if (n === 0) return []
+  if (total <= 0) return parts.map(() => 0)
+  const effMin = Math.min(min, Math.floor(total / n)) // stay feasible when total < n
+  const sum = parts.reduce((a, b) => a + Math.max(0, b), 0)
+  const raw = parts.map((w) => (sum > 0 ? (Math.max(0, w) / sum) * total : total / n))
+  const ints = raw.map((r) => Math.max(effMin, Math.floor(r)))
+  const order = raw
+    .map((r, i) => ({ i, frac: r - Math.floor(r) }))
+    .sort((a, b) => b.frac - a.frac)
+  let used = ints.reduce((a, b) => a + b, 0)
+  let k = 0
+  while (used < total) { ints[order[k % n].i]++; used++; k++ }
+  let guard = 0
+  while (used > total && guard < 100000) {
+    let idx = -1
+    for (let j = n - 1; j >= 0; j--) { const ri = order[j].i; if (ints[ri] > effMin) { idx = ri; break } }
+    if (idx < 0) break
+    ints[idx]--; used--; guard++
+  }
+  return ints
 }

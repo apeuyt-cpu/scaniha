@@ -1,7 +1,8 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getBusinessBySlugCached } from '@/lib/db/business'
-import { businessAccent } from '@/lib/db/game'
+import { businessAccent, businessGradient } from '@/lib/db/game'
+import { isFidelityEnabled } from '@/lib/design-settings'
 import ProfileClient from '@/components/menu/ProfileClient'
 import BottomNav from '@/components/menu/BottomNav'
 
@@ -26,11 +27,14 @@ export default async function ProfilePage({ params }: { params: Promise<{ slug: 
     notFound()
   }
   if (!business) notFound()
+  // Fidelity system off → no profile page; send them back to the menu.
+  if (!isFidelityEnabled(business)) redirect(`/${business.slug}`)
 
   const accent = businessAccent(business)
+  const gradient = businessGradient(business)
   return (
     <>
-      <ProfileClient slug={business.slug} businessName={business.name} />
+      <ProfileClient slug={business.slug} businessName={business.name} accent={accent} gradient={gradient} />
       <BottomNav slug={business.slug} accent={accent} active="profile" />
     </>
   )

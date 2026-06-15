@@ -256,6 +256,16 @@ export function getBrandContact(business: any): { enabled: boolean; phone: strin
   }
 }
 
+/**
+ * Master "fidelity system" switch (business-wide sibling key in design_settings).
+ * OFF → the business is a PURE QR menu: no bottom nav, no profile page, no
+ * roulette, no loyalty/points. ON → the full engagement layer appears.
+ * Opt-in: defaults OFF until the owner turns it on in the admin.
+ */
+export function isFidelityEnabled(business: any): boolean {
+  return business?.design_settings?.loyaltyEnabled === true
+}
+
 type AnyItem = { id: string | number; available?: boolean }
 
 /** Deterministic-ish shuffle seeded by a number (so SSR/CSR agree per render seed). */

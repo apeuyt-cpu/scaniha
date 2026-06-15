@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import GameManager from '@/components/admin/GameManager'
 import LoyaltyManager from '@/components/admin/LoyaltyManager'
+import FidelityToggle from '@/components/admin/game/FidelityToggle'
 
 /** Fetches the owner's business, then shows Roue / Fidélité config in tabs. */
 export default function GameTabs() {
@@ -34,6 +35,9 @@ export default function GameTabs() {
 
   return (
     <div className="space-y-4">
+      {/* Master switch: QR menu only ↔ QR menu + fidelity. */}
+      <FidelityToggle businessId={business.id} />
+
       <div className="grid grid-cols-2 gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1">
         <TabBtn active={tab === 'roue'} onClick={() => setTab('roue')} icon={<IconWheel />}>Roue</TabBtn>
         <TabBtn active={tab === 'fidelite'} onClick={() => setTab('fidelite')} icon={<IconStar />}>Fidélité</TabBtn>

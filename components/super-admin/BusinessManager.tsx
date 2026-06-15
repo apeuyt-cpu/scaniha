@@ -6,6 +6,7 @@ import { useToast } from './Toast'
 import Button from '@/components/admin/ui/Button'
 import Toggle from '@/components/admin/ui/Toggle'
 import { inputClass } from '@/components/admin/ui/Field'
+import { QR_TTL_OPTIONS } from '@/lib/game'
 
 type Business = Database['public']['Tables']['businesses']['Row'] & {
   wheel_enabled?: boolean
@@ -43,6 +44,16 @@ function getTimeRemaining(expiresAt: string | null) {
   return { text: `${mins} min restantes`, color: 'text-red-600', urgent: true, expired: false }
 }
 
+/** "10 min" / "2 h" label for a scan-session TTL. */
+function ttlLabel(min: number): string {
+  if (min < 60) return `${min} min`
+  const h = min / 60
+  return Number.isInteger(h) ? `${h} h` : `${min} min`
+}
+
+/** Per-café QR-gate state, loaded lazily when the detail sheet opens. */
+type QrGateState = { exists: boolean; gameActive?: boolean; enabled?: boolean; ttlMin?: number; hasKey?: boolean }
+
 function bucketOf(b: Business): Exclude<StatusFilter, 'all'> {
   if (b.status === 'paused') return 'suspended'
   if (!b.expires_at) return 'unlimited'
@@ -73,6 +84,9 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
   const [suspendConfirm, setSuspendConfirm] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [deleteNameInput, setDeleteNameInput] = useState('')
+  // QR scan-to-play gate (games.config.qrGate) — loaded per café when the sheet opens.
+  const [qrGate, setQrGate] = useState<QrGateState | null>(null)
+  const [qrRegenConfirm, setQrRegenConfirm] = useState(false)
 
   const selected = useMemo(() => businesses.find((b) => b.id === selectedId) || null, [businesses, selectedId])
 
@@ -86,6 +100,19 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
     setSuspendConfirm(false)
     setDeleteConfirm(false)
     setDeleteNameInput('')
+    setQrRegenConfirm(false)
+  }, [selectedId])
+
+  // Lazy-load the café's QR-gate state when a detail sheet opens.
+  useEffect(() => {
+    if (!selectedId) { setQrGate(null); return }
+    let cancelled = false
+    setQrGate(null)
+    fetch(`/api/super-admin/businesses/${selectedId}/qr-gate`)
+      .then((r) => r.json())
+      .then((j) => { if (!cancelled) setQrGate(j) })
+      .catch(() => { if (!cancelled) setQrGate({ exists: false }) })
+    return () => { cancelled = true }
   }, [selectedId])
 
   // Lock body scroll while the sheet is open.
@@ -238,6 +265,27 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
       }
       setBusinesses((cur) => cur.map((b) => (b.id === business.id ? { ...b, wheel_enabled: next } : b)))
       toast(next ? 'Roue de la chance activée.' : 'Roue de la chance désactivée.', 'success')
+    } catch (err: any) {
+      toast(err.message || 'Une erreur est survenue.', 'error')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  // ── QR scan-to-play gate ────────────────────────────────────────────
+  const patchQrGate = async (businessId: string, patch: Record<string, unknown>, okMsg: string) => {
+    setLoading(`qr-${businessId}`)
+    try {
+      const res = await fetch(`/api/super-admin/businesses/${businessId}/qr-gate`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour.')
+      setQrGate((cur) => ({ ...(cur || { exists: true }), ...json }))
+      setQrRegenConfirm(false)
+      toast(okMsg, 'success')
     } catch (err: any) {
       toast(err.message || 'Une erreur est survenue.', 'error')
     } finally {
@@ -547,6 +595,83 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                       </button>
                     )}
                   </div>
+                </Section>
+
+                {/* QR scan-to-play gate */}
+                <Section title="Scan QR pour jouer">
+                  {qrGate === null ? (
+                    <p className="text-sm text-zinc-400">Chargement…</p>
+                  ) : !qrGate.exists ? (
+                    <p className="rounded-xl bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
+                      Ce café n’a pas encore configuré la roue — rien à verrouiller pour l’instant.
+                    </p>
+                  ) : (
+                    <>
+                      <Toggle
+                        checked={Boolean(qrGate.enabled)}
+                        onChange={(v) => patchQrGate(b.id, { enabled: v }, v ? 'Scan du QR requis pour jouer.' : 'Scan du QR non requis.')}
+                        disabled={loading === `qr-${b.id}`}
+                        label="Exiger le scan du QR"
+                        hint="Le client doit avoir scanné le QR du café récemment pour tourner la roue."
+                      />
+                      {qrGate.enabled && (
+                        <>
+                          <div className="mt-4">
+                            <p className="text-xs font-medium text-zinc-600">Validité d’un scan</p>
+                            <div className="mt-1.5 inline-flex flex-wrap gap-1 rounded-xl border border-zinc-200 p-1">
+                              {QR_TTL_OPTIONS.map((m) => (
+                                <button
+                                  key={m}
+                                  type="button"
+                                  onClick={() => patchQrGate(b.id, { ttlMin: m }, `Validité réglée sur ${ttlLabel(m)}.`)}
+                                  disabled={loading === `qr-${b.id}`}
+                                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${qrGate.ttlMin === m ? 'bg-orange-500 text-white' : 'text-zinc-600 hover:bg-zinc-100'}`}
+                                >
+                                  {ttlLabel(m)}
+                                </button>
+                              ))}
+                            </div>
+                            <p className="mt-1.5 text-[11px] text-zinc-400">Au-delà, le client doit re-scanner le QR pour rejouer.</p>
+                          </div>
+
+                          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                            <p className="text-[12px] leading-relaxed text-amber-800">
+                              ⚠️ Après activation ou régénération, le café doit <strong>ré-imprimer son QR</strong> depuis Partage, sinon l’ancien QR ne débloque plus la roue.
+                            </p>
+                            <div className="mt-2">
+                              {qrRegenConfirm ? (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs text-amber-800">Régénérer la clé ? L’ancien QR cessera de fonctionner.</span>
+                                  <button
+                                    onClick={() => patchQrGate(b.id, { regen: true }, 'Nouvelle clé QR générée.')}
+                                    disabled={loading === `qr-${b.id}`}
+                                    className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700 disabled:opacity-50"
+                                  >
+                                    {loading === `qr-${b.id}` ? 'En cours…' : 'Confirmer'}
+                                  </button>
+                                  <button onClick={() => setQrRegenConfirm(false)} className="text-xs font-semibold text-zinc-500 hover:text-zinc-700">Annuler</button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setQrRegenConfirm(true)}
+                                  disabled={loading === `qr-${b.id}`}
+                                  className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-50"
+                                >
+                                  ↻ Régénérer la clé du QR
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {qrGate.gameActive === false && (
+                            <p className="mt-3 text-[12px] text-zinc-400">
+                              Note : la roue de ce café est inactive — le verrou s’appliquera dès qu’elle sera activée.
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
                 </Section>
 
                 {/* Danger zone */}

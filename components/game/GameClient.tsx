@@ -5,7 +5,6 @@ import Link from 'next/link'
 import RouletteWheel from './RouletteWheel'
 import Confetti from './Confetti'
 import DinerAuth, { type DinerSession } from './DinerAuth'
-import AccountSheet from './AccountSheet'
 import RewardsStore from './RewardsStore'
 import PlayGatesGate from './PlayGatesGate'
 import type { GameGate } from '@/lib/game'
@@ -66,7 +65,6 @@ export default function GameClient({ slug }: { slug: string }) {
   const [confetti, setConfetti] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [accountOpen, setAccountOpen] = useState(false)
   const [storeOpen, setStoreOpen] = useState(false)
   const [winModalOpen, setWinModalOpen] = useState(false)
   const [pendingSpin, setPendingSpin] = useState(false)
@@ -168,7 +166,6 @@ export default function GameClient({ slug }: { slug: string }) {
     setResult(null)
     setRevealed(false)
     setConfetti(false)
-    setAccountOpen(false)
     setAuthMessage(message ?? null)
     setPhase('auth')
   }
@@ -192,7 +189,6 @@ export default function GameClient({ slug }: { slug: string }) {
     setResult(null)
     setRevealed(false)
     setConfetti(false)
-    setAccountOpen(false)
     setAuthMessage(null)
     setError(null)
     setPhase('auth')
@@ -386,9 +382,8 @@ export default function GameClient({ slug }: { slug: string }) {
             </button>
           )}
           {session ? (
-            <button
-              type="button"
-              onClick={() => setAccountOpen(true)}
+            <Link
+              href={`/${slug}/profil`}
               aria-label="Mon compte"
               className="flex h-11 w-11 items-center justify-center rounded-full border bg-white text-[#1B1714] transition active:scale-95"
               style={{ borderColor: '#ECE7DF', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
@@ -397,7 +392,7 @@ export default function GameClient({ slug }: { slug: string }) {
                 <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
-            </button>
+            </Link>
           ) : (
             !loyaltyActive && <span className="h-11 w-11" aria-hidden="true" />
           )}
@@ -486,14 +481,13 @@ export default function GameClient({ slug }: { slug: string }) {
                 </button>
               )}
               {session && (
-                <button
-                  type="button"
-                  onClick={() => setAccountOpen(true)}
-                  className="rounded-2xl border bg-white py-3.5 text-sm font-medium text-[#1B1714] transition hover:bg-[#FAFAF9] active:scale-[0.99]"
+                <Link
+                  href={`/${slug}/profil`}
+                  className="rounded-2xl border bg-white py-3.5 text-center text-sm font-medium text-[#1B1714] transition hover:bg-[#FAFAF9] active:scale-[0.99]"
                   style={{ borderColor: '#ECE7DF' }}
                 >
                   Mon compte
-                </button>
+                </Link>
               )}
               <Link
                 href={`/${slug}`}
@@ -525,19 +519,7 @@ export default function GameClient({ slug }: { slug: string }) {
           copied={copied}
           onCopy={copyCode}
           slug={slug}
-          onAccount={() => { setWinModalOpen(false); setAccountOpen(true) }}
           onClose={() => setWinModalOpen(false)}
-        />
-      )}
-
-      {/* Account sheet */}
-      {accountOpen && session && (
-        <AccountSheet
-          slug={slug}
-          session={session}
-          accent={accent}
-          gradient={gradient}
-          onClose={() => setAccountOpen(false)}
         />
       )}
 
@@ -596,7 +578,6 @@ function WinModal({
   accent,
   copied,
   onCopy,
-  onAccount,
   slug,
   onClose,
 }: {
@@ -604,7 +585,6 @@ function WinModal({
   accent: string
   copied: boolean
   onCopy: () => void
-  onAccount: () => void
   slug: string
   onClose: () => void
 }) {
@@ -670,17 +650,16 @@ function WinModal({
         <NextSpinCountdown accent={accent} />
 
         <div className="mt-5 flex flex-col gap-2.5">
-          <button
-            type="button"
-            onClick={onAccount}
-            className="rounded-2xl py-3.5 text-sm font-medium text-white transition active:scale-[0.99]"
+          <Link
+            href={`/${slug}/profil`}
+            className="rounded-2xl py-3.5 text-center text-sm font-medium text-white transition active:scale-[0.99]"
             style={{ backgroundColor: accent, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
           >
             Mon compte
-          </button>
+          </Link>
           <Link
             href={`/${slug}`}
-            className="rounded-2xl border bg-white py-3.5 text-sm font-medium text-[#1B1714] transition hover:bg-[#FAFAF9]"
+            className="rounded-2xl border bg-white py-3.5 text-center text-sm font-medium text-[#1B1714] transition hover:bg-[#FAFAF9]"
             style={{ borderColor: '#ECE7DF' }}
           >
             ← Retour au menu

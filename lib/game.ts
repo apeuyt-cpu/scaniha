@@ -72,12 +72,12 @@ export interface QrGateSummary {
   enabled: boolean
 }
 
-/** Allowed scan-session durations (minutes) offered in the admin. */
-export const QR_TTL_OPTIONS = [30, 60, 120, 240, 480] as const
+/** Allowed scan-session durations (minutes) offered in the admin + super-admin. */
+export const QR_TTL_OPTIONS = [10, 30, 60, 120, 240, 480] as const
 
 export const DEFAULT_QR_GATE: QrGateConfig = {
   enabled: false,
-  ttlMin: 120,
+  ttlMin: 10,
   qrKey: '',
   message: '',
   alsoRedeem: false,

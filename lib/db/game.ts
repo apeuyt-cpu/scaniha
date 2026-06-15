@@ -164,6 +164,63 @@ export async function playGame(slug: string, deviceId: string | null, phone: str
   }
 }
 
+/**
+ * Start of "today" in Tunisia (UTC+1, no DST), as an ISO instant — the daily
+ * window. Mirrors the SQL `date_trunc('day', now() at time zone 'Africa/Tunis')`
+ * so the Node guard and the RPC agree on when "today" began.
+ */
+function tunisDayStartISO(): string {
+  const ymd = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Tunis',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+  return new Date(`${ymd}T00:00:00+01:00`).toISOString()
+}
+
+/**
+ * Defence-in-depth daily-limit check in Node. The authoritative, race-safe check
+ * is inside the play_game RPC (serialized by a row lock); this ALSO enforces the
+ * limit when the deployed RPC is out of date (the common cause of "I can still
+ * spin a lot"). Returns the block reason, or null when within the limit.
+ * Fails OPEN on a transient error so a legit spin is never wrongly blocked.
+ */
+export async function dailyLimitBlocked(
+  slug: string,
+  deviceId: string | null,
+  phone: string | null
+): Promise<'phone_limit' | 'device_limit' | null> {
+  try {
+    const supabase: any = await createServiceRoleClient()
+    const { data: business } = await supabase
+      .from('businesses').select('id').eq('slug', slug).eq('status', 'active').maybeSingle()
+    if (!business) return null
+    const { data: game } = await supabase
+      .from('games').select('id, daily_limit')
+      .eq('business_id', business.id).eq('type', 'roulette').eq('active', true).maybeSingle()
+    if (!game) return null
+    const limit = Math.max(1, Number(game.daily_limit) || 1)
+    const since = tunisDayStartISO()
+    if (phone) {
+      const { count } = await supabase
+        .from('plays').select('id', { count: 'exact', head: true })
+        .eq('game_id', game.id).eq('customer_phone', phone).gte('created_at', since)
+      if ((count || 0) >= limit) return 'phone_limit'
+    }
+    if (deviceId) {
+      const { count } = await supabase
+        .from('plays').select('id', { count: 'exact', head: true })
+        .eq('game_id', game.id).eq('device_id', deviceId).gte('created_at', since)
+      if ((count || 0) >= limit) return 'device_limit'
+    }
+    return null
+  } catch (e: any) {
+    console.error('dailyLimitBlocked:', e?.message)
+    return null
+  }
+}
+
 /** Coerce a stored games.config.qrGate blob into a safe, complete QrGateConfig. */
 export function normalizeQrGate(raw: any): QrGateConfig {
   if (!raw || typeof raw !== 'object') return DEFAULT_QR_GATE

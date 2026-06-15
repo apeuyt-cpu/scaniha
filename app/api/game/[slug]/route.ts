@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { loadGameConfig, playGame, loadQrGate } from '@/lib/db/game'
+import { loadGameConfig, playGame, loadQrGate, dailyLimitBlocked } from '@/lib/db/game'
 import { dinerSession } from '@/lib/db/account'
 import { scanCookieName, verifyScan } from '@/lib/qr-session'
 
@@ -70,6 +70,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
         { status: 403 }
       )
     }
+  }
+
+  // Daily-limit guard in Node — also blocks if the deployed play_game RPC is
+  // outdated (the usual reason a diner "can still spin a lot"). The RPC remains
+  // the authoritative, race-safe check.
+  const limited = await dailyLimitBlocked(slug, deviceId, phone)
+  if (limited) {
+    const e = ERR[limited]
+    return NextResponse.json({ success: false, error: e.msg }, { status: e.status })
   }
 
   const result = await playGame(slug, deviceId, phone)

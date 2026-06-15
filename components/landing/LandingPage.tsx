@@ -241,6 +241,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
                 alt="Le menu numérique Scaniha affiché sur plusieurs smartphones"
                 sizes="(min-width: 1024px) 960px, 100vw"
                 priority
+                placeholder="blur"
                 className="float-img relative z-10 mx-auto block h-auto w-full"
               />
             </div>

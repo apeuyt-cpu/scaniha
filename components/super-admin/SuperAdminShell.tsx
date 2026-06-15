@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 
 const TABS = [
   { href: '/super-admin', label: 'Aperçu' },
+  { href: '/super-admin/activity', label: 'Activité' },
   { href: '/super-admin/businesses', label: 'Comptes' },
   { href: '/super-admin/payments', label: 'Paiements', badge: true },
   { href: '/super-admin/devis', label: 'Devis' },

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { DinerSession } from './DinerAuth'
+import ScanGateNotice from './ScanGateNotice'
 
 interface Reward {
   id: string
@@ -34,6 +35,7 @@ export default function RewardsStore({
 }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [rescan, setRescan] = useState<string | null>(null)
   const [rewards, setRewards] = useState<Reward[]>([])
   const [balance, setBalance] = useState(0)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -42,6 +44,7 @@ export default function RewardsStore({
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
+    setRescan(null)
     try {
       const q = session?.phone ? `?phone=${encodeURIComponent(session.phone)}` : ''
       const res = await fetch(`/api/loyalty/${slug}${q}`)
@@ -69,6 +72,7 @@ export default function RewardsStore({
     if (!session) { onRequireLogin?.(); return }
     setBusyId(reward.id)
     setError(null)
+    setRescan(null)
     try {
       const res = await fetch(`/api/loyalty/${slug}`, {
         method: 'POST',
@@ -76,8 +80,11 @@ export default function RewardsStore({
         body: JSON.stringify({ phone: session.phone, rewardId: reward.id }),
       })
       const j = await res.json()
-      // QR-session gate (403 rescanRequired) surfaces as a normal error message
-      // below — the diner re-scans the café QR, then retries.
+      // QR-session gate (403 rescanRequired): friendly scan prompt, not a red error.
+      if (res.status === 403 && j.rescanRequired) {
+        setRescan(typeof j.error === 'string' ? j.error : '')
+        return
+      }
       if (!res.ok || !j.success) throw new Error(j.error || 'Échange impossible.')
       setRedeemed({ code: j.code, rewardLabel: j.rewardLabel })
       await load()
@@ -127,7 +134,11 @@ export default function RewardsStore({
             </div>
           ) : (
             <>
-              {error && <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p>}
+              {rescan !== null ? (
+                <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour échanger" className="mb-3" />
+              ) : error ? (
+                <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p>
+              ) : null}
 
               {redeemed && (
                 <div className="mb-4 rounded-2xl border bg-white p-5 text-center" style={{ borderColor: '#ECE7DF' }}>

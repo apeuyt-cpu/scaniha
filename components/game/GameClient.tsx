@@ -7,6 +7,7 @@ import Confetti from './Confetti'
 import DinerAuth, { type DinerSession } from './DinerAuth'
 import RewardsStore from './RewardsStore'
 import PlayGatesGate from './PlayGatesGate'
+import ScanGateNotice from './ScanGateNotice'
 import type { GameGate } from '@/lib/game'
 
 type Phase = 'loading' | 'inactive' | 'auth' | 'ready' | 'spinning' | 'won' | 'blocked'
@@ -65,6 +66,7 @@ export default function GameClient({ slug }: { slug: string }) {
   const [confetti, setConfetti] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [rescan, setRescan] = useState<string | null>(null)
   const [storeOpen, setStoreOpen] = useState(false)
   const [winModalOpen, setWinModalOpen] = useState(false)
   const [pendingSpin, setPendingSpin] = useState(false)
@@ -208,6 +210,7 @@ export default function GameClient({ slug }: { slug: string }) {
       return
     }
     setError(null)
+    setRescan(null)
     // Replay: clear the previous win so the wheel re-spins from scratch instead
     // of snapping to the old prize before the new result lands.
     setResult(null)
@@ -226,8 +229,13 @@ export default function GameClient({ slug }: { slug: string }) {
           return
         }
         // QR-session gate (403 rescanRequired): the scan expired or they never
-        // scanned. Stay on 'ready' (not 'blocked' — that's the daily-limit
-        // countdown) so the spin button remains once they re-scan the café QR.
+        // scanned. Show a friendly "scan to play" card (not a red error) and keep
+        // the spin button so they can retry right after re-scanning the café QR.
+        if (res.status === 403 && json.rescanRequired) {
+          setPhase('ready')
+          setRescan(typeof json.error === 'string' ? json.error : '')
+          return
+        }
         setPhase(res.status === 429 ? 'blocked' : 'ready')
         setError(json.error || 'Une erreur est survenue. Réessayez.')
         return
@@ -440,10 +448,15 @@ export default function GameClient({ slug }: { slug: string }) {
             >
               {phase === 'spinning' ? 'La roue tourne…' : 'Tourner la roue'}
             </button>
-            <p className="mt-3 text-center text-[11px] leading-relaxed text-[#8A8178]">
-              Vos gains et vos points sont gardés sur votre compte.
-            </p>
-            {error && <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p>}
+            {rescan !== null ? (
+              <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour jouer" />
+            ) : error ? (
+              <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p>
+            ) : (
+              <p className="mt-3 text-center text-[11px] leading-relaxed text-[#8A8178]">
+                Vos gains et vos points sont gardés sur votre compte.
+              </p>
+            )}
           </>
         ) : (
           <div className="space-y-3">

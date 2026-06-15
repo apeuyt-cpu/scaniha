@@ -66,6 +66,11 @@ supabase/.temp/
 # Local promo/poster image dump (~43 MB of source PNGs) — not app assets.
 /POSTES/
 
+# Local-only internal product catalog (physical products / pricing). Dev machine
+# ONLY — must never be committed or deployed. The page also self-guards on
+# NODE_ENV so a prod build 404s it. Do NOT remove this rule.
+/app/secret-products/
+
 # Runtime dev-server log
 dev-server.log
 

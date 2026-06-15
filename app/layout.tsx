@@ -11,11 +11,14 @@ export const metadata: Metadata = {
   },
   description: 'Scaniha, l’application tunisienne de menu QR : créez un menu numérique élégant pour votre restaurant ou café en quelques minutes, sans application ni compétences techniques. Essai gratuit.',
   keywords: [
-    'Scaniha', 'menu QR', 'créateur de menu QR', 'menu numérique restaurant',
+    'Scaniha', 'scaniha', 'Scaniha Tunisie', 'scaniha menu', 'scaniha app', 'scaniha.com',
+    'menu QR', 'créateur de menu QR', 'menu numérique restaurant',
     'menu QR restaurant', 'carte numérique restaurant', 'créer un menu QR', 'menu en ligne restaurant',
     'menu numérique café', 'QR code menu restaurant', 'menu QR gratuit',
-    'menu sans contact', 'scaniha.com', 'menu numérique', 'menu café', 'application menu restaurant',
-    'carte numérique café', 'menu digital Tunisie'
+    'menu sans contact', 'menu numérique', 'menu café', 'application menu restaurant',
+    'carte numérique café', 'menu digital Tunisie', 'menu QR Tunisie', 'QR code restaurant Tunisie',
+    'menu sans contact Tunisie', 'carte QR restaurant', 'menu restaurant Tunisie',
+    'salon de thé menu QR', 'food truck menu QR', 'menu digital café Tunisie'
   ],
   applicationName: 'Scaniha',
   authors: [{ name: 'Scaniha', url: 'https://scaniha.com' }],

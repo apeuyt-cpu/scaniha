@@ -558,6 +558,12 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
               de la chance et à un programme de points de fidélité. Un seul outil pour votre menu QR, votre QR Wi-Fi et
               l&apos;engagement de votre salle — conçu pour les cafés et restaurants en Tunisie, et entièrement en français.
             </p>
+            <p>
+              <strong className="text-zinc-900">Scaniha</strong> s&apos;écrit S-C-A-N-I-H-A (à ne pas confondre avec « Scania ») :
+              c&apos;est la plateforme de <strong className="text-zinc-900">menu QR</strong> pour restaurants, cafés, salons de thé
+              et food trucks en Tunisie. Menu QR gratuit à l&apos;essai, QR code de menu, carte numérique sans contact et menu
+              digital en français — tout est centralisé dans votre espace <strong className="text-zinc-900">Scaniha</strong>.
+            </p>
           </div>
         </div>
       </section>

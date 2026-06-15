@@ -118,7 +118,7 @@ export default function Design12({ business, categories }: { business: any; cate
           {settings.showLogo && business?.logo_url ? (
             <button type="button" onClick={toTop} aria-label="Accueil" className="shrink-0 transition active:scale-95">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={business.logo_url} alt={business?.name || ''} className="h-10 w-10 rounded-full object-cover ring-1 ring-black/10" style={{ outline: `2px solid ${PAGE}`, outlineOffset: 1 }} />
+              <img src={business.logo_url} alt={business?.name || ''} className="h-10 w-auto max-w-[130px] object-contain" />
             </button>
           ) : (
             <button type="button" onClick={toTop} aria-label="Accueil" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition active:scale-95" style={{ backgroundImage: gradient, boxShadow: `0 8px 18px -8px ${accent}e6` }}>

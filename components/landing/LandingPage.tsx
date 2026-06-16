@@ -610,6 +610,32 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
             </div>
           </div>
           <div className="border-t border-zinc-800 pt-6 text-center text-sm">
+            <div className="mb-4 flex items-center justify-center gap-3">
+              <a
+                href="https://www.instagram.com/scaniha.co/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Scaniha sur Instagram"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-700 text-zinc-400 transition hover:border-orange-500 hover:text-orange-500"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-[18px] w-[18px]" aria-hidden="true">
+                  <rect x="2" y="2" width="20" height="20" rx="5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                </svg>
+              </a>
+              <a
+                href="https://www.facebook.com/61587286774228"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Scaniha sur Facebook"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-700 text-zinc-400 transition hover:border-orange-500 hover:text-orange-500"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]" aria-hidden="true">
+                  <path d="M14 13.5h2.5l1-4H14v-2c0-1.03 0-2 2-2h1.5V2.14c-.326-.043-1.557-.14-2.857-.14C11.928 2 10 3.657 10 6.7v2.8H7v4h3V22h4v-8.5z" />
+                </svg>
+              </a>
+            </div>
             <p className="mb-2">© {new Date().getFullYear()} {t('app.name')}. Tous droits réservés.</p>
           </div>
         </div>

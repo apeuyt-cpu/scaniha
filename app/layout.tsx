@@ -133,8 +133,12 @@ export default function RootLayout({
                 "areaServed": "TN",
                 "availableLanguage": ["French"],
               },
-              // TODO: add verified social profiles here for a stronger entity
-              // signal, e.g. "sameAs": ["https://instagram.com/...", ...].
+              // Verified brand profiles — strong entity signal that "Scaniha" is a
+              // distinct brand (not "Scania"); Google + AI engines read these.
+              "sameAs": [
+                "https://www.instagram.com/scaniha.co/",
+                "https://www.facebook.com/61587286774228",
+              ],
             }),
           }}
         />

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { type GameRow, type PrizeRow, gameCooldownHours, COOLDOWN_OPTIONS } from '@/lib/game'
+import { type GameRow, type PrizeRow, gameCooldownHours, COOLDOWN_OPTIONS, splitInt } from '@/lib/game'
 import Toggle from '@/components/admin/ui/Toggle'
 import Button from '@/components/admin/ui/Button'
 import Field, { inputClass } from '@/components/admin/ui/Field'
@@ -487,32 +487,3 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 /* Warm, on-brand palette (orange → amber) for the odds bar + per-lot dots. */
 const PRIZE_COLORS = ['#F47B20', '#FB923C', '#F59E0B', '#FDBA74', '#FBBF24', '#EA580C', '#FCD34D', '#FED7AA']
-
-/**
- * Split `total` across `parts` proportionally, as whole numbers that sum EXACTLY
- * to `total`, each at least `min` (largest-remainder method). Used to turn lot
- * weights into clean percentages that always add up to 100.
- */
-function splitInt(parts: number[], total: number, min = 1): number[] {
-  const n = parts.length
-  if (n === 0) return []
-  if (total <= 0) return parts.map(() => 0)
-  const effMin = Math.min(min, Math.floor(total / n)) // stay feasible when total < n
-  const sum = parts.reduce((a, b) => a + Math.max(0, b), 0)
-  const raw = parts.map((w) => (sum > 0 ? (Math.max(0, w) / sum) * total : total / n))
-  const ints = raw.map((r) => Math.max(effMin, Math.floor(r)))
-  const order = raw
-    .map((r, i) => ({ i, frac: r - Math.floor(r) }))
-    .sort((a, b) => b.frac - a.frac)
-  let used = ints.reduce((a, b) => a + b, 0)
-  let k = 0
-  while (used < total) { ints[order[k % n].i]++; used++; k++ }
-  let guard = 0
-  while (used > total && guard < 100000) {
-    let idx = -1
-    for (let j = n - 1; j >= 0; j--) { const ri = order[j].i; if (ints[ri] > effMin) { idx = ri; break } }
-    if (idx < 0) break
-    ints[idx]--; used--; guard++
-  }
-  return ints
-}

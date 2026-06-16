@@ -217,6 +217,36 @@ export function generateWinCode(): string {
   return `${out.slice(0, 3)}-${out.slice(3)}`
 }
 
+/**
+ * Split `total` across `parts` proportionally, as whole numbers that sum
+ * EXACTLY to `total`, each at least `min` (largest-remainder method). Used to
+ * turn lot weights into clean percentages that always add up to 100 — shared by
+ * the customer odds editor (GameManager) and the admin roulette settings.
+ */
+export function splitInt(parts: number[], total: number, min = 1): number[] {
+  const n = parts.length
+  if (n === 0) return []
+  if (total <= 0) return parts.map(() => 0)
+  const effMin = Math.min(min, Math.floor(total / n)) // stay feasible when total < n
+  const sum = parts.reduce((a, b) => a + Math.max(0, b), 0)
+  const raw = parts.map((w) => (sum > 0 ? (Math.max(0, w) / sum) * total : total / n))
+  const ints = raw.map((r) => Math.max(effMin, Math.floor(r)))
+  const order = raw
+    .map((r, i) => ({ i, frac: r - Math.floor(r) }))
+    .sort((a, b) => b.frac - a.frac)
+  let used = ints.reduce((a, b) => a + b, 0)
+  let k = 0
+  while (used < total) { ints[order[k % n].i]++; used++; k++ }
+  let guard = 0
+  while (used > total && guard < 100000) {
+    let idx = -1
+    for (let j = n - 1; j >= 0; j--) { const ri = order[j].i; if (ints[ri] > effMin) { idx = ri; break } }
+    if (idx < 0) break
+    ints[idx]--; used--; guard++
+  }
+  return ints
+}
+
 /** Default prize set offered when an owner activates the game. */
 export const DEFAULT_PRIZES: { label: string; weight: number; cost: number | null }[] = [
   { label: 'Café offert', weight: 2, cost: 2.5 },

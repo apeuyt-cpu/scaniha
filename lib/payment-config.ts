@@ -3,10 +3,10 @@
 
 export type PlanId = '1year' | 'lifetime'
 
-// Two clean tiers shown on the pricing page / cards (per product).
+// Menu QR plan tiers shown on the pricing page / cards.
 export const PLANS: Record<PlanId, { id: PlanId; label: string; price: number }> = {
-  '1year': { id: '1year', label: '1 an', price: 100 },
-  lifetime: { id: 'lifetime', label: 'À vie', price: 200 },
+  '1year': { id: '1year', label: '1 an', price: 150 },
+  lifetime: { id: 'lifetime', label: 'À vie', price: 250 },
 }
 
 // All payable variants (used by the API + approval).
@@ -14,11 +14,10 @@ export const PLANS: Record<PlanId, { id: PlanId; label: string; price: number }>
 // approval sets the business's expires_at to null (no expiry — a real lifetime,
 // not a "9999 days" hack). See app/api/super-admin/payment-requests/[id]/route.ts.
 export const PAYMENT_PLANS: Record<string, { label: string; price: number; grantsDays: number | null }> = {
-  '1year': { label: '1 an', price: 100, grantsDays: 365 },
-  lifetime: { label: 'À vie', price: 200, grantsDays: null },
-  // Programme de fidélité (produit séparé) — même tarif deux paliers.
-  fidelity_year: { label: 'Fidélité — 1 an', price: 100, grantsDays: 365 },
-  fidelity_lifetime: { label: 'Fidélité — À vie', price: 200, grantsDays: null },
+  '1year': { label: '1 an', price: 150, grantsDays: 365 },
+  lifetime: { label: 'À vie', price: 250, grantsDays: null },
+  // Programme de fidélité (produit séparé) — abonnement annuel.
+  fidelity_year: { label: 'Fidélité — 1 an', price: 50, grantsDays: 365 },
   // ── Legacy variants ───────────────────────────────────────────────
   // No longer offered in the UI, but kept here so any historical pending
   // request that used them still resolves correctly on approval.

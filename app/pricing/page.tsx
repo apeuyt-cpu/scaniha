@@ -33,7 +33,7 @@ const faqs = [
   },
   {
     q: 'Le paiement est-il unique ou récurrent ?',
-    a: 'Le paiement est unique pour la durée choisie (1 an ou à vie). Il n’y a aucun abonnement et aucun prélèvement automatique. Pour le forfait à vie, vous pouvez régler en 2 versements de 100 TND, sans frais.',
+    a: 'Le paiement est unique pour la durée choisie (1 an ou à vie). Il n’y a aucun abonnement et aucun prélèvement automatique. Pour le forfait à vie, vous pouvez régler en 2 versements de 125 TND, sans frais.',
   },
   {
     q: 'Puis-je commencer sans payer ?',

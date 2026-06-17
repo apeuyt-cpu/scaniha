@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Toggle from '@/components/admin/ui/Toggle'
 import Button from '@/components/admin/ui/Button'
-import { inputClass } from '@/components/admin/ui/Field'
+import Field, { inputClass } from '@/components/admin/ui/Field'
 import SetupCard from '@/components/admin/game/SetupCard'
 import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
 
@@ -12,7 +12,6 @@ interface Program {
   business_id: string
   active: boolean
   points_per_tnd: number
-  play_points: number
   welcome_points: number
   redeem_expiry_hours: number
 }
@@ -180,6 +179,18 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
             <p className="text-sm font-semibold text-zinc-900">1 dinar dépensé = 1 point</p>
             <p className="mt-0.5 text-xs text-zinc-500">Simple et clair pour vos clients. Les points se gagnent uniquement en caisse, sur le montant dépensé.</p>
           </div>
+        </div>
+        <div className="mt-4">
+          <Field label="Points de bienvenue" hint="Offerts une seule fois, à la première visite du client. Mettez 0 pour désactiver.">
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={program.welcome_points}
+              onChange={(e) => updateProgram({ welcome_points: Math.max(0, Math.round(Number(e.target.value) || 0)) })}
+              className={`${inputClass} sm:max-w-xs`}
+            />
+          </Field>
         </div>
         {pending > 0 && (
           <div className="mt-4 text-xs text-zinc-400">{pending} récompense{pending > 1 ? 's' : ''} à remettre</div>

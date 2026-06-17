@@ -52,6 +52,8 @@ export interface GameConfig {
   loyaltyActive: boolean
   businessName: string
   prizes: string[]
+  /** Welcome bonus credited at signup (0 when loyalty is off) — shown as the join hook. */
+  welcomePoints: number
   accent: string
   gradient: string
   /** "Conditions pour jouer" — gates the player must clear before spinning. */
@@ -62,7 +64,7 @@ export interface GameConfig {
 
 /** Public wheel config for /[slug]/jeu and the menu FAB. Tolerates missing tables. */
 export async function loadGameConfig(slug: string): Promise<GameConfig> {
-  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', gates: [], qrGate: { enabled: false } }
+  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], welcomePoints: 0, accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', gates: [], qrGate: { enabled: false } }
   try {
     const supabase: any = await createServiceRoleClient()
     const { data: business } = await supabase
@@ -123,7 +125,7 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
 
     const { data: program } = await supabase
       .from('loyalty_programs')
-      .select('business_id')
+      .select('business_id, welcome_points')
       .eq('business_id', business.id)
       .eq('active', true)
       .maybeSingle()
@@ -131,11 +133,13 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
     // Master switch: if the owner hasn't enabled the fidelity system, the whole
     // game/loyalty layer reads as off (so the roulette button + store never show).
     const fidelity = isFidelityLive(business)
+    const loyaltyOn = fidelity && Boolean(program)
     return {
       active: fidelity && Boolean(game) && prizes.length > 0,
-      loyaltyActive: fidelity && Boolean(program),
+      loyaltyActive: loyaltyOn,
       businessName: business.name,
       prizes,
+      welcomePoints: loyaltyOn ? Number(program.welcome_points) || 0 : 0,
       accent,
       gradient,
       gates,

@@ -133,7 +133,6 @@ export interface LoyaltyProgram {
   business_id: string
   active: boolean
   points_per_tnd: number
-  play_points: number
   welcome_points: number
   redeem_expiry_hours: number
 }

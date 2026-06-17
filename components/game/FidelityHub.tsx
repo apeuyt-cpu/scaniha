@@ -51,6 +51,8 @@ export default function FidelityHub({
   // Whether the roulette is on for this café. When OFF but loyalty is ON, the hub
   // runs in "points-only" mode (no Roue tab/CTA). true → identical to before.
   const [hasRoulette, setHasRoulette] = useState(false)
+  // Welcome bonus credited at signup — surfaced as the join hook (0 = none).
+  const [welcomePoints, setWelcomePoints] = useState(0)
   const [session, setSession] = useState<DinerSession | null>(null)
   const [loyaltyActive, setLoyaltyActive] = useState(false)
   const [rewards, setRewards] = useState<Reward[]>([])
@@ -106,7 +108,7 @@ export default function FidelityHub({
         const loyalty = Boolean(json.loyaltyActive)
         // Active if EITHER the roulette OR the points program is on (points-only allowed).
         if (!roulette && !loyalty) { setPhase('inactive'); return }
-        setHasRoulette(roulette); setLoyaltyActive(loyalty)
+        setHasRoulette(roulette); setLoyaltyActive(loyalty); setWelcomePoints(Number(json.welcomePoints) || 0)
         setPrizes(Array.isArray(json.prizes) ? json.prizes : []); setGates(Array.isArray(json.gates) ? json.gates : [])
 
         const token = readToken(slug)
@@ -124,7 +126,9 @@ export default function FidelityHub({
         let qTab: Tab | null = null
         try { const q = new URLSearchParams(window.location.search).get('t'); if (q === 'carte' || q === 'roue' || q === 'boutique') qTab = q } catch {}
         if (qTab === 'roue' && !roulette) qTab = null
-        setTabState(qTab ?? (roulette && !authed ? 'roue' : 'carte'))
+        // Land on "Ma carte" first — value shown before any form (incl. roulette
+        // cafés, which now sign the diner up first, then offer the spin).
+        setTabState(qTab ?? 'carte')
 
         if (authed) {
           setSession(authed); loadAccount(authed.phone)
@@ -142,6 +146,8 @@ export default function FidelityHub({
   function onAuthed(s: DinerSession) {
     setSession(s); setAuthMessage(null); setError(null); setPhase('ready'); loadAccount(s.phone)
     if (pendingSpin) { setPendingSpin(false); setTabState('roue'); spin(s.token) }
+    // Fresh member at a roulette café → drop them on the wheel for their first spin.
+    else if (hasRoulette) setTabState('roue')
   }
   function requireLogin(message?: string) { clearToken(slug); setSession(null); setResult(null); setConfetti(false); setAuthMessage(message ?? null); setPhase('auth') }
   async function logout() {
@@ -226,9 +232,9 @@ export default function FidelityHub({
           <div className="mb-6 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-3xl" style={{ backgroundColor: `${accent}1a` }} aria-hidden="true">🎁</div>
             <h1 className="mt-4 text-2xl font-bold" style={{ color: INK }}>Votre compte fidélité</h1>
-            <p className="mx-auto mt-2 max-w-[17rem] text-sm leading-relaxed" style={{ color: MUT }}>{authMessage || 'Connectez-vous pour jouer et garder vos points et récompenses.'}</p>
+            <p className="mx-auto mt-2 max-w-[17rem] text-sm leading-relaxed" style={{ color: MUT }}>{authMessage || (welcomePoints > 0 ? `Créez votre compte en 10 secondes et recevez ${welcomePoints} points offerts.` : 'Créez votre compte en 10 secondes et cumulez des points à chaque visite.')}</p>
           </div>
-          <DinerAuth slug={slug} accent={accent} gradient={gradient} onAuthed={onAuthed} />
+          <DinerAuth slug={slug} accent={accent} gradient={gradient} welcomePoints={welcomePoints} onAuthed={onAuthed} />
         </div>
       </div>
     )
@@ -255,7 +261,7 @@ export default function FidelityHub({
 
       <div className="px-[18px] pt-1">
         {tab === 'carte' && (
-          <CarteTab session={session} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} onPlay={() => (hasRoulette ? setTab('roue') : requireLogin('Connectez-vous pour créer votre carte de fidélité et cumuler des points.'))} onLogout={logout} />
+          <CarteTab session={session} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} welcomePoints={welcomePoints} onPlay={() => requireLogin()} onLogout={logout} />
         )}
         {hasRoulette && tab === 'roue' && (
           <RoueTab prizes={prizes} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} onSpin={() => spin()} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone) } }} onReview={() => setWinModalOpen(true)} />
@@ -323,19 +329,36 @@ function NavItem({ active, onClick, label, pill, lbl, children }: { active: bool
 /* ── Ma carte ────────────────────────────────────────────────────────────────── */
 function CarteTab(props: {
   session: DinerSession | null; accent: string; gradient: string; greeting: string; balance: number; nextReward: Reward | null; pct: number; loyaltyActive: boolean
-  rewards: Reward[]; activeCodes: Array<{ code: string; label: string; expires_at: string }>; recent: CustomerSummary['recent']; cardCode: string; qrOpen: boolean; setQrOpen: (v: boolean) => void; hasRoulette: boolean; onPlay: () => void; onLogout: () => void
+  rewards: Reward[]; activeCodes: Array<{ code: string; label: string; expires_at: string }>; recent: CustomerSummary['recent']; cardCode: string; qrOpen: boolean; setQrOpen: (v: boolean) => void; hasRoulette: boolean; welcomePoints: number; onPlay: () => void; onLogout: () => void
 }) {
-  const { session, accent, gradient, greeting, balance, nextReward, pct, loyaltyActive, activeCodes, recent, cardCode, qrOpen, setQrOpen, hasRoulette, onPlay, onLogout } = props
+  const { session, accent, gradient, greeting, balance, nextReward, pct, loyaltyActive, rewards, activeCodes, recent, cardCode, qrOpen, setQrOpen, hasRoulette, welcomePoints, onPlay, onLogout } = props
   if (!session) {
+    const perks: Array<{ icon: string; title: string; sub: string }> = []
+    if (welcomePoints > 0) perks.push({ icon: '🎁', title: `${welcomePoints} points offerts`, sub: 'rien qu’à l’inscription' })
+    if (hasRoulette) perks.push({ icon: '🎰', title: 'Roue de la chance', sub: 'un tour offert — tout le monde gagne' })
+    perks.push({ icon: '🎯', title: 'Des récompenses', sub: rewards.length > 0 ? rewards.slice(0, 2).map((r) => r.label).join(', ').toLowerCase() : 'échangez vos points en boutique' })
     return (
-      <div className="pt-6 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}1a`, color: accent }} aria-hidden="true">
-          <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h4" /></svg>
+      <div className="pt-6">
+        <div className="text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-3xl" style={{ backgroundColor: `${accent}1a` }} aria-hidden="true">🎁</div>
+          <h1 className="mt-4 text-xl font-bold" style={{ color: INK }}>Votre carte de fidélité</h1>
+          <p className="mx-auto mt-1.5 max-w-xs text-sm leading-relaxed" style={{ color: MUT }}>Gagnez à chaque visite — c’est gratuit.</p>
         </div>
-        <h1 className="mt-4 text-xl font-bold" style={{ color: INK }}>Votre carte de fidélité</h1>
-        <p className="mx-auto mt-1.5 max-w-xs text-sm leading-relaxed" style={{ color: MUT }}>{hasRoulette ? 'Cumulez des points à chaque visite, gagnez à la roue et échangez vos points contre des récompenses.' : 'Cumulez des points à chaque visite et échangez-les contre des récompenses.'}</p>
-        <button type="button" onClick={onPlay} className="mt-6 block w-full rounded-2xl py-3.5 text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -16px ${accent}` }}>{hasRoulette ? 'Tourner la roue pour commencer' : 'Créer ma carte de fidélité'}</button>
-        <p className="mt-3 text-[11px] leading-relaxed" style={{ color: FAINT }}>{hasRoulette ? 'Aucune inscription — on vous demande votre numéro seulement si vous gagnez.' : 'Présentez votre carte à la caisse pour cumuler des points à chaque achat.'}</p>
+
+        <div className="mt-6 space-y-2.5">
+          {perks.map((p) => (
+            <div key={p.title} className="flex items-center gap-3.5 rounded-[18px] bg-white p-3.5" style={{ boxShadow: SOFT }}>
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xl" style={{ backgroundColor: `${accent}12` }} aria-hidden="true">{p.icon}</span>
+              <div className="min-w-0 leading-tight">
+                <div className="text-[15px] font-semibold" style={{ color: INK }}>{p.title}</div>
+                <div className="truncate text-xs first-letter:uppercase" style={{ color: MUT }}>{p.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button type="button" onClick={onPlay} className="mt-6 block w-full rounded-2xl py-4 text-base font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -16px ${accent}` }}>Commencer — c’est parti</button>
+        <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: FAINT }}>Juste votre numéro et un code à 4 chiffres. 10 secondes, sans e-mail.</p>
       </div>
     )
   }

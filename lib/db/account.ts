@@ -1,6 +1,7 @@
 /**
- * Diner-account data layer (phone + password, per business). Wraps the
- * SECURITY DEFINER RPCs from supabase/accounts.sql. The API route is the auth
+ * Diner-account data layer (phone + 4-digit PIN, per business). Wraps the
+ * SECURITY DEFINER RPCs from supabase/accounts.sql. The PIN travels as the
+ * `password` arg (the column is still password_hash). The API route is the auth
  * boundary; the single `as any` for the untyped service client lives here.
  */
 import { createServiceRoleClient } from '@/lib/supabase/server'
@@ -16,19 +17,19 @@ export type SessionResult = { ok: true; phone: string; name: string | null; busi
 /** Map an RPC error key to a French message for the diner. */
 const SIGNUP_MSG: Record<string, string> = {
   phone: 'Entrez un numéro de téléphone valide.',
-  weak: 'Le mot de passe doit contenir au moins 6 caractères.',
+  weak: 'Choisissez un code à 4 chiffres.',
   exists: 'Un compte existe déjà avec ce numéro. Connectez-vous.',
   no_business: 'Établissement introuvable.',
 }
 const LOGIN_MSG: Record<string, string> = {
-  invalid: 'Numéro ou mot de passe incorrect.',
+  invalid: 'Numéro ou code incorrect.',
   no_business: 'Établissement introuvable.',
 }
 
 export async function dinerSignup(slug: string, phoneRaw: string, password: string, name?: string): Promise<AccountResult> {
   const phone = normPhone(phoneRaw)
   if (!phone) return { ok: false, error: SIGNUP_MSG.phone }
-  if (!password || password.length < 6) return { ok: false, error: SIGNUP_MSG.weak }
+  if (!/^[0-9]{4}$/.test(password || '')) return { ok: false, error: SIGNUP_MSG.weak }
   try {
     const supabase: any = await createServiceRoleClient()
     const { data, error } = await supabase.rpc('diner_signup', { p_slug: slug, p_phone: phone, p_password: password, p_name: name || null })

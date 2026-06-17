@@ -11,7 +11,7 @@ export type AccountResult =
   | { ok: true; token: string; phone: string; name: string | null }
   | { ok: false; error: string }
 
-export type SessionResult = { ok: true; phone: string; name: string | null; businessId: string } | { ok: false }
+export type SessionResult = { ok: true; phone: string; name: string | null } | { ok: false }
 
 /** Map an RPC error key to a French message for the diner. */
 const SIGNUP_MSG: Record<string, string> = {
@@ -25,13 +25,13 @@ const LOGIN_MSG: Record<string, string> = {
   no_business: 'Établissement introuvable.',
 }
 
-export async function dinerSignup(slug: string, phoneRaw: string, password: string, name?: string): Promise<AccountResult> {
+export async function dinerSignup(phoneRaw: string, password: string, name?: string): Promise<AccountResult> {
   const phone = normPhone(phoneRaw)
   if (!phone) return { ok: false, error: SIGNUP_MSG.phone }
   if (!password || password.length < 6) return { ok: false, error: SIGNUP_MSG.weak }
   try {
     const supabase: any = await createServiceRoleClient()
-    const { data, error } = await supabase.rpc('diner_signup', { p_slug: slug, p_phone: phone, p_password: password, p_name: name || null })
+    const { data, error } = await supabase.rpc('diner_signup', { p_phone: phone, p_password: password, p_name: name || null })
     if (error) {
       if (isMissingRpc(error)) return { ok: false, error: 'Les comptes ne sont pas encore configurés.' }
       console.error('diner_signup rpc:', error.message)
@@ -45,12 +45,12 @@ export async function dinerSignup(slug: string, phoneRaw: string, password: stri
   }
 }
 
-export async function dinerLogin(slug: string, phoneRaw: string, password: string): Promise<AccountResult> {
+export async function dinerLogin(phoneRaw: string, password: string): Promise<AccountResult> {
   const phone = normPhone(phoneRaw)
   if (!phone || !password) return { ok: false, error: LOGIN_MSG.invalid }
   try {
     const supabase: any = await createServiceRoleClient()
-    const { data, error } = await supabase.rpc('diner_login', { p_slug: slug, p_phone: phone, p_password: password })
+    const { data, error } = await supabase.rpc('diner_login', { p_phone: phone, p_password: password })
     if (error) {
       if (isMissingRpc(error)) return { ok: false, error: 'Les comptes ne sont pas encore configurés.' }
       console.error('diner_login rpc:', error.message)
@@ -71,9 +71,9 @@ export async function dinerSession(token: string | null | undefined): Promise<Se
     const supabase: any = await createServiceRoleClient()
     const { data, error } = await supabase.rpc('diner_session', { p_token: token })
     if (error || !data?.ok) return { ok: false }
-    // businessId binds the token to the café it was issued for — callers compare
-    // it against the slug being acted on to block cross-business token replay.
-    return { ok: true, phone: data.phone, name: data.name ?? null, businessId: data.businessId }
+    // Global identity — the token resolves the customer's phone/name regardless of
+    // café. Per-café data access is scoped by the slug's business at each route.
+    return { ok: true, phone: data.phone, name: data.name ?? null }
   } catch {
     return { ok: false }
   }

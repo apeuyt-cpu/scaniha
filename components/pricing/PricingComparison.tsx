@@ -13,44 +13,36 @@ interface Plan {
   note?: string
 }
 
-// Every plan is the same product — only the duration and price differ.
-// So all cards share one feature list (matches "toutes les fonctionnalités incluses").
-const FEATURES = [
+// ── Produit 1 : Menu QR ──────────────────────────────────────────────
+const FEATURES_QR = [
   'Articles et catégories illimités',
   '8 designs de menu premium',
   'QR code personnalisé',
-  'Liens vers les réseaux sociaux',
+  'Modifications en temps réel',
   'Statistiques de consultation',
   'Support prioritaire',
 ]
 
-const plans: Plan[] = [
-  {
-    variant: 'light',
-    name: '6 mois',
-    price: '150',
-    period: 'pour 6 mois',
-    href: '/signup?plan=6months',
-  },
-  {
-    variant: 'popular',
-    name: '1 an',
-    price: '250',
-    period: 'par an',
-    href: '/signup?plan=1year',
-    badge: 'Le plus populaire',
-    save: 'Économisez 50 TND',
-  },
-  {
-    variant: 'dark',
-    name: 'À vie',
-    price: '600',
-    period: 'accès à vie — sans abonnement',
-    note: 'Réglez en une fois (600 TND) ou en 2 fois (2 × 300 TND), sans frais.',
-    href: '/signup?plan=lifetime',
-    badge: 'Meilleure offre',
-    save: 'Économisez 300 TND',
-  },
+const qrPlans: Plan[] = [
+  { variant: 'light', name: '6 mois', price: '100', period: 'pour 6 mois', href: '/signup?plan=6months' },
+  { variant: 'popular', name: '1 an', price: '150', period: 'par an', href: '/signup?plan=1year', badge: 'Le plus populaire', save: 'Économisez 50 TND' },
+  { variant: 'dark', name: 'À vie', price: '300', period: 'accès à vie — sans abonnement', note: 'Réglez une seule fois, plus jamais d’abonnement.', href: '/signup?plan=lifetime', badge: 'Meilleure offre' },
+]
+
+// ── Produit 2 : Programme de fidélité (séparé) ───────────────────────
+const FEATURES_FIDELITY = [
+  'Points de fidélité à chaque achat',
+  'Récompenses personnalisées',
+  'Roue de la chance (activable ou non)',
+  'Carte de fidélité numérique',
+  'Codes de retrait sécurisés',
+  'Statistiques clients',
+]
+
+const fidelityPlans: Plan[] = [
+  { variant: 'light', name: 'Mensuel', price: '15', period: 'par mois', href: '/signup?plan=fidelity_monthly' },
+  { variant: 'popular', name: 'Annuel', price: '60', period: 'par an', href: '/signup?plan=fidelity_year', badge: 'Le plus populaire', save: 'Économisez 120 TND' },
+  { variant: 'dark', name: 'À vie', price: '100', period: 'accès à vie', href: '/signup?plan=fidelity_lifetime', badge: 'Meilleure offre' },
 ]
 
 function Check({ variant }: { variant: Variant }) {
@@ -69,7 +61,7 @@ function Check({ variant }: { variant: Variant }) {
   )
 }
 
-function PlanCard({ plan }: { plan: Plan }) {
+function PlanCard({ plan, features }: { plan: Plan; features: string[] }) {
   const { variant } = plan
 
   const shell =
@@ -95,9 +87,7 @@ function PlanCard({ plan }: { plan: Plan }) {
       {plan.badge && (
         <span
           className={`absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold shadow-md ${
-            variant === 'popular'
-              ? 'bg-white text-orange-600'
-              : 'bg-gradient-to-r from-amber-300 to-yellow-400 text-zinc-900'
+            variant === 'popular' ? 'bg-white text-orange-600' : 'bg-gradient-to-r from-amber-300 to-yellow-400 text-zinc-900'
           }`}
         >
           {plan.badge}
@@ -128,7 +118,7 @@ function PlanCard({ plan }: { plan: Plan }) {
       <hr className={`mt-6 border-t ${divider}`} />
 
       <ul className="mb-8 mt-6 space-y-3.5">
-        {FEATURES.map((f) => (
+        {features.map((f) => (
           <li key={f} className={`flex items-center gap-3 text-sm font-medium ${featureColor}`}>
             <Check variant={variant} />
             <span>{f}</span>
@@ -154,19 +144,43 @@ function PlanCard({ plan }: { plan: Plan }) {
 
 export default function PricingComparison() {
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="grid grid-cols-1 items-stretch gap-7 pt-4 md:grid-cols-3">
-        {plans.map((plan) => (
-          <PlanCard key={plan.variant} plan={plan} />
-        ))}
+    <div className="mx-auto max-w-5xl space-y-16">
+      {/* ── Produit 1 : Menu QR ── */}
+      <div>
+        <div className="mx-auto mb-8 max-w-2xl text-center">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500">Le menu QR</span>
+          <h3 className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-900">Votre carte numérique</h3>
+          <p className="mt-2 text-zinc-500">Un menu élégant en un scan, modifiable à tout moment.</p>
+        </div>
+        <div className="grid grid-cols-1 items-stretch gap-7 pt-4 md:grid-cols-3">
+          {qrPlans.map((plan) => (
+            <PlanCard key={plan.variant} plan={plan} features={FEATURES_QR} />
+          ))}
+        </div>
+        <div className="mx-auto mt-8 flex max-w-2xl items-start gap-3 rounded-2xl border-2 border-orange-300 bg-orange-50 px-5 py-4 text-left shadow-sm">
+          <span aria-hidden="true" className="mt-0.5 text-lg leading-none">ℹ️</span>
+          <p className="text-sm font-semibold leading-relaxed text-orange-900">
+            Tarifs de la plateforme uniquement — <span className="font-extrabold underline decoration-orange-400 decoration-2 underline-offset-2">supports de table et stickers QR non inclus</span> (en option lors de l&apos;abonnement).
+          </p>
+        </div>
       </div>
 
-      {/* Scope note — software only (highlighted so it can't be missed) */}
-      <div className="mx-auto mt-8 flex max-w-2xl items-start gap-3 rounded-2xl border-2 border-orange-300 bg-orange-50 px-5 py-4 text-left shadow-sm">
-        <span aria-hidden="true" className="mt-0.5 text-lg leading-none">ℹ️</span>
-        <p className="text-sm font-semibold leading-relaxed text-orange-900">
-          Tarifs de la plateforme uniquement — <span className="font-extrabold underline decoration-orange-400 decoration-2 underline-offset-2">supports de table et stickers QR non inclus</span> (en option lors de l&apos;abonnement).
-        </p>
+      {/* ── Produit 2 : Programme de fidélité (séparé) ── */}
+      <div>
+        <div className="mx-auto mb-8 max-w-2xl text-center">
+          <span className="inline-flex items-center gap-2 rounded-full bg-orange-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-orange-700">
+            Produit séparé
+          </span>
+          <h3 className="mt-3 text-2xl font-extrabold tracking-tight text-zinc-900">Le programme de fidélité</h3>
+          <p className="mt-2 text-zinc-500">
+            Points, récompenses et roue de la chance pour faire revenir vos clients. Un produit à part — prenez-le avec votre menu QR ou tout seul.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 items-stretch gap-7 pt-4 md:grid-cols-3">
+          {fidelityPlans.map((plan) => (
+            <PlanCard key={plan.variant} plan={plan} features={FEATURES_FIDELITY} />
+          ))}
+        </div>
       </div>
     </div>
   )

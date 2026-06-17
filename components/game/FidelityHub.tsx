@@ -194,16 +194,67 @@ export default function FidelityHub({
   // ── Loading / inactive / auth ───────────────────────────────────────────────
   if (phase === 'loading') {
     return (
-      <div className="flex min-h-[100svh] flex-col items-center justify-center gap-5 px-6 text-center" style={{ background: BG }}>
-        <span className="relative flex h-16 w-16 items-center justify-center" aria-hidden="true">
-          <span className="fh-ping absolute inset-0 rounded-full" style={{ backgroundColor: `${accent}1f` }} />
-          <svg viewBox="0 0 40 40" width="60" height="60" className="fh-spin"><circle cx="20" cy="20" r="16" fill="none" stroke={accent} strokeWidth="2.4" strokeLinecap="round" strokeDasharray="4 6" /><circle cx="20" cy="20" r="3.2" fill={accent} /></svg>
-        </span>
-        <p className="fh-pulse text-sm font-medium" style={{ color: MUT }}>Chargement…</p>
+      <div className="mx-auto min-h-[100svh] max-w-md pb-28" style={{ background: BG }} aria-busy="true" aria-label="Chargement de votre fidélité">
+        {/* Skeleton mirrors the "Ma carte" layout so the swap to real content is seamless. */}
+        <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3.5" style={{ background: 'rgba(250,248,245,0.85)', backdropFilter: 'blur(8px)' }}>
+          <div className="fh-sk h-3 w-24 rounded-full" />
+          <div className="fh-sk h-3.5 w-16 rounded-full" />
+        </div>
+
+        <div className="px-[18px] pt-2">
+          {/* Greeting */}
+          <div className="mb-4 flex items-center gap-3 px-0.5">
+            <div className="fh-sk h-11 w-11 rounded-full" />
+            <div className="space-y-2">
+              <div className="fh-sk h-3.5 w-32 rounded-full" />
+              <div className="fh-sk h-2.5 w-20 rounded-full" />
+            </div>
+          </div>
+
+          {/* Membership card */}
+          <div className="fh-sk h-[148px] w-full rounded-[26px]" />
+
+          {/* QR row */}
+          <div className="mt-3.5 flex items-center gap-3 rounded-[20px] bg-white p-4" style={{ boxShadow: SOFT }}>
+            <div className="fh-sk h-11 w-11 rounded-[13px]" />
+            <div className="flex-1 space-y-2">
+              <div className="fh-sk h-3.5 w-40 rounded-full" />
+              <div className="fh-sk h-2.5 w-28 rounded-full" />
+            </div>
+          </div>
+
+          {/* Mes bons */}
+          <div className="fh-sk mb-2.5 mt-6 h-2.5 w-16 rounded-full" />
+          <div className="space-y-2.5">
+            {[0, 1].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-[18px] bg-white p-3.5" style={{ boxShadow: SOFT }}>
+                <div className="fh-sk h-[22px] w-[22px] rounded-md" />
+                <div className="flex-1 space-y-2">
+                  <div className="fh-sk h-3.5 w-3/4 rounded-full" />
+                  <div className="fh-sk h-2.5 w-1/3 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom nav placeholder */}
+        <nav aria-hidden="true" className="fixed inset-x-0 bottom-0 z-40 bg-white" style={{ borderTop: `1px solid ${LINE}`, paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          <div className="mx-auto flex max-w-md px-2.5 pb-3 pt-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex flex-1 flex-col items-center gap-1.5 py-1">
+                <div className="fh-sk h-[26px] w-10 rounded-full" />
+                <div className="fh-sk h-2 w-10 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </nav>
+
         <style jsx>{`
-          @keyframes fh-spin { to { transform: rotate(360deg) } } @keyframes fh-ping { 0% { transform: scale(0.85); opacity: 0.7 } 100% { transform: scale(1.8); opacity: 0 } } @keyframes fh-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.45 } }
-          .fh-spin { transform-origin: 50% 50%; animation: fh-spin 1.1s linear infinite } .fh-ping { animation: fh-ping 1.6s cubic-bezier(0,0,0.2,1) infinite } .fh-pulse { animation: fh-pulse 1.6s ease-in-out infinite }
-          @media (prefers-reduced-motion: reduce) { .fh-spin, .fh-ping, .fh-pulse { animation: none !important } .fh-ping { display: none } }
+          .fh-sk { position: relative; overflow: hidden; background: #ECE7E0; }
+          .fh-sk::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent); animation: fh-shimmer 1.4s ease-in-out infinite; }
+          @keyframes fh-shimmer { 100% { transform: translateX(100%) } }
+          @media (prefers-reduced-motion: reduce) { .fh-sk::after { animation: none } }
         `}</style>
       </div>
     )

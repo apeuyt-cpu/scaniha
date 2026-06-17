@@ -147,7 +147,24 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
     else setRewards((cur) => cur.filter((r) => r.id !== id))
   }
 
-  if (loading) return <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-400">Chargement…</div>
+  if (loading) return (
+    <div className="space-y-4" aria-busy="true" aria-label="Chargement de la fidélité">
+      <div className="animate-pulse rounded-2xl border border-zinc-200 bg-white p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-2"><div className="h-4 w-40 rounded bg-zinc-200" /><div className="h-3 w-56 rounded bg-zinc-100" /></div>
+          <div className="h-6 w-11 rounded-full bg-zinc-200" />
+        </div>
+        <div className="mt-4 h-[68px] rounded-xl bg-zinc-100" />
+        <div className="mt-4 h-9 w-48 rounded-lg bg-zinc-100" />
+      </div>
+      <div className="animate-pulse rounded-2xl border border-zinc-200 bg-white p-5">
+        <div className="h-4 w-32 rounded bg-zinc-200" />
+        <div className="mt-4 space-y-2">
+          {[0, 1, 2].map((i) => <div key={i} className="h-12 rounded-xl bg-zinc-100" />)}
+        </div>
+      </div>
+    </div>
+  )
 
   if (setupNeeded || !program) {
     return (

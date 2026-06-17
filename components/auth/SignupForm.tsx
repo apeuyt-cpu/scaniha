@@ -204,7 +204,6 @@ export default function SignupForm({ plan }: { plan?: string }) {
             slug: slug,
             expires_at: null,
             status: 'pending',
-            currency: 'TND',
           })
           .select()
           .single()
@@ -231,7 +230,6 @@ export default function SignupForm({ plan }: { plan?: string }) {
             slug: slug,
             expires_at: expirationDate.toISOString(),
             status: 'active',
-            currency: 'TND',
           })
           .select()
           .single()

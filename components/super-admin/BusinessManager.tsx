@@ -77,6 +77,7 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
 
   // Sheet-local state (only one sheet open at a time).
   const [editingProfile, setEditingProfile] = useState(false)
+  const [editName, setEditName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [editPhone, setEditPhone] = useState('')
   const [extendDays, setExtendDays] = useState('')
@@ -95,6 +96,7 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
   // Reset sheet-local state whenever the open business changes.
   useEffect(() => {
     setEditingProfile(false)
+    setEditName('')
     setEditEmail('')
     setEditPhone('')
     setExtendDays('')
@@ -330,26 +332,44 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
   // ── Profile ─────────────────────────────────────────────────────────
   const startEditProfile = (business: Business) => {
     setEditingProfile(true)
+    setEditName(business.name || '')
     setEditEmail(business.profiles?.email || '')
     setEditPhone(business.profiles?.phone_number || '')
   }
 
   const handleSaveProfile = async (businessId: string) => {
+    const newName = editName.trim()
+    if (!newName) { toast('Le nom de l’établissement est requis.', 'error'); return }
+    const newEmail = editEmail.trim() || null
+    const newPhone = editPhone.trim() || null
+    const current = businesses.find((b) => b.id === businessId)
     setLoading(`profile-${businessId}`)
     try {
-      const response = await fetch(`/api/super-admin/businesses/${businessId}/profile`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: editEmail.trim() || null, phone_number: editPhone.trim() || null }),
-      })
-      const result = await response.json()
-      if (!response.ok) throw new Error(result.error || 'Échec de la mise à jour du profil.')
+      // 1. Business name (own table + public-menu cache bust) — only if changed.
+      if (newName !== current?.name) {
+        const res = await fetch(`/api/super-admin/businesses/${businessId}/details`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName }),
+        })
+        const j = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(j.error || 'Échec de la mise à jour du nom.')
+      }
+      // 2. Owner contact profile (email/phone). The route rejects an empty pair,
+      // so only call it when there's at least one value to save.
+      if (newEmail || newPhone) {
+        const response = await fetch(`/api/super-admin/businesses/${businessId}/profile`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: newEmail, phone_number: newPhone }),
+        })
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || 'Échec de la mise à jour du profil.')
+      }
       // Reflect what we actually submitted — the route can echo a stale value
       // when a field is cleared, so trust our own inputs (they match the DB).
-      const newEmail = editEmail.trim() || null
-      const newPhone = editPhone.trim() || null
       setBusinesses((cur) =>
-        cur.map((b) => (b.id === businessId ? { ...b, profiles: { email: newEmail, phone_number: newPhone } } : b))
+        cur.map((b) => (b.id === businessId ? { ...b, name: newName, profiles: { email: newEmail, phone_number: newPhone } } : b))
       )
       setEditingProfile(false)
       toast('Profil mis à jour.', 'success')
@@ -534,6 +554,10 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                   {editingProfile ? (
                     <div className="space-y-3">
                       <div>
+                        <label className="mb-1 block text-xs text-zinc-500">Nom de l’établissement</label>
+                        <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Nom de l’établissement" maxLength={100} className={inputClass} />
+                      </div>
+                      <div>
                         <label className="mb-1 block text-xs text-zinc-500">Adresse e-mail</label>
                         <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="example@email.com" className={inputClass} dir="ltr" />
                       </div>
@@ -550,6 +574,7 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                     </div>
                   ) : (
                     <div className="space-y-1.5 text-sm">
+                      <Row label="Nom"><span className="text-zinc-900">{b.name}</span></Row>
                       <Row label="E-mail">{b.profiles?.email ? <span dir="ltr" className="text-zinc-900">{b.profiles.email}</span> : <span className="text-zinc-400">Non disponible</span>}</Row>
                       <Row label="Téléphone">{b.profiles?.phone_number ? <span dir="ltr" className="text-zinc-900">{b.profiles.phone_number}</span> : <span className="text-zinc-400">Non disponible</span>}</Row>
                       <Row label="Lien"><a href={`/${b.slug}`} target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:underline" dir="ltr">/{b.slug}</a></Row>

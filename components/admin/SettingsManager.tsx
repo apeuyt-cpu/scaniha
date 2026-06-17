@@ -1,9 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import SeoSettings from '@/components/admin/SeoSettings'
 import { createClient } from '@/lib/supabase/client'
 import { useLocale } from '@/lib/i18n/LocaleContext'
+import { useToast } from '@/components/admin/ui/Toast'
+import { inputClass } from '@/components/admin/ui/Field'
+import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 
 interface Business {
   id: string
@@ -17,8 +20,40 @@ interface Business {
 
 export default function SettingsManager({ business, onUpdate }: { business: Business; onUpdate: () => void }) {
   const { t, dir } = useLocale()
+  const toast = useToast()
   const [copied, setCopied] = useState(false)
   const supabase = createClient()
+
+  // Business name — editable here as well as in « Design » → Marque.
+  const [editingName, setEditingName] = useState(false)
+  const [name, setName] = useState(business.name)
+  const [savingName, setSavingName] = useState(false)
+
+  // Keep the buffer in sync with the canonical name unless actively editing.
+  useEffect(() => {
+    if (!editingName) setName(business.name)
+  }, [business.name, editingName])
+
+  const handleSaveName = async () => {
+    const trimmed = name.trim()
+    if (!trimmed) {
+      toast.error("Le nom de l'établissement ne peut pas être vide")
+      return
+    }
+    setSavingName(true)
+    try {
+      const { error } = await (supabase.from('businesses') as any).update({ name: trimmed }).eq('id', business.id)
+      if (error) throw error
+      revalidatePublicMenu() // push the new name to the live menu now
+      setEditingName(false)
+      onUpdate()
+      toast.success("Nom de l'établissement enregistré")
+    } catch (err: any) {
+      toast.error(err.message || 'Échec de la mise à jour')
+    } finally {
+      setSavingName(false)
+    }
+  }
 
   const menuUrl = typeof window !== 'undefined' ? `${window.location.origin}/${business.slug}` : `/${business.slug}`
 
@@ -37,6 +72,53 @@ export default function SettingsManager({ business, onUpdate }: { business: Busi
 
   return (
     <div className="space-y-5" dir={dir}>
+      {/* Nom de l'établissement — editable identity */}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h2 className="text-base font-bold text-zinc-900">Nom de l&apos;établissement</h2>
+        <p className="mt-0.5 text-sm text-zinc-500">Le nom affiché sur votre menu public.</p>
+        <div className="mt-4">
+          {editingName ? (
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={100}
+                className={inputClass}
+                autoFocus
+                aria-label="Nom de l'établissement"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveName}
+                  disabled={savingName}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50"
+                >
+                  {savingName ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+                <button
+                  onClick={() => { setName(business.name); setEditingName(false) }}
+                  disabled={savingName}
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-zinc-100 px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-200 disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3">
+              <span className="truncate text-sm text-zinc-900">{business.name}</span>
+              <button
+                onClick={() => setEditingName(true)}
+                className="shrink-0 text-sm font-semibold text-orange-600 transition hover:text-orange-700"
+              >
+                Modifier
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Lien du menu — account info */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5">
         <h2 className="text-base font-bold text-zinc-900">Lien du menu</h2>
@@ -49,7 +131,7 @@ export default function SettingsManager({ business, onUpdate }: { business: Busi
               {copied ? 'Copié ✓' : t('settings.copy')}
             </button>
           </div>
-          <p className="mt-1.5 text-xs text-zinc-400">Le logo, le nom, les réseaux et le style du menu se règlent dans « Design ».</p>
+          <p className="mt-1.5 text-xs text-zinc-400">Le logo, les réseaux et le style du menu se règlent dans « Design ».</p>
         </div>
       </section>
 

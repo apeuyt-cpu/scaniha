@@ -7,6 +7,7 @@ import Button from '@/components/admin/ui/Button'
 import Toggle from '@/components/admin/ui/Toggle'
 import { inputClass } from '@/components/admin/ui/Field'
 import { QR_TTL_OPTIONS } from '@/lib/game'
+import MenuDesignPicker, { type ThemeCtrl } from '@/components/admin/MenuDesignPicker'
 
 type Business = Database['public']['Tables']['businesses']['Row'] & {
   wheel_enabled?: boolean
@@ -90,6 +91,10 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
   const [qrRegenConfirm, setQrRegenConfirm] = useState(false)
   // Product mode (design_settings.products) — loaded per café when the sheet opens.
   const [productMode, setProductMode] = useState<{ products: string | null } | null>(null)
+  // Design (theme_id + primary_color) — both already on the business row.
+  const [themeSaving, setThemeSaving] = useState<string | null>(null)
+  const [themeSaved, setThemeSaved] = useState<string | null>(null)
+  const [designError, setDesignError] = useState<string | null>(null)
 
   const selected = useMemo(() => businesses.find((b) => b.id === selectedId) || null, [businesses, selectedId])
 
@@ -105,6 +110,9 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
     setDeleteConfirm(false)
     setDeleteNameInput('')
     setQrRegenConfirm(false)
+    setThemeSaving(null)
+    setThemeSaved(null)
+    setDesignError(null)
   }, [selectedId])
 
   // Lazy-load the café's QR-gate state when a detail sheet opens.
@@ -327,6 +335,32 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
     } finally {
       setLoading(null)
     }
+  }
+
+  // ── Design (menu theme + accent colour) ────────────────────────────
+  const patchDesign = async (businessId: string, patch: { theme_id?: string; primary_color?: string }, okMsg: string) => {
+    setDesignError(null)
+    setBusinesses((cur) => cur.map((b) => (b.id === businessId ? { ...b, ...patch } : b))) // optimistic
+    try {
+      const res = await fetch(`/api/super-admin/businesses/${businessId}/design`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour.')
+      if (patch.theme_id) setThemeSaved(patch.theme_id)
+      toast(okMsg, 'success')
+    } catch (err: any) {
+      setDesignError(err.message || 'Une erreur est survenue.')
+      toast(err.message || 'Une erreur est survenue.', 'error')
+    }
+  }
+
+  const selectTheme = (businessId: string, themeId: string) => {
+    setThemeSaving(themeId)
+    setThemeSaved(null)
+    patchDesign(businessId, { theme_id: themeId }, 'Design appliqué.').finally(() => setThemeSaving(null))
   }
 
   // ── Profile ─────────────────────────────────────────────────────────
@@ -688,6 +722,37 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                       </p>
                     </>
                   )}
+                </Section>
+
+                {/* Design du menu (modèle + couleur) */}
+                <Section title="Design du menu">
+                  <p className="mb-3 text-xs text-zinc-400">
+                    Modèle de menu et couleur principale de ce café — visible aussitôt sur sa page publique.
+                  </p>
+                  <div className="mb-5 flex items-center gap-3">
+                    <label htmlFor={`color-${b.id}`} className="text-sm font-medium text-zinc-600">Couleur principale</label>
+                    <input
+                      id={`color-${b.id}`}
+                      type="color"
+                      value={b.primary_color || '#F47B20'}
+                      onChange={(e) => setBusinesses((cur) => cur.map((x) => (x.id === b.id ? { ...x, primary_color: e.target.value } : x)))}
+                      onBlur={(e) => patchDesign(b.id, { primary_color: e.target.value }, 'Couleur principale mise à jour.')}
+                      className="h-9 w-12 cursor-pointer rounded-lg border border-zinc-200 bg-white p-0.5"
+                      aria-label="Couleur principale"
+                    />
+                    <span className="font-mono text-xs text-zinc-400">{(b.primary_color || '#F47B20').toUpperCase()}</span>
+                  </div>
+                  <MenuDesignPicker
+                    themeCtrl={{
+                      activeId: b.theme_id || 'design1',
+                      onSelect: (themeId) => selectTheme(b.id, themeId),
+                      savingId: themeSaving,
+                      savedId: themeSaved,
+                      error: designError,
+                    } as ThemeCtrl}
+                    slug={b.slug}
+                    accent={b.primary_color || '#F47B20'}
+                  />
                 </Section>
 
                 {/* QR scan-to-play gate */}

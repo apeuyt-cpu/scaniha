@@ -4,14 +4,14 @@ import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/utils/slug'
 import { useLocale } from '@/lib/i18n/LocaleContext'
+import { PAYMENT_PLANS } from '@/lib/payment-config'
 
 const MIN_PASSWORD_LENGTH = 8
 
-// Plan prices shown exactly as the pricing cards render them (integer TND, no decimals).
-const PLAN_PRICES: Record<string, string> = {
-  lifetime: '600 TND',
-  '1year': '250 TND',
-  '6months': '150 TND',
+/** Price label for the selected-plan banner — from the single pricing source. */
+function planPriceLabel(plan?: string): string {
+  const p = (plan && PAYMENT_PLANS[plan]) || PAYMENT_PLANS['1year']
+  return `${p.price} TND`
 }
 
 export default function SignupForm({ plan }: { plan?: string }) {
@@ -271,7 +271,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
               <path d="M9 11h6M9 15h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
             <div>
-              <p className="text-sm font-semibold text-orange-900">{t('auth.selectPlan')}: {PLAN_PRICES[plan] ?? PLAN_PRICES['6months']}</p>
+              <p className="text-sm font-semibold text-orange-900">{t('auth.selectPlan')}: {planPriceLabel(plan)}</p>
               <p className="text-xs text-orange-700 mt-0.5">Paiement par virement bancaire — vous enverrez votre reçu depuis votre tableau de bord.</p>
             </div>
           </div>

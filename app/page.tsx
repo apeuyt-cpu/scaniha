@@ -1,5 +1,6 @@
 import { getCurrentProfile, getDashboardUrl } from '@/lib/auth'
 import LandingPage from '@/components/landing/LandingPage'
+import ScanihaJsonLd from '@/components/seo/ScanihaJsonLd'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -51,5 +52,10 @@ export default async function Home() {
   const role = (profile as any)?.role as 'owner' | 'super_admin' | null | undefined
   const dashboardUrl = role ? getDashboardUrl(role) : null
 
-  return <LandingPage dashboardUrl={dashboardUrl} />
+  return (
+    <>
+      <ScanihaJsonLd />
+      <LandingPage dashboardUrl={dashboardUrl} />
+    </>
+  )
 }

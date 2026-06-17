@@ -4,10 +4,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect, useRef } from 'react'
 import { useLocale, useTranslation } from '@/lib/i18n/LocaleContext'
+import { createClient } from '@/lib/supabase/client'
 import PricingComparison from '@/components/pricing/PricingComparison'
 import ClientsSection from '@/components/landing/ClientsSection'
 import AnimatedShapes from '@/components/landing/AnimatedShapes'
 import LocalProductsSection from '@/components/landing/LocalProductsSection'
+import FidelityShowcase from '@/components/landing/FidelityShowcase'
 import logoIcon from '../../public/logo.png'
 import logoFull from '../../public/logo2.png'
 import heroPhones from '../../public/hero/hero-phones.webp'
@@ -16,10 +18,6 @@ import feature1 from '../../public/features/feature-1.webp'
 import feature2 from '../../public/features/feature-2.webp'
 import feature3 from '../../public/features/feature-3.webp'
 import feature4 from '../../public/features/feature-4.webp'
-import engagementRoue from '../../public/engagement-roue.webp'
-import engagementPoints from '../../public/engagement-points.webp'
-import iconRoue from '../../public/engagement-icon-roue.png'
-import iconPoints from '../../public/engagement-icon-points.png'
 
 function useScrollReveal() {
   useEffect(() => {
@@ -48,7 +46,14 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
   const { t, locale, dir } = useLocale()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showStickyCta, setShowStickyCta] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const heroRef = useRef<HTMLElement | null>(null)
+
+  const handleLogout = async () => {
+    setLoggingOut(true)
+    try { await createClient().auth.signOut() } catch {}
+    window.location.href = '/'
+  }
 
   useScrollReveal()
 
@@ -94,12 +99,22 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
           {/* Desktop CTAs */}
           <div className="hidden items-center gap-1 lg:flex">
             {dashboardUrl ? (
-              <Link
-                href={dashboardUrl}
-                className="rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-700"
-              >
-                Mon espace
-              </Link>
+              <>
+                <Link
+                  href={dashboardUrl}
+                  className="rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-700"
+                >
+                  Mon espace
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 disabled:opacity-50"
+                >
+                  {loggingOut ? '…' : 'Déconnexion'}
+                </button>
+              </>
             ) : (
               <>
                 <Link href="/login" className="px-3 py-2 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900">
@@ -154,9 +169,14 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
               </Link>
               <div className="mt-3 flex flex-col gap-2 border-t border-zinc-100 pt-4">
                 {dashboardUrl ? (
-                  <Link href={dashboardUrl} className="rounded-lg bg-orange-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-orange-700" onClick={() => setMobileMenuOpen(false)}>
-                    Mon espace
-                  </Link>
+                  <>
+                    <Link href={dashboardUrl} className="rounded-lg bg-orange-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-orange-700" onClick={() => setMobileMenuOpen(false)}>
+                      Mon espace
+                    </Link>
+                    <button type="button" onClick={() => { setMobileMenuOpen(false); handleLogout() }} disabled={loggingOut} className="rounded-lg border border-zinc-300 px-4 py-2.5 text-center text-sm font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-50">
+                      {loggingOut ? '…' : 'Déconnexion'}
+                    </button>
+                  </>
                 ) : (
                   <>
                     <Link href="/login" className="rounded-lg border border-zinc-300 px-4 py-2.5 text-center text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50" onClick={() => setMobileMenuOpen(false)}>
@@ -388,67 +408,17 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
       {/* Engagement — game + loyalty */}
       <section className="bg-[#FFF9F3] py-20 sm:py-24 lg:py-28">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
-          <div className="reveal mx-auto mb-12 max-w-2xl text-center">
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-500">Nouveau</p>
+          <div className="reveal mx-auto mb-14 max-w-2xl text-center">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-500">Programme de fidélité</p>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
               Faites revenir vos clients
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-600">
-              Votre menu devient une expérience : un jeu où tout le monde gagne, et des points qui récompensent chaque visite.
+              Une carte de fidélité dans le téléphone : on s’inscrit en 10 secondes, on tourne la roue, on cumule des points et on les échange contre des récompenses.
             </p>
           </div>
 
-          <div className="reveal grid gap-6 lg:grid-cols-2">
-            {/* Roue de la chance */}
-            <div className="overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
-              <Image
-                src={engagementRoue}
-                alt="La roue de la chance — Café offert, -10%, Dessert offert, Boisson offerte"
-                sizes="(min-width: 1024px) 600px, 100vw"
-                className="h-auto w-full object-cover"
-              />
-              <div className="p-7 lg:p-8">
-                <div className="flex items-center gap-3">
-                  <Image src={iconRoue} alt="" className="h-10 w-10 rounded-xl" />
-                  <h3 className="text-xl font-extrabold text-zinc-900">La roue de la chance</h3>
-                </div>
-                <p className="mt-3 leading-relaxed text-zinc-600">
-                  Vos clients scannent, tournent la roue et <strong className="text-zinc-900">gagnent toujours quelque chose</strong> —
-                  un café offert, une remise, un dessert. Vous contrôlez les lots, leur fréquence et le stock.
-                </p>
-                <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-                  <li><span className="font-bold text-orange-500">✓</span> Sans application — directement depuis le menu</li>
-                  <li><span className="font-bold text-orange-500">✓</span> Une partie par client et par jour</li>
-                  <li><span className="font-bold text-orange-500">✓</span> Code de retrait à montrer au personnel</li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Points de fidélité */}
-            <div className="overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm">
-              <Image
-                src={engagementPoints}
-                alt="Les points de fidélité — solde de 120 points sur smartphone"
-                sizes="(min-width: 1024px) 600px, 100vw"
-                className="h-auto w-full object-cover"
-              />
-              <div className="p-7 lg:p-8">
-                <div className="flex items-center gap-3">
-                  <Image src={iconPoints} alt="" className="h-10 w-10 rounded-xl" />
-                  <h3 className="text-xl font-extrabold text-zinc-900">Les points de fidélité</h3>
-                </div>
-                <p className="mt-3 leading-relaxed text-zinc-600">
-                  Chaque achat rapporte des points, chaque partie de roue aussi. Vos clients les échangent contre des
-                  <strong className="text-zinc-900"> récompenses que vous définissez</strong> — et reviennent pour en gagner plus.
-                </p>
-                <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-                  <li><span className="font-bold text-orange-500">✓</span> Simple : le client donne son numéro en caisse</li>
-                  <li><span className="font-bold text-orange-500">✓</span> Vous fixez les points par dinar et les récompenses</li>
-                  <li><span className="font-bold text-orange-500">✓</span> Solde et historique consultables par le client</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+          <FidelityShowcase />
         </div>
       </section>
 

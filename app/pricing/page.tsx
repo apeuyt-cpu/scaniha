@@ -5,7 +5,7 @@ import PricingComparison from '@/components/pricing/PricingComparison'
 export const metadata: Metadata = {
   alternates: { canonical: 'https://scaniha.com/pricing' },
   title: 'Tarifs | Scaniha - Créateur de menu QR',
-  description: 'Choisissez le forfait idéal pour votre restaurant ou café. Commencez par un essai gratuit de 7 jours. Forfaits 6 mois, 1 an et à vie disponibles. Sans frais cachés.',
+  description: 'Choisissez le forfait idéal pour votre restaurant ou café. Commencez par un essai gratuit de 7 jours. Forfaits 1 an et à vie disponibles. Sans frais cachés.',
   openGraph: {
     images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Créateur de menu QR pour restaurants et cafés' }], 
     title: 'Tarifs | Scaniha - Créateur de menu QR',
@@ -33,7 +33,7 @@ const faqs = [
   },
   {
     q: 'Le paiement est-il unique ou récurrent ?',
-    a: 'Le paiement est unique pour la durée choisie (6 mois, 1 an ou à vie). Il n’y a aucun abonnement et aucun prélèvement automatique. Pour le forfait à vie, vous pouvez régler en 2 versements de 300 TND, sans frais.',
+    a: 'Le paiement est unique pour la durée choisie (1 an ou à vie). Il n’y a aucun abonnement et aucun prélèvement automatique. Pour le forfait à vie, vous pouvez régler en 2 versements de 100 TND, sans frais.',
   },
   {
     q: 'Puis-je commencer sans payer ?',

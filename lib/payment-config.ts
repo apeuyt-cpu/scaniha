@@ -1,13 +1,12 @@
 // Manual payment configuration.
 // Customers pick a plan, choose a method below, send the money, then upload a receipt.
 
-export type PlanId = '6months' | '1year' | 'lifetime'
+export type PlanId = '1year' | 'lifetime'
 
-// The 3 plans shown on the pricing page / cards.
+// Two clean tiers shown on the pricing page / cards (per product).
 export const PLANS: Record<PlanId, { id: PlanId; label: string; price: number }> = {
-  '6months': { id: '6months', label: '6 mois', price: 100 },
-  '1year': { id: '1year', label: '1 an', price: 150 },
-  lifetime: { id: 'lifetime', label: 'À vie', price: 300 },
+  '1year': { id: '1year', label: '1 an', price: 100 },
+  lifetime: { id: 'lifetime', label: 'À vie', price: 200 },
 }
 
 // All payable variants (used by the API + approval).
@@ -15,12 +14,15 @@ export const PLANS: Record<PlanId, { id: PlanId; label: string; price: number }>
 // approval sets the business's expires_at to null (no expiry — a real lifetime,
 // not a "9999 days" hack). See app/api/super-admin/payment-requests/[id]/route.ts.
 export const PAYMENT_PLANS: Record<string, { label: string; price: number; grantsDays: number | null }> = {
-  '6months': { label: '6 mois', price: 100, grantsDays: 182 },
-  '1year': { label: '1 an', price: 150, grantsDays: 365 },
-  lifetime: { label: 'À vie', price: 300, grantsDays: null },
-  // ── Legacy installment variants ──────────────────────────────────
+  '1year': { label: '1 an', price: 100, grantsDays: 365 },
+  lifetime: { label: 'À vie', price: 200, grantsDays: null },
+  // Programme de fidélité (produit séparé) — même tarif deux paliers.
+  fidelity_year: { label: 'Fidélité — 1 an', price: 100, grantsDays: 365 },
+  fidelity_lifetime: { label: 'Fidélité — À vie', price: 200, grantsDays: null },
+  // ── Legacy variants ───────────────────────────────────────────────
   // No longer offered in the UI, but kept here so any historical pending
   // request that used them still resolves correctly on approval.
+  '6months': { label: '6 mois', price: 100, grantsDays: 182 },
   lifetime_split1: { label: 'À vie — 1er versement (1/2)', price: 300, grantsDays: 31 },
   lifetime_split2: { label: 'À vie — 2e versement (2/2)', price: 300, grantsDays: null },
 }

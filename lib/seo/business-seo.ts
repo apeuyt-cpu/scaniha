@@ -39,7 +39,8 @@ export function getBusinessSeo(business: BusinessSeoInput): BusinessSeo {
   const activeTagline = business?.theme_id ? clean(ds?.[business.theme_id]?.tagline) : null
 
   const metaTitle = clean(seo.metaTitle)
-  const title = metaTitle || `${name} - Menu numérique | Scaniha`
+  // A client's page is THEIR brand — no "| Scaniha" suffix in the title.
+  const title = metaTitle || `${name} – Menu numérique`
   const ogTitle = metaTitle || `${name} - Menu`
 
   const description =

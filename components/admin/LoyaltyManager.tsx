@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Toggle from '@/components/admin/ui/Toggle'
 import Button from '@/components/admin/ui/Button'
-import Field, { inputClass } from '@/components/admin/ui/Field'
+import { inputClass } from '@/components/admin/ui/Field'
 import SetupCard from '@/components/admin/game/SetupCard'
 import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
 
@@ -54,6 +54,12 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
       } else { console.error('LoyaltyManager load error:', pErr); setError('Impossible de charger la fidélité. Réessayez.') }
       setLoading(false)
       return
+    }
+    // Loyalty is intentionally simple: 1 dinar spent = 1 point, everywhere.
+    // The owner no longer tunes a ratio, so self-heal any legacy non-1 value.
+    if (p && Number(p.points_per_tnd) !== 1) {
+      ;(supabase.from('loyalty_programs') as any).update({ points_per_tnd: 1 }).eq('business_id', businessId)
+      p.points_per_tnd = 1
     }
     setProgram(p ? { redeem_expiry_hours: 48, ...p } : null)
     if (p) {
@@ -168,11 +174,12 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
           label={program.active ? 'Programme actif' : 'Programme désactivé'}
           hint={program.active ? 'Vos clients voient leurs points sur /fidelite.' : 'Activez pour ouvrir la page fidélité.'}
         />
-        <div className="mt-4">
-          <Field label="Points par TND dépensé" hint="Ex. 1 = 1 point par dinar. Les points se gagnent uniquement en caisse, sur le montant dépensé.">
-            <input type="number" min={0} step={0.5} value={program.points_per_tnd}
-              onChange={(e) => updateProgram({ points_per_tnd: Math.max(0, Number(e.target.value)) })} className={`${inputClass} sm:max-w-xs`} />
-          </Field>
+        <div className="mt-4 flex items-start gap-3 rounded-xl border border-orange-100 bg-orange-50/60 px-4 py-3">
+          <span aria-hidden="true" className="mt-0.5 text-base leading-none">🪙</span>
+          <div>
+            <p className="text-sm font-semibold text-zinc-900">1 dinar dépensé = 1 point</p>
+            <p className="mt-0.5 text-xs text-zinc-500">Simple et clair pour vos clients. Les points se gagnent uniquement en caisse, sur le montant dépensé.</p>
+          </div>
         </div>
         {pending > 0 && (
           <div className="mt-4 text-xs text-zinc-400">{pending} récompense{pending > 1 ? 's' : ''} à remettre</div>

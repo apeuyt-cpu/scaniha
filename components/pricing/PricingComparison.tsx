@@ -29,8 +29,8 @@ const FEATURES_QR = [
 ]
 
 const qrPlans: Plan[] = [
-  { variant: 'popular', name: '1 an', price: '150', period: 'par an', href: '/signup?plan=1year', badge: 'Le plus populaire' },
-  { variant: 'dark', name: 'À vie', price: '250', period: 'accès à vie — sans abonnement', note: 'Réglez une seule fois, plus jamais d’abonnement.', href: '/signup?plan=lifetime', badge: 'Meilleure offre' },
+  { variant: 'popular', name: '1 an', price: '150', oldPrice: '250', discount: '−40%', period: 'par an', href: '/signup?plan=1year', badge: 'Le plus populaire' },
+  { variant: 'dark', name: 'À vie', price: '250', oldPrice: '600', discount: '−58%', period: 'accès à vie — sans abonnement', note: 'Réglez une seule fois, plus jamais d’abonnement.', href: '/signup?plan=lifetime', badge: 'Meilleure offre' },
 ]
 
 // ── Produit 2 : Programme de fidélité (séparé) ───────────────────────

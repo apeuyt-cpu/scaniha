@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 import MenuDesignPicker, { type ThemeCtrl } from './MenuDesignPicker'
@@ -38,6 +38,14 @@ export default function DesignStudio({ business }: { business: any }) {
       : {}
   )
   const [tab, setTab] = useState<TabId>('model')
+
+  // Deep-link support: /admin/theme?tab=brand|colors|model opens that tab on
+  // load (e.g. the "Ajoutez votre logo" onboarding step links straight to
+  // Marque). Done in an effect so SSR/first paint match, then switch on mount.
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab')
+    if (t === 'brand' || t === 'colors' || t === 'model') setTab(t)
+  }, [])
 
   // Lifted brand fields so name/logo edits in the Marque tab update the preview live.
   const [bizName, setBizName] = useState<string>(business.name || '')

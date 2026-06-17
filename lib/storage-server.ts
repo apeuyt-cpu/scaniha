@@ -4,12 +4,11 @@
  * metadata stripped) and stored in the public `menu-images` bucket with
  * immutable cache headers — small files, fast loads, free CDN caching.
  *
- * Format: menu photos (items/categories/covers) are encoded to BOTH AVIF and
- * WebP and the smaller wins — AVIF is ~40% lighter than WebP for photos, and
- * the Supabase render endpoint (used to serve every menu image) transcodes
- * AVIF origins to whatever the browser accepts, so there's no compatibility
- * cost. Logos/receipts stay WebP: a logo can be served as a raw origin
- * (favicon) where AVIF support is less universal, and that saving is trivial.
+ * Format: everything is encoded to WebP. We serve these origins DIRECTLY (the
+ * paid Supabase render endpoint that used to transcode them is disabled on the
+ * free plan — see lib/image-url), so the stored format must be universally
+ * decodable in the browser. WebP is (Chrome/Firefox/Edge/Safari 14+). AVIF would
+ * be ~30% smaller but isn't safe to serve raw to every visitor, so we don't use it.
  */
 import { randomUUID } from 'crypto'
 import sharp from 'sharp'
@@ -25,13 +24,17 @@ export const STORAGE_BUCKET = 'menu-images'
  * Supabase free-tier storage + bandwidth go as far as possible.
  */
 interface Profile { max: number; webp: number; avif: number | null }
+// avif:null everywhere — origins are served raw on the free plan, so WebP (which
+// every browser decodes) is the safe format. `max` is the long-edge cap in px,
+// tuned to the size each image is actually shown at (×2 for retina), since we no
+// longer downscale per display context.
 const PROFILES: Record<string, Profile> = {
-  logos:      { max: 512,  webp: 82, avif: null }, // small on screen; crisp + WebP-compatible
-  items:      { max: 1080, webp: 74, avif: 48 },   // menu item photos
-  categories: { max: 1080, webp: 74, avif: 48 },
-  covers:     { max: 1500, webp: 74, avif: 50 },   // wide hero / cover
-  receipts:   { max: 1500, webp: 72, avif: null }, // legibility over beauty; WebP-compatible
-  uploads:    { max: 1200, webp: 74, avif: 50 },   // default bucket
+  logos:      { max: 512,  webp: 82, avif: null }, // small on screen; crisp
+  items:      { max: 1080, webp: 74, avif: null }, // menu item photos
+  categories: { max: 1080, webp: 74, avif: null },
+  covers:     { max: 1500, webp: 74, avif: null }, // wide hero / cover
+  receipts:   { max: 1500, webp: 72, avif: null }, // legibility over beauty
+  uploads:    { max: 1200, webp: 74, avif: null }, // default bucket
 }
 const DEFAULT_PROFILE: Profile = PROFILES.uploads
 

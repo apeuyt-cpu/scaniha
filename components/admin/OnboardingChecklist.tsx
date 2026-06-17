@@ -83,13 +83,13 @@ export default function OnboardingChecklist({ business }: { business: Onboarding
   }, [business.design_settings, business.primary_color])
 
   const steps: Step[] = useMemo(() => {
-    const logo: Step = { key: 'logo', title: 'Ajoutez votre logo', subtitle: 'Il s’affiche en haut de votre page', href: '/admin/settings', done: !!business.logo_url }
+    const logo: Step = { key: 'logo', title: 'Ajoutez votre logo', subtitle: 'Il s’affiche en haut de votre page', href: '/admin/theme?tab=brand', done: !!business.logo_url }
     const menuReady = itemCount > 0 && categoryCount > 0
 
     if (mode === 'fidelity') {
       return [
         logo,
-        { key: 'design', title: 'Choisissez vos couleurs', subtitle: 'Style et couleur de votre carte', href: '/admin/theme', done: designChosen },
+        { key: 'design', title: 'Choisissez vos couleurs', subtitle: 'Style et couleur de votre carte', href: '/admin/theme?tab=colors', done: designChosen },
         { key: 'roue', title: 'Configurez la roue', subtitle: 'Lots et chances de gagner', href: '/admin/fidelite/roue', done: gameOk },
         { key: 'recompenses', title: 'Définissez les récompenses', subtitle: 'Points par dinar et catalogue', href: '/admin/fidelite/recompenses', done: programOk },
         { key: 'qr', title: 'Partagez votre QR code', subtitle: 'À imprimer pour vos tables', href: '/admin/share', done: gameOk },

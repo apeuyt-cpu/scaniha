@@ -1,36 +1,29 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { type GameRow, type PrizeRow, gameCooldownHours, COOLDOWN_OPTIONS, splitInt } from '@/lib/game'
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { type PrizeRow, splitInt } from '@/lib/game'
+import { useRoueGame } from '@/components/admin/fidelite/useRoueGame'
 import Toggle from '@/components/admin/ui/Toggle'
 import Button from '@/components/admin/ui/Button'
-import Field, { inputClass } from '@/components/admin/ui/Field'
+import { inputClass } from '@/components/admin/ui/Field'
 import SetupCard from '@/components/admin/game/SetupCard'
 import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
-import PlayGates from '@/components/admin/game/PlayGates'
-import QrSessionLock from '@/components/admin/game/QrSessionLock'
-import SurveyResponses from '@/components/admin/game/SurveyResponses'
 
 /**
  * Owner configuration for the roulette ("everyone wins, variable value").
- * Operate (validate won codes) lives in the Caisse console — this screen is
- * setup: activate, prizes (label/weight/stock), and the limits.
+ * This screen stays deliberately simple: activate, prizes (name + chance), and a
+ * live preview. Everything else — play limits, cost/stock, conditions, QR lock —
+ * lives on the separate "Réglages avancés" page so first setup never feels heavy.
  */
 export default function GameManager({ businessId, slug }: { businessId: string; slug: string }) {
-  const supabase = createClient()
-  const [game, setGame] = useState<GameRow | null>(null)
-  const [prizes, setPrizes] = useState<PrizeRow[]>([])
-  const [stats, setStats] = useState({ plays: 0, pending: 0, redeemed: 0 })
-  const [loading, setLoading] = useState(true)
-  const [setupNeeded, setSetupNeeded] = useState(false)
+  const {
+    game, prizes, setPrizes, stats, loading, setupNeeded, error, setError,
+    gameApi, createGame, updateGame, updatePrize, persistPrize,
+  } = useRoueGame(businessId)
+
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [prizeToDelete, setPrizeToDelete] = useState<string | null>(null)
-  // Progressive disclosure — keep the screen simple (on/off + prizes) by default;
-  // the owner opens "Options avancées" for costs, stock, budget, daily limits,
-  // play conditions and the presence lock.
-  const [advanced, setAdvanced] = useState(false)
   // Prize NAME persists on a short debounce (not only on blur) so a typed name is
   // never lost if the owner switches tab or navigates before the input blurs.
   const labelTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
@@ -39,89 +32,13 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
   const weightTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingWeights = useRef<Map<string, number>>(new Map())
 
-  const load = useCallback(async () => {
-    setError(null)
-    const { data: g, error: gErr } = await (supabase.from('games') as any)
-      .select('*')
-      .eq('business_id', businessId)
-      .eq('type', 'roulette')
-      .maybeSingle()
-    if (gErr) {
-      if (gErr.code === '42P01' || gErr.message?.includes('does not exist') || gErr.message?.includes('schema cache')) {
-        setSetupNeeded(true)
-        setLoading(false)
-        return
-      }
-      console.error('GameManager load error:', gErr)
-      setError('Impossible de charger le jeu. Réessayez.')
-      setLoading(false)
-      return
-    }
-    setGame(g)
-    if (g) {
-      const midnight = new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
-      const now = new Date().toISOString()
-      const [{ data: p }, plays, pending, redeemed] = await Promise.all([
-        (supabase.from('prizes') as any).select('*').eq('game_id', g.id).order('position').order('created_at'),
-        (supabase.from('plays') as any).select('id', { count: 'exact', head: true }).eq('game_id', g.id).gte('created_at', midnight),
-        (supabase.from('wins') as any).select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'pending').gt('expires_at', now),
-        (supabase.from('wins') as any).select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'redeemed').gte('redeemed_at', midnight),
-      ])
-      setPrizes(p || [])
-      setStats({ plays: plays.count ?? 0, pending: pending.count ?? 0, redeemed: redeemed.count ?? 0 })
-    }
-    setLoading(false)
-  }, [businessId, supabase])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  // Flush nothing on unmount, just drop the pending timer to avoid a late setState.
+  // Drop the pending timer on unmount to avoid a late setState.
   useEffect(() => () => { if (weightTimer.current) clearTimeout(weightTimer.current) }, [])
 
-  const SAVE_MSG = 'Impossible d\'enregistrer. Réessayez.'
-
-  // Writes go through the server (requireOwner + service role) so a stale browser
-  // token can never silently block them — the old cause of "Impossible d'enregistrer".
-  async function gameApi(action: string, payload: Record<string, unknown> = {}) {
-    const res = await fetch('/api/admin/game', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, ...payload }),
-    })
-    const json = await res.json().catch(() => ({}))
-    return { ok: res.ok, json }
-  }
-
-  async function createGame() {
+  async function handleCreate() {
     setBusy(true)
-    setError(null)
-    const { ok, json } = await gameApi('createGame')
+    await createGame()
     setBusy(false)
-    if (!ok) { console.error('GameManager createGame error:', json.error); setError(json.error || SAVE_MSG); return }
-    setSetupNeeded(false)
-    await load()
-  }
-
-  async function updateGame(patch: Partial<GameRow>) {
-    if (!game) return
-    setGame({ ...game, ...patch })
-    const { ok, json } = await gameApi('updateGame', { gameId: game.id, patch })
-    if (!ok) { console.error('GameManager updateGame error:', json.error); setError(json.error || SAVE_MSG) }
-  }
-
-  async function updatePrize(id: string, patch: Partial<PrizeRow>) {
-    setPrizes((cur) => cur.map((p) => (p.id === id ? { ...p, ...patch } : p)))
-    const { ok, json } = await gameApi('updatePrize', { prizeId: id, patch })
-    if (!ok) { console.error('GameManager updatePrize error:', json.error); setError(json.error || SAVE_MSG) }
-  }
-
-  // Persist a single field without touching local state (state is already set by
-  // the caller) — used by the odds slider so dragging doesn't churn React state.
-  async function persistPrize(id: string, patch: Partial<PrizeRow>) {
-    const { ok, json } = await gameApi('updatePrize', { prizeId: id, patch })
-    if (!ok) { console.error('GameManager persistPrize error:', json.error); setError(json.error || SAVE_MSG) }
   }
 
   // Debounced batch-save of slider weights: drag updates state instantly, the DB
@@ -184,7 +101,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
   async function addPrize() {
     if (!game) return
     const { ok, json } = await gameApi('addPrize', { gameId: game.id, position: prizes.length })
-    if (!ok || !json.prize) { console.error('GameManager addPrize error:', json.error); setError(json.error || SAVE_MSG); return }
+    if (!ok || !json.prize) { console.error('GameManager addPrize error:', json.error); setError(json.error || 'Impossible d\'enregistrer. Réessayez.'); return }
     const next = [...prizes, json.prize as PrizeRow]
     setPrizes(next)
     renormalizeActive(next) // give the new lot a fair share, keep the total at 100%
@@ -192,7 +109,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
 
   async function deletePrize(id: string) {
     const { ok, json } = await gameApi('deletePrize', { prizeId: id })
-    if (!ok) { console.error('GameManager deletePrize error:', json.error); setError(json.error || SAVE_MSG); return }
+    if (!ok) { console.error('GameManager deletePrize error:', json.error); setError(json.error || 'Impossible d\'enregistrer. Réessayez.'); return }
     const next = prizes.filter((p) => p.id !== id)
     setPrizes(next)
     renormalizeActive(next) // re-spread the freed-up odds across the remaining lots
@@ -207,9 +124,9 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
       <SetupCard
         icon={<span aria-hidden="true">🎡</span>}
         title="Roue de la chance"
-        description="Vos clients scannent, tournent la roue et gagnent toujours quelque chose — vous contrôlez les lots, leur fréquence et le stock. Un aimant à fidélité pour votre établissement."
+        description="Vos clients scannent, tournent la roue et gagnent toujours quelque chose — vous contrôlez les lots et leur fréquence. Un aimant à fidélité pour votre établissement."
         cta="Configurer ma roue"
-        onActivate={createGame}
+        onActivate={handleCreate}
         busy={busy}
         error={error}
       />
@@ -228,8 +145,6 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
   // Stable warm colour per lot (by row order) — shared by the live bar and dots.
   const colorById: Record<string, string> = {}
   prizes.forEach((p, i) => { colorById[p.id] = PRIZE_COLORS[i % PRIZE_COLORS.length] })
-  // Average giveaway cost per spin, from the displayed odds (advanced/budget only).
-  const avgCostPerPlay = activeList.reduce((s, p) => s + ((pctById[p.id] || 0) / 100) * (Number(p.cost) || 0), 0)
 
   return (
     <div className="space-y-4">
@@ -345,59 +260,15 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                   <span className="text-[11px] text-zinc-400">N&apos;apparaît pas sur la roue.</span>
                 )}
               </div>
-              {/* Advanced: cost (feeds the budget) + stock cap */}
-              {advanced && (
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <label className="block text-[11px] font-semibold text-zinc-500">
-                    <span className="mb-1 block">Coût (TND)</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.5"
-                      value={p.cost ?? ''}
-                      placeholder="—"
-                      onChange={(e) => updatePrize(p.id, { cost: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
-                      className={`${inputClass} text-center`}
-                    />
-                  </label>
-                  <label className="block text-[11px] font-semibold text-zinc-500">
-                    <span className="mb-1 block">Stock</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={p.stock ?? ''}
-                      placeholder="∞"
-                      onChange={(e) => updatePrize(p.id, { stock: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
-                      className={`${inputClass} text-center`}
-                    />
-                  </label>
-                </div>
-              )}
             </div>
           ))}
           {prizes.length === 0 && <p className="py-6 text-center text-sm text-zinc-400">Aucun lot — ajoutez-en au moins deux.</p>}
         </div>
-
-        {/* Giveaway budget — advanced only (odds now live on the sliders above) */}
-        {advanced && activeList.length > 0 && (
-          <div className="mt-4 space-y-2 rounded-xl bg-zinc-50 p-3 text-xs">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-semibold text-zinc-600">Coût moyen par partie</span>
-              <span className="font-bold text-zinc-900">{avgCostPerPlay.toFixed(2)} TND</span>
-            </div>
-            <div className="flex items-center justify-between gap-2 text-zinc-500">
-              <span>Budget estimé · 100 parties</span>
-              <span className="font-semibold">≈ {(avgCostPerPlay * 100).toFixed(0)} TND</span>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Advanced options — collapsed by default to keep setup simple. */}
-      <button
-        type="button"
-        onClick={() => setAdvanced((v) => !v)}
-        aria-expanded={advanced}
+      {/* Advanced settings — moved off this screen to keep setup simple. */}
+      <Link
+        href="/admin/fidelite/roue/reglages"
         className="flex w-full items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-left transition hover:bg-zinc-50"
       >
         <span className="flex items-center gap-3">
@@ -405,61 +276,12 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
           </span>
           <span>
-            <span className="block text-sm font-semibold text-zinc-900">Options avancées</span>
-            <span className="block text-xs text-zinc-400">Coûts &amp; stock, budget, limites, conditions, présence</span>
+            <span className="block text-sm font-semibold text-zinc-900">Réglages avancés</span>
+            <span className="block text-xs text-zinc-400">Coûts &amp; stock, limites, conditions, présence</span>
           </span>
         </span>
-        <svg className={`shrink-0 text-zinc-400 transition-transform ${advanced ? 'rotate-180' : ''}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-      </button>
-
-      {advanced && (
-        <>
-          {/* Réglages */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-            <h4 className="font-semibold text-zinc-900">Réglages</h4>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Field label="Parties autorisées" hint="Par client (téléphone) et par appareil, sur la période choisie.">
-                <input
-                  type="number"
-                  min={1}
-                  value={game.daily_limit}
-                  onChange={(e) => updateGame({ daily_limit: Math.max(1, Number(e.target.value)) })}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Fréquence" hint="Délai avant de pouvoir rejouer — compté depuis la dernière partie.">
-                <select
-                  value={gameCooldownHours(game.config)}
-                  onChange={(e) => updateGame({ config: { ...(game.config || {}), cooldownHours: Number(e.target.value) } })}
-                  className={inputClass}
-                >
-                  {COOLDOWN_OPTIONS.map((o) => (
-                    <option key={o.hours} value={o.hours}>{o.label}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Validité d’un gain (heures)" hint="Délai pour récupérer un lot avant expiration.">
-                <input
-                  type="number"
-                  min={1}
-                  value={game.win_expiry_hours}
-                  onChange={(e) => updateGame({ win_expiry_hours: Math.max(1, Number(e.target.value)) })}
-                  className={inputClass}
-                />
-              </Field>
-            </div>
-          </div>
-
-          {/* Conditions pour jouer (gates: social follow / link / survey) */}
-          <PlayGates gameId={game.id} config={game.config || {}} onConfig={(c) => setGame({ ...game, config: c })} />
-
-          {/* Exiger le scan du QR pour jouer (session QR limitée, contrôlée ici) */}
-          <QrSessionLock gameId={game.id} config={game.config || {}} onConfig={(c) => setGame({ ...game, config: c })} />
-
-          {/* Survey answers collected by the gates (shows only when there are any) */}
-          <SurveyResponses businessId={businessId} />
-        </>
-      )}
+        <svg className="shrink-0 text-zinc-300" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+      </Link>
 
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 

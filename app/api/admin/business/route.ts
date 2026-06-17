@@ -13,8 +13,11 @@ function planDisplayLabel(plan: string): string {
 
 /**
  * Current plan for a business: the most recent APPROVED manual payment request
- * (payment_requests is service-role only). No approved payment yet but still
- * active with an expiry → it's the 7-day free trial.
+ * (payment_requests is service-role only). With no approved payment, we only
+ * call it the free trial when the subscription window is short (~the 7-day trial
+ * set at signup). A LONG window with no payment record is a legacy/comped paid
+ * account — it must never be labelled "Essai gratuit" (returns null → no badge;
+ * the dashboard still shows "Abonnement actif" + the expiry).
  */
 async function currentPlan(business: any): Promise<string | null> {
   try {
@@ -28,7 +31,14 @@ async function currentPlan(business: any): Promise<string | null> {
       .limit(1)
     const pr = data?.[0]
     if (pr?.plan) return planDisplayLabel(pr.plan)
-    if (business.status === 'active' && business.expires_at) return 'Essai gratuit'
+    if (business.status === 'active' && business.expires_at) {
+      const created = business.created_at ? new Date(business.created_at).getTime() : NaN
+      const windowDays = Number.isFinite(created)
+        ? (new Date(business.expires_at).getTime() - created) / 86_400_000
+        : Infinity
+      // 7-day trial (+ buffer). Any longer window = a paid/legacy plan, not a trial.
+      if (windowDays <= 14) return 'Essai gratuit'
+    }
     return null
   } catch (e: any) {
     console.error('[admin/business] plan lookup:', e?.message)

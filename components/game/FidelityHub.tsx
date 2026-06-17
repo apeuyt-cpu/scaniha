@@ -48,6 +48,9 @@ export default function FidelityHub({
   const [phase, setPhase] = useState<Phase>('loading')
   const [tab, setTabState] = useState<Tab>('carte')
   const [prizes, setPrizes] = useState<string[]>([])
+  // Whether the roulette is on for this café. When OFF but loyalty is ON, the hub
+  // runs in "points-only" mode (no Roue tab/CTA). true → identical to before.
+  const [hasRoulette, setHasRoulette] = useState(false)
   const [session, setSession] = useState<DinerSession | null>(null)
   const [loyaltyActive, setLoyaltyActive] = useState(false)
   const [rewards, setRewards] = useState<Reward[]>([])
@@ -99,8 +102,12 @@ export default function FidelityHub({
         const res = await fetch(`/api/game/${slug}`)
         const json = await res.json()
         if (cancelled) return
-        if (!json.active) { setPhase('inactive'); return }
-        setPrizes(json.prizes); setGates(Array.isArray(json.gates) ? json.gates : [])
+        const roulette = Boolean(json.active)
+        const loyalty = Boolean(json.loyaltyActive)
+        // Active if EITHER the roulette OR the points program is on (points-only allowed).
+        if (!roulette && !loyalty) { setPhase('inactive'); return }
+        setHasRoulette(roulette); setLoyaltyActive(loyalty)
+        setPrizes(Array.isArray(json.prizes) ? json.prizes : []); setGates(Array.isArray(json.gates) ? json.gates : [])
 
         const token = readToken(slug)
         let authed: DinerSession | null = null
@@ -116,7 +123,8 @@ export default function FidelityHub({
 
         let qTab: Tab | null = null
         try { const q = new URLSearchParams(window.location.search).get('t'); if (q === 'carte' || q === 'roue' || q === 'boutique') qTab = q } catch {}
-        setTabState(qTab ?? (authed ? 'carte' : 'roue'))
+        if (qTab === 'roue' && !roulette) qTab = null
+        setTabState(qTab ?? (roulette && !authed ? 'roue' : 'carte'))
 
         if (authed) {
           setSession(authed); loadAccount(authed.phone)
@@ -140,7 +148,7 @@ export default function FidelityHub({
     const token = session?.token ?? readToken(slug); clearToken(slug)
     try { localStorage.removeItem(`scaniha_win_${slug}`) } catch {}
     if (token) { try { await fetch(`/api/account/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout', token }) }) } catch {} }
-    setSession(null); setSummary(EMPTY); setResult(null); setConfetti(false); setQrOpen(false); setError(null); setRedeemed(null); loadPublicRewards(); setTabState('roue'); setPhase('ready')
+    setSession(null); setSummary(EMPTY); setResult(null); setConfetti(false); setQrOpen(false); setError(null); setRedeemed(null); loadPublicRewards(); setTabState(hasRoulette ? 'roue' : 'carte'); setPhase('ready')
   }
 
   async function spin(tokenOverride?: string, gatesOk?: boolean) {
@@ -247,9 +255,9 @@ export default function FidelityHub({
 
       <div className="px-[18px] pt-1">
         {tab === 'carte' && (
-          <CarteTab session={session} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} onPlay={() => setTab('roue')} onLogout={logout} />
+          <CarteTab session={session} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} onPlay={() => (hasRoulette ? setTab('roue') : requireLogin('Connectez-vous pour créer votre carte de fidélité et cumuler des points.'))} onLogout={logout} />
         )}
-        {tab === 'roue' && (
+        {hasRoulette && tab === 'roue' && (
           <RoueTab prizes={prizes} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} onSpin={() => spin()} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone) } }} onReview={() => setWinModalOpen(true)} />
         )}
         {tab === 'boutique' && (
@@ -257,7 +265,7 @@ export default function FidelityHub({
         )}
       </div>
 
-      <FidelityNav tab={tab} setTab={setTab} hasMenu={hasMenu} slug={slug} accent={accent} />
+      <FidelityNav tab={tab} setTab={setTab} hasMenu={hasMenu} hasRoulette={hasRoulette} slug={slug} accent={accent} />
 
       {phase === 'won' && result && winModalOpen && (
         <WinModal result={result} accent={accent} gradient={gradient} copied={copied} onCopy={copyCode} onClose={() => setWinModalOpen(false)} onSeeCard={() => { setWinModalOpen(false); setTab('carte') }} />
@@ -276,7 +284,7 @@ export default function FidelityHub({
 }
 
 /* ── Bottom navigation (pill active state) ───────────────────────────────────── */
-function FidelityNav({ tab, setTab, hasMenu, slug, accent }: { tab: Tab; setTab: (t: Tab) => void; hasMenu: boolean; slug: string; accent: string }) {
+function FidelityNav({ tab, setTab, hasMenu, hasRoulette, slug, accent }: { tab: Tab; setTab: (t: Tab) => void; hasMenu: boolean; hasRoulette: boolean; slug: string; accent: string }) {
   const pill = (active: boolean) => ({ background: active ? `${accent}1f` : 'transparent', color: active ? accent : FAINT })
   const lbl = (active: boolean) => ({ color: active ? INK : FAINT })
   return (
@@ -291,9 +299,11 @@ function FidelityNav({ tab, setTab, hasMenu, slug, accent }: { tab: Tab; setTab:
         <NavItem active={tab === 'carte'} onClick={() => setTab('carte')} label="Ma carte" pill={pill} lbl={lbl}>
           <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h4" /></svg>
         </NavItem>
-        <NavItem active={tab === 'roue'} onClick={() => setTab('roue')} label="Roue" pill={pill} lbl={lbl}>
-          <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4" /></svg>
-        </NavItem>
+        {hasRoulette && (
+          <NavItem active={tab === 'roue'} onClick={() => setTab('roue')} label="Roue" pill={pill} lbl={lbl}>
+            <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4" /></svg>
+          </NavItem>
+        )}
         <NavItem active={tab === 'boutique'} onClick={() => setTab('boutique')} label="Boutique" pill={pill} lbl={lbl}>
           <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
         </NavItem>
@@ -313,9 +323,9 @@ function NavItem({ active, onClick, label, pill, lbl, children }: { active: bool
 /* ── Ma carte ────────────────────────────────────────────────────────────────── */
 function CarteTab(props: {
   session: DinerSession | null; accent: string; gradient: string; greeting: string; balance: number; nextReward: Reward | null; pct: number; loyaltyActive: boolean
-  rewards: Reward[]; activeCodes: Array<{ code: string; label: string; expires_at: string }>; recent: CustomerSummary['recent']; cardCode: string; qrOpen: boolean; setQrOpen: (v: boolean) => void; onPlay: () => void; onLogout: () => void
+  rewards: Reward[]; activeCodes: Array<{ code: string; label: string; expires_at: string }>; recent: CustomerSummary['recent']; cardCode: string; qrOpen: boolean; setQrOpen: (v: boolean) => void; hasRoulette: boolean; onPlay: () => void; onLogout: () => void
 }) {
-  const { session, accent, gradient, greeting, balance, nextReward, pct, loyaltyActive, activeCodes, recent, cardCode, qrOpen, setQrOpen, onPlay, onLogout } = props
+  const { session, accent, gradient, greeting, balance, nextReward, pct, loyaltyActive, activeCodes, recent, cardCode, qrOpen, setQrOpen, hasRoulette, onPlay, onLogout } = props
   if (!session) {
     return (
       <div className="pt-6 text-center">
@@ -323,9 +333,9 @@ function CarteTab(props: {
           <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h4" /></svg>
         </div>
         <h1 className="mt-4 text-xl font-bold" style={{ color: INK }}>Votre carte de fidélité</h1>
-        <p className="mx-auto mt-1.5 max-w-xs text-sm leading-relaxed" style={{ color: MUT }}>Cumulez des points à chaque visite, gagnez à la roue et échangez vos points contre des récompenses.</p>
-        <button type="button" onClick={onPlay} className="mt-6 block w-full rounded-2xl py-3.5 text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -16px ${accent}` }}>Tourner la roue pour commencer</button>
-        <p className="mt-3 text-[11px] leading-relaxed" style={{ color: FAINT }}>Aucune inscription — on vous demande votre numéro seulement si vous gagnez.</p>
+        <p className="mx-auto mt-1.5 max-w-xs text-sm leading-relaxed" style={{ color: MUT }}>{hasRoulette ? 'Cumulez des points à chaque visite, gagnez à la roue et échangez vos points contre des récompenses.' : 'Cumulez des points à chaque visite et échangez-les contre des récompenses.'}</p>
+        <button type="button" onClick={onPlay} className="mt-6 block w-full rounded-2xl py-3.5 text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -16px ${accent}` }}>{hasRoulette ? 'Tourner la roue pour commencer' : 'Créer ma carte de fidélité'}</button>
+        <p className="mt-3 text-[11px] leading-relaxed" style={{ color: FAINT }}>{hasRoulette ? 'Aucune inscription — on vous demande votre numéro seulement si vous gagnez.' : 'Présentez votre carte à la caisse pour cumuler des points à chaque achat.'}</p>
       </div>
     )
   }
@@ -382,7 +392,7 @@ function CarteTab(props: {
           ))}
         </div>
       ) : (
-        <p className="rounded-[18px] bg-white px-4 py-6 text-center text-sm" style={{ color: MUT, boxShadow: SOFT }}>Aucun bon pour le moment. Tournez la roue pour gagner&nbsp;!</p>
+        <p className="rounded-[18px] bg-white px-4 py-6 text-center text-sm" style={{ color: MUT, boxShadow: SOFT }}>{hasRoulette ? 'Aucun bon pour le moment. Tournez la roue pour gagner !' : 'Aucun bon pour le moment. Cumulez des points à chaque visite !'}</p>
       )}
 
       {/* Historique */}

@@ -71,6 +71,7 @@ supabase/.temp/
 # only under `next dev` AND only when this file exists, so it stays invisible in
 # production and for anyone who clones the repo. Do NOT remove this rule.
 /public/_local-products.json
+/public/_local-products/
 /app/secret-products/
 
 # Runtime dev-server log

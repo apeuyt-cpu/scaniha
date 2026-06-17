@@ -260,10 +260,56 @@ export function getBrandContact(business: any): { enabled: boolean; phone: strin
  * Master "fidelity system" switch (business-wide sibling key in design_settings).
  * OFF → the business is a PURE QR menu: no bottom nav, no profile page, no
  * roulette, no loyalty/points. ON → the full engagement layer appears.
- * Opt-in: defaults OFF until the owner turns it on in the admin.
+ * Defaults ON — both products (menu + fidélité) are live unless the owner turns
+ * fidelity off here, or the super-admin sets products='menu'.
  */
 export function isFidelityEnabled(business: any): boolean {
-  return business?.design_settings?.loyaltyEnabled === true
+  return business?.design_settings?.loyaltyEnabled !== false
+}
+
+export type ProductMode = 'menu' | 'fidelity' | 'both'
+
+/**
+ * The product(s) a café is provisioned for — a business-wide sibling key in
+ * design_settings. This is the PLAN CEILING, set by the super-admin (and, within
+ * it, the owner). `loyaltyEnabled` stays the owner's within-plan on/off switch.
+ *   undefined → legacy: behave exactly as before this field existed.
+ */
+export function getProductMode(business: any): ProductMode | undefined {
+  const p = business?.design_settings?.products
+  return p === 'menu' || p === 'fidelity' || p === 'both' ? p : undefined
+}
+
+/**
+ * The EFFECTIVE customer mode that drives the home screen + navigation. Combines
+ * the product ceiling with the fidelity toggle so existing cafés (no `products`
+ * set) keep today's exact behaviour.
+ *   'menu'     → QR menu only
+ *   'fidelity' → loyalty hub only (no digital menu)
+ *   'both'     → menu + fidelity
+ */
+export function resolveMode(business: any): ProductMode {
+  switch (getProductMode(business)) {
+    case 'fidelity':
+      return 'fidelity'
+    case 'menu':
+      return 'menu'
+    // 'both' OR legacy (unset) → respect the master fidelity toggle.
+    default:
+      return isFidelityEnabled(business) ? 'both' : 'menu'
+  }
+}
+
+/**
+ * Whether fidelity surfaces are LIVE for customers — respects the product
+ * ceiling. Use this for ALL customer-facing gates (menu bottom nav, roulette
+ * button, /fidelite, public game/loyalty APIs). `isFidelityEnabled` is only the
+ * owner's master toggle and ignores `products`, so a 'menu' plan would still
+ * leak fidelity if gated on it. Identical to isFidelityEnabled for legacy cafés
+ * (no `products` set), so no behaviour change there.
+ */
+export function isFidelityLive(business: any): boolean {
+  return resolveMode(business) !== 'menu'
 }
 
 type AnyItem = { id: string | number; available?: boolean }

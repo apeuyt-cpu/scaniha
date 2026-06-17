@@ -87,6 +87,8 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
   // QR scan-to-play gate (games.config.qrGate) — loaded per café when the sheet opens.
   const [qrGate, setQrGate] = useState<QrGateState | null>(null)
   const [qrRegenConfirm, setQrRegenConfirm] = useState(false)
+  // Product mode (design_settings.products) — loaded per café when the sheet opens.
+  const [productMode, setProductMode] = useState<{ products: string | null } | null>(null)
 
   const selected = useMemo(() => businesses.find((b) => b.id === selectedId) || null, [businesses, selectedId])
 
@@ -112,6 +114,18 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
       .then((r) => r.json())
       .then((j) => { if (!cancelled) setQrGate(j) })
       .catch(() => { if (!cancelled) setQrGate({ exists: false }) })
+    return () => { cancelled = true }
+  }, [selectedId])
+
+  // Lazy-load the café's product mode when a detail sheet opens.
+  useEffect(() => {
+    if (!selectedId) { setProductMode(null); return }
+    let cancelled = false
+    setProductMode(null)
+    fetch(`/api/super-admin/businesses/${selectedId}/products`)
+      .then((r) => r.json())
+      .then((j) => { if (!cancelled) setProductMode({ products: j.products ?? null }) })
+      .catch(() => { if (!cancelled) setProductMode({ products: null }) })
     return () => { cancelled = true }
   }, [selectedId])
 
@@ -285,6 +299,26 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
       if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour.')
       setQrGate((cur) => ({ ...(cur || { exists: true }), ...json }))
       setQrRegenConfirm(false)
+      toast(okMsg, 'success')
+    } catch (err: any) {
+      toast(err.message || 'Une erreur est survenue.', 'error')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  // ── Product mode (formule) ──────────────────────────────────────────
+  const patchProducts = async (businessId: string, products: string | null, okMsg: string) => {
+    setLoading(`products-${businessId}`)
+    try {
+      const res = await fetch(`/api/super-admin/businesses/${businessId}/products`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour.')
+      setProductMode({ products: json.products ?? null })
       toast(okMsg, 'success')
     } catch (err: any) {
       toast(err.message || 'Une erreur est survenue.', 'error')
@@ -595,6 +629,40 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                       </button>
                     )}
                   </div>
+                </Section>
+
+                {/* Produits (formule) */}
+                <Section title="Produits (formule)">
+                  {productMode === null ? (
+                    <p className="text-sm text-zinc-400">Chargement…</p>
+                  ) : (
+                    <>
+                      <div className="inline-flex flex-wrap gap-1 rounded-xl border border-zinc-200 p-1">
+                        {([
+                          { v: null, label: 'Par défaut' },
+                          { v: 'menu', label: 'Menu QR' },
+                          { v: 'fidelity', label: 'Fidélité' },
+                          { v: 'both', label: 'Les deux' },
+                        ] as const).map((opt) => {
+                          const active = (productMode.products ?? null) === opt.v
+                          return (
+                            <button
+                              key={String(opt.v)}
+                              type="button"
+                              onClick={() => patchProducts(b.id, opt.v, `Formule : ${opt.label}.`)}
+                              disabled={loading === `products-${b.id}`}
+                              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${active ? 'bg-orange-500 text-white' : 'text-zinc-600 hover:bg-zinc-100'}`}
+                            >
+                              {opt.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">
+                        Ce que le client voit en scannant : « Menu QR » (carte seule), « Fidélité » (carte de fidélité + roue, sans menu), « Les deux ». « Par défaut » = ancien comportement (menu + fidélité si l’owner l’active).
+                      </p>
+                    </>
+                  )}
                 </Section>
 
                 {/* QR scan-to-play gate */}

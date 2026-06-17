@@ -88,7 +88,7 @@ export default function RouletteButton({
       ) : null}
 
       <Link
-        href={`/${slug}/jeu`}
+        href={`/${slug}/fidelite?t=roue`}
         aria-label="Tentez votre chance — jouez à la roulette"
         title="Tentez votre chance"
         className={`rb-glow flex h-full w-full items-center justify-center text-white transition active:scale-95 ${rounded} ${className}`}

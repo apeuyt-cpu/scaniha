@@ -4,7 +4,7 @@
  * and nowhere else. All spins go through the atomic `play_game` RPC.
  */
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import { getDesignSettings, resolveAccent, resolveGradient, isDesignId, isFidelityEnabled, type DesignId } from '@/lib/design-settings'
+import { getDesignSettings, resolveAccent, resolveGradient, isDesignId, isFidelityLive, type DesignId } from '@/lib/design-settings'
 import { DEFAULT_QR_GATE, gameCooldownHours } from '@/lib/game'
 import type { PlayResult, GameGate, QrGateConfig, QrGateSummary } from '@/lib/game'
 
@@ -130,7 +130,7 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
 
     // Master switch: if the owner hasn't enabled the fidelity system, the whole
     // game/loyalty layer reads as off (so the roulette button + store never show).
-    const fidelity = isFidelityEnabled(business)
+    const fidelity = isFidelityLive(business)
     return {
       active: fidelity && Boolean(game) && prizes.length > 0,
       loyaltyActive: fidelity && Boolean(program),

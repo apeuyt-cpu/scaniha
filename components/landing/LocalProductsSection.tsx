@@ -3,79 +3,50 @@
 import { useEffect, useState } from 'react'
 
 /**
- * LOCAL-ONLY internal product catalog, rendered inside the landing page.
+ * LOCAL-ONLY internal product catalog, rendered inside the landing page as a
+ * series of full-width alternating sections (image + copy), matching the brand.
  *
- * This component holds NO product data — it just renders whatever lives in the
- * gitignored public/_local-products.json. That file is never committed or
- * deployed, so:
- *   • In production (and for anyone who clones the repo) this renders NOTHING
- *     — the NODE_ENV gate short-circuits it AND the JSON isn't there to fetch.
- *   • Only on a dev machine that has the JSON does the section appear.
- * No build/runtime risk: it's a plain fetch (no static import of a maybe-missing
- * module), so a missing file just yields an empty section.
+ * Holds NO product data — it renders whatever lives in the gitignored
+ * public/_local-products.json (images from gitignored public/_local-products/).
+ * In production (and for anyone who clones the repo) it renders NOTHING: the
+ * NODE_ENV gate short-circuits it AND the JSON isn't there to fetch. Plain
+ * runtime fetch (no static import) → a missing file just yields nothing.
  */
 
-type Kind = 'glow' | 'paper' | 'premium'
 type Product = {
   name: string
   tagline?: string
   description?: string
-  kind: Kind
+  image?: string
   value?: string
   bullets?: string[]
-  board?: { heading: string; items: { name: string; price: string }[] }[]
   prices?: { size: string; price: string }[]
 }
 type Catalog = { headline?: string; subheadline?: string; valueProp?: string; products: Product[] }
 
 const TBD = 'À définir'
 
-const THEMES: Record<Kind, { wrap: string; glowText?: string; heading: string; item: string; price: string; dotted: string; qrBg: string }> = {
-  glow: { wrap: 'bg-gradient-to-b from-zinc-900 to-black', glowText: '0 0 12px rgba(245,184,46,0.6)', heading: 'text-amber-300', item: 'text-zinc-300', price: 'text-zinc-200', dotted: 'border-zinc-700', qrBg: 'bg-white' },
-  paper: { wrap: 'bg-[#FBF7F0]', heading: 'text-zinc-800', item: 'text-zinc-700', price: 'text-zinc-900', dotted: 'border-zinc-300', qrBg: 'bg-white ring-1 ring-zinc-300' },
-  premium: { wrap: 'bg-gradient-to-b from-white to-amber-50', heading: 'text-amber-700', item: 'text-zinc-700', price: 'text-amber-800', dotted: 'border-amber-200', qrBg: 'bg-white ring-1 ring-amber-200' },
-}
-
-function BoardPreview({ product }: { product: Product }) {
-  const t = THEMES[product.kind] ?? THEMES.glow
-  if (!product.board) return null
-  return (
-    <div className={`relative p-6 ${t.wrap}`}>
-      {product.kind === 'glow' && (
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-60" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(244,123,32,0.25), transparent 60%)' }} />
-      )}
-      <div className="relative space-y-4 font-mono text-sm">
-        {product.board.map((sec) => (
-          <div key={sec.heading}>
-            <p className={`font-bold tracking-[0.3em] ${t.heading}`} style={t.glowText ? { textShadow: t.glowText } : undefined}>{sec.heading}</p>
-            <ul className={`mt-1 space-y-0.5 ${t.item}`}>
-              {sec.items.map((it) => (
-                <li key={it.name} className="flex items-baseline justify-between gap-2">
-                  <span>{it.name}</span>
-                  <span className={`flex-1 border-b border-dotted ${t.dotted}`} />
-                  <span className={`tabular-nums ${t.price}`}>{it.price}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-        <div className="pt-2 text-center">
-          <p className={`text-xs font-bold tracking-[0.25em] ${t.heading}`} style={t.glowText ? { textShadow: t.glowText } : undefined}>SCAN TO ORDER</p>
-          <div className={`mx-auto mt-2 grid h-16 w-16 grid-cols-4 grid-rows-4 gap-0.5 rounded p-1.5 ${t.qrBg}`}>
-            {Array.from({ length: 16 }).map((_, k) => (
-              <span key={k} className={(k * 7 + 3) % 3 === 0 ? 'bg-black' : 'bg-transparent'} />
-            ))}
-          </div>
+/** Product photo with a clean placeholder until the local image is dropped in. */
+function ProductImage({ src, alt }: { src?: string; alt: string }) {
+  const [errored, setErrored] = useState(false)
+  if (!src || errored) {
+    return (
+      <div className="flex aspect-[4/3] w-full items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50">
+        <div className="px-4 text-center">
+          <div className="text-4xl">🖼️</div>
+          <p className="mt-2 text-sm font-semibold text-orange-700">Ajoutez une photo</p>
+          {src && <p className="mt-1 font-mono text-[11px] text-zinc-400">{src.replace('/_local-products/', '')}</p>}
         </div>
       </div>
-    </div>
-  )
+    )
+  }
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt={alt} className="aspect-[4/3] w-full object-cover" onError={() => setErrored(true)} />
 }
 
 export default function LocalProductsSection() {
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   useEffect(() => {
-    // Dev machine only — never even attempts the fetch in production.
     if (process.env.NODE_ENV !== 'development') return
     let cancelled = false
     fetch('/_local-products.json', { cache: 'no-store' })
@@ -85,63 +56,83 @@ export default function LocalProductsSection() {
     return () => { cancelled = true }
   }, [])
 
-  // Renders nothing in production, or anywhere the local JSON is absent.
   if (process.env.NODE_ENV !== 'development') return null
   if (!catalog || !catalog.products?.length) return null
 
   return (
-    <section className="bg-zinc-950 px-4 py-16 text-zinc-100">
-      <div className="mx-auto max-w-5xl">
-        <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-400">Local uniquement · catalogue interne</span>
-        <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
-          {catalog.headline || 'Produits physiques'}
-        </h2>
-        {catalog.subheadline && <p className="mt-3 max-w-2xl text-zinc-400">{catalog.subheadline}</p>}
-        {catalog.valueProp && (
-          <p className="mt-5 inline-block rounded-2xl border-2 border-amber-400/60 bg-amber-500/10 px-5 py-3 text-lg font-extrabold text-amber-300">
-            {catalog.valueProp}
-          </p>
-        )}
+    <>
+      {/* Intro */}
+      <section className="bg-white pt-20 pb-10 sm:pt-24">
+        <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] text-zinc-500">
+            🔒 Local uniquement · catalogue interne
+          </span>
+          <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
+            {catalog.headline || 'Produits physiques'}
+          </h2>
+          {catalog.subheadline && <p className="mt-4 text-lg leading-relaxed text-zinc-600">{catalog.subheadline}</p>}
+          {catalog.valueProp && (
+            <p className="mt-6 inline-block rounded-2xl border-2 border-orange-300 bg-orange-50 px-5 py-3 text-base font-extrabold text-orange-900 sm:text-lg">
+              💡 {catalog.valueProp}
+            </p>
+          )}
+        </div>
+      </section>
 
-        <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {catalog.products.map((p, i) => (
-            <article key={p.name} className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 shadow-xl">
-              <BoardPreview product={p} />
-              <div className="p-6">
-                <span className="text-xs font-bold text-amber-500">Produit {i + 1}</span>
-                <h3 className="mt-1 text-xl font-extrabold">{p.name}</h3>
-                {p.tagline && <p className="text-sm italic text-zinc-400">{p.tagline}</p>}
-                {p.description && <p className="mt-3 text-sm leading-relaxed text-zinc-300">{p.description}</p>}
+      {/* One full-width section per product — alternating side + background */}
+      {catalog.products.map((p, i) => {
+        const flip = i % 2 === 1
+        return (
+          <section key={p.name} className={`${flip ? 'bg-[#FFF9F3]' : 'bg-white'} py-14 sm:py-20`}>
+            <div className="mx-auto grid max-w-[1100px] items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16">
+              {/* Image */}
+              <div className={flip ? 'lg:order-2' : ''}>
+                <div className="overflow-hidden rounded-3xl border border-orange-100 shadow-sm">
+                  <ProductImage src={p.image} alt={p.name} />
+                </div>
+              </div>
+
+              {/* Copy */}
+              <div>
+                <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-orange-600">
+                  Produit {i + 1}
+                </span>
+                <h3 className="mt-3 text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl">{p.name}</h3>
+                {p.tagline && <p className="mt-1 text-base font-semibold text-orange-600">{p.tagline}</p>}
+                {p.description && <p className="mt-4 text-[15px] leading-relaxed text-zinc-600">{p.description}</p>}
+
                 {p.value && (
-                  <div className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
-                    <p className="text-sm font-semibold leading-relaxed text-amber-300">{p.value}</p>
+                  <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
+                    <p className="text-sm font-semibold leading-relaxed text-orange-900">{p.value}</p>
                   </div>
                 )}
+
                 {p.bullets && p.bullets.length > 0 && (
-                  <ul className="mt-4 space-y-1.5">
+                  <ul className="mt-5 space-y-2.5">
                     {p.bullets.map((b) => (
-                      <li key={b} className="flex items-start gap-2 text-sm text-zinc-300">
-                        <span className="mt-0.5 font-bold text-amber-400">✓</span>
+                      <li key={b} className="flex items-start gap-2.5 text-[15px] text-zinc-700">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600">✓</span>
                         <span>{b}</span>
                       </li>
                     ))}
                   </ul>
                 )}
+
                 {p.prices && p.prices.length > 0 && (
-                  <div className="mt-5 space-y-2">
+                  <div className="mt-6 flex flex-wrap gap-2.5">
                     {p.prices.map((pr) => (
-                      <div key={pr.size} className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5">
-                        <span className="text-sm text-zinc-400">{pr.size}</span>
-                        <span className={`text-base font-bold ${pr.price === TBD ? 'text-zinc-500 italic' : 'text-amber-400'}`}>{pr.price}</span>
+                      <div key={pr.size} className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-center">
+                        <div className="text-xs text-zinc-500">{pr.size}</div>
+                        <div className={pr.price === TBD ? 'mt-0.5 text-sm italic text-zinc-400' : 'mt-0.5 text-lg font-extrabold text-orange-600'}>{pr.price}</div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
+            </div>
+          </section>
+        )
+      })}
+    </>
   )
 }

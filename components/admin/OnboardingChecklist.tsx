@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { getProductMode } from '@/lib/design-settings'
 
 interface OnboardingBusiness {
   id: string
@@ -31,8 +32,15 @@ export default function OnboardingChecklist({ business }: { business: Onboarding
   const supabase = createClient()
   const [categoryCount, setCategoryCount] = useState(0)
   const [itemCount, setItemCount] = useState(0)
+  const [gameOk, setGameOk] = useState(false)
+  const [programOk, setProgramOk] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [dismissed, setDismissed] = useState(true)
+
+  // Tailor the steps to the café's product(s).
+  const mode = getProductMode(business)
+  const hasMenu = mode !== 'fidelity'
+  const hasFidelity = mode === 'fidelity' || mode === 'both'
 
   useEffect(() => {
     setDismissed(typeof window !== 'undefined' && localStorage.getItem(DISMISS_KEY) === '1')
@@ -42,23 +50,23 @@ export default function OnboardingChecklist({ business }: { business: Onboarding
     let active = true
     ;(async () => {
       try {
-        const { data: cats } = await supabase
-          .from('categories')
-          .select('id')
-          .eq('business_id', business.id)
-        const catIds = (cats || []).map((c: any) => c.id)
-        let items = 0
-        if (catIds.length > 0) {
-          const { count } = await (supabase.from('items') as any)
-            .select('id', { count: 'exact', head: true })
-            .in('category_id', catIds)
-          items = count ?? 0
+        if (hasMenu) {
+          const { data: cats } = await supabase.from('categories').select('id').eq('business_id', business.id)
+          const catIds = (cats || []).map((c: any) => c.id)
+          let items = 0
+          if (catIds.length > 0) {
+            const { count } = await (supabase.from('items') as any).select('id', { count: 'exact', head: true }).in('category_id', catIds)
+            items = count ?? 0
+          }
+          if (active) { setCategoryCount(catIds.length); setItemCount(items) }
         }
-        if (!active) return
-        setCategoryCount(catIds.length)
-        setItemCount(items)
+        if (hasFidelity) {
+          const { data: g } = await (supabase.from('games') as any).select('id').eq('business_id', business.id).eq('type', 'roulette').limit(1)
+          const { data: p } = await (supabase.from('loyalty_programs') as any).select('business_id').eq('business_id', business.id).limit(1)
+          if (active) { setGameOk((g?.length ?? 0) > 0); setProgramOk((p?.length ?? 0) > 0) }
+        }
       } catch {
-        /* counts stay at 0 — the checklist simply shows steps as not done */
+        /* leave counts/flags at defaults — steps simply show as not done */
       } finally {
         if (active) setLoaded(true)
       }
@@ -66,7 +74,7 @@ export default function OnboardingChecklist({ business }: { business: Onboarding
     return () => {
       active = false
     }
-  }, [business.id, supabase])
+  }, [business.id, supabase, hasMenu, hasFidelity])
 
   const designChosen = useMemo(() => {
     const ds = business.design_settings
@@ -74,21 +82,49 @@ export default function OnboardingChecklist({ business }: { business: Onboarding
     return hasDesign || !!business.primary_color
   }, [business.design_settings, business.primary_color])
 
-  const steps: Step[] = useMemo(
-    () => [
-      { key: 'logo', title: 'Ajoutez votre logo', subtitle: 'Il s’affiche en haut de votre menu', href: '/admin/settings', done: !!business.logo_url },
+  const steps: Step[] = useMemo(() => {
+    const logo: Step = { key: 'logo', title: 'Ajoutez votre logo', subtitle: 'Il s’affiche en haut de votre page', href: '/admin/settings', done: !!business.logo_url }
+    const menuReady = itemCount > 0 && categoryCount > 0
+
+    if (mode === 'fidelity') {
+      return [
+        logo,
+        { key: 'design', title: 'Choisissez vos couleurs', subtitle: 'Style et couleur de votre carte', href: '/admin/theme', done: designChosen },
+        { key: 'roue', title: 'Configurez la roue', subtitle: 'Lots et chances de gagner', href: '/admin/fidelite/roue', done: gameOk },
+        { key: 'recompenses', title: 'Définissez les récompenses', subtitle: 'Points par dinar et catalogue', href: '/admin/fidelite/recompenses', done: programOk },
+        { key: 'qr', title: 'Partagez votre QR code', subtitle: 'À imprimer pour vos tables', href: '/admin/share', done: gameOk },
+      ]
+    }
+
+    const menuCore: Step[] = [
+      logo,
       { key: 'category', title: 'Créez une première catégorie', subtitle: 'Ex. Boissons chaudes, Desserts', href: '/admin/menu', done: categoryCount > 0 },
       { key: 'item', title: 'Ajoutez un premier plat', subtitle: 'Nom, prix et photo', href: '/admin/menu', done: itemCount > 0 },
       { key: 'design', title: 'Choisissez un design', subtitle: 'Style et couleur de votre menu', href: '/admin/theme', done: designChosen },
-      { key: 'qr', title: 'Partagez votre QR code', subtitle: 'À imprimer pour vos tables', href: '/admin/share', done: itemCount > 0 && categoryCount > 0 },
-    ],
-    [business.logo_url, categoryCount, itemCount, designChosen]
-  )
+    ]
+
+    if (mode === 'both') {
+      return [
+        ...menuCore,
+        { key: 'roue', title: 'Configurez la roue', subtitle: 'Lots et chances de gagner', href: '/admin/fidelite/roue', done: gameOk },
+        { key: 'recompenses', title: 'Définissez les récompenses', subtitle: 'Points et catalogue', href: '/admin/fidelite/recompenses', done: programOk },
+        { key: 'qr', title: 'Partagez votre QR code', subtitle: 'À imprimer pour vos tables', href: '/admin/share', done: menuReady },
+      ]
+    }
+
+    return [
+      ...menuCore,
+      { key: 'qr', title: 'Partagez votre QR code', subtitle: 'À imprimer pour vos tables', href: '/admin/share', done: menuReady },
+    ]
+  }, [business.logo_url, categoryCount, itemCount, designChosen, gameOk, programOk, mode])
 
   const completed = steps.filter((s) => s.done).length
   const total = steps.length
   const allDone = completed === total
   const nextStep = steps.find((s) => !s.done)
+
+  const headerTitle = mode === 'fidelity' ? 'Configurez votre fidélité' : mode === 'both' ? 'Configurez votre établissement' : 'Configurez votre menu'
+  const headerSub = mode === 'fidelity' ? 'Quelques étapes pour lancer votre programme de fidélité.' : 'Quelques étapes pour tout mettre en ligne.'
 
   // Don't flash before data is loaded; hide when complete or dismissed.
   if (!loaded || dismissed || allDone) return null
@@ -102,10 +138,8 @@ export default function OnboardingChecklist({ business }: { business: Onboarding
     <section className="overflow-hidden rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50">
       <div className="flex items-start justify-between gap-3 p-4 pb-3">
         <div className="min-w-0">
-          <h2 className="text-base font-bold text-zinc-900">Configurez votre menu</h2>
-          <p className="mt-0.5 text-sm text-zinc-600">
-            Quelques étapes pour mettre votre menu en ligne.
-          </p>
+          <h2 className="text-base font-bold text-zinc-900">{headerTitle}</h2>
+          <p className="mt-0.5 text-sm text-zinc-600">{headerSub}</p>
         </div>
         <button
           type="button"

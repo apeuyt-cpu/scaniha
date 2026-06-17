@@ -289,9 +289,9 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
 
         <div className="mt-4 space-y-2.5">
           {prizes.map((p) => (
-            <div key={p.id} className={`rounded-xl border border-zinc-100 bg-zinc-50/60 p-3 ${p.active ? '' : 'opacity-60'}`}>
-              {/* Row 1: name · active · delete */}
-              <div className="flex items-center gap-2">
+            <div key={p.id} className={`rounded-xl border border-zinc-200 bg-white p-3.5 transition ${p.active ? '' : 'opacity-70'}`}>
+              {/* Row 1: colour dot · name · delete */}
+              <div className="flex items-center gap-2.5">
                 <span
                   className="h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: p.active ? colorById[p.id] : '#D4D4D8' }}
@@ -306,46 +306,48 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                 />
                 <button
                   type="button"
-                  onClick={() => togglePrizeActive(p)}
-                  aria-pressed={p.active}
-                  className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition ${p.active ? 'bg-green-100 text-green-700' : 'bg-zinc-200 text-zinc-500'}`}
-                >
-                  {p.active ? 'Actif' : 'Inactif'}
-                </button>
-                <button
-                  type="button"
                   onClick={() => setPrizeToDelete(p.id)}
                   aria-label="Supprimer le lot"
                   title="Supprimer"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-50 hover:text-red-500"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-50 hover:text-red-500"
                 >
-                  ✕
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6" /></svg>
                 </button>
               </div>
-              {/* Row 2: chance-of-winning slider — moving one auto-balances the rest to 100% */}
-              {p.active ? (
-                <div className="mt-3 flex items-center gap-3">
-                  <input
-                    type="range"
-                    min={1}
-                    max={sliderMax}
-                    step={1}
-                    value={pctById[p.id] ?? 0}
-                    disabled={activeList.length <= 1}
-                    onChange={(e) => setPct(p.id, Number(e.target.value))}
-                    aria-label={`Chance de gagner « ${p.label || 'lot'} »`}
-                    className="h-6 flex-1 cursor-pointer accent-orange-500 disabled:cursor-default disabled:opacity-50"
-                  />
-                  <span className="w-12 shrink-0 text-right text-base font-bold tabular-nums" style={{ color: colorById[p.id] }}>
-                    {pctById[p.id] ?? 0}%
-                  </span>
-                </div>
-              ) : (
-                <p className="mt-2 text-[11px] text-zinc-400">Désactivé — n&apos;apparaît pas sur la roue.</p>
-              )}
+              {/* Row 2: active toggle + chance slider — moving one auto-balances the rest to 100% */}
+              <div className="mt-3 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => togglePrizeActive(p)}
+                  aria-pressed={p.active}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${p.active ? 'bg-green-100 text-green-700' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}`}
+                >
+                  {p.active ? 'Actif' : 'Inactif'}
+                </button>
+                {p.active ? (
+                  <>
+                    <input
+                      type="range"
+                      min={1}
+                      max={sliderMax}
+                      step={1}
+                      value={pctById[p.id] ?? 0}
+                      disabled={activeList.length <= 1}
+                      onChange={(e) => setPct(p.id, Number(e.target.value))}
+                      aria-label={`Chance de gagner « ${p.label || 'lot'} »`}
+                      className="h-6 flex-1 cursor-pointer accent-orange-500 disabled:cursor-default disabled:opacity-50"
+                    />
+                    <span className="w-12 shrink-0 text-right text-base font-bold tabular-nums" style={{ color: colorById[p.id] }}>
+                      {pctById[p.id] ?? 0}%
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-[11px] text-zinc-400">N&apos;apparaît pas sur la roue.</span>
+                )}
+              </div>
               {/* Advanced: cost (feeds the budget) + stock cap */}
               {advanced && (
-                <div className="mt-2.5 grid grid-cols-2 gap-2">
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   <label className="block text-[11px] font-semibold text-zinc-500">
                     <span className="mb-1 block">Coût (TND)</span>
                     <input
@@ -355,7 +357,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                       value={p.cost ?? ''}
                       placeholder="—"
                       onChange={(e) => updatePrize(p.id, { cost: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2.5 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
+                      className={`${inputClass} text-center`}
                     />
                   </label>
                   <label className="block text-[11px] font-semibold text-zinc-500">
@@ -366,7 +368,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                       value={p.stock ?? ''}
                       placeholder="∞"
                       onChange={(e) => updatePrize(p.id, { stock: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
-                      className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-2.5 text-center text-base outline-none focus:ring-2 focus:ring-orange-500/30"
+                      className={`${inputClass} text-center`}
                     />
                   </label>
                 </div>
@@ -399,13 +401,15 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
         className="flex w-full items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-left transition hover:bg-zinc-50"
       >
         <span className="flex items-center gap-3">
-          <span className="text-lg leading-none text-zinc-400" aria-hidden="true">⚙</span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
+          </span>
           <span>
             <span className="block text-sm font-semibold text-zinc-900">Options avancées</span>
             <span className="block text-xs text-zinc-400">Coûts &amp; stock, budget, limites, conditions, présence</span>
           </span>
         </span>
-        <span className="shrink-0 text-sm text-zinc-400">{advanced ? '▲' : '▼'}</span>
+        <svg className={`shrink-0 text-zinc-400 transition-transform ${advanced ? 'rotate-180' : ''}`} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
       </button>
 
       {advanced && (

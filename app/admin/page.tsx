@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import PaymentRequestModal from '@/components/admin/PaymentRequestModal'
 import SectionHeader from '@/components/admin/ui/SectionHeader'
+import Spinner from '@/components/admin/ui/Spinner'
 import OnboardingChecklist from '@/components/admin/OnboardingChecklist'
+import { getProductMode } from '@/lib/design-settings'
 import { useLocale } from '@/lib/i18n/LocaleContext'
 import { createClient } from '@/lib/supabase/client'
 
@@ -89,13 +91,7 @@ export default function AdminHome() {
     window.location.href = '/login'
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
-      </div>
-    )
-  }
+  if (loading) return <Spinner />
 
   if (!business) {
     return (
@@ -152,6 +148,12 @@ export default function AdminHome() {
   // ─── Active home hub ──────────────────────────────────────────
   const menuUrl = `${window.location.origin}/${business.slug}`
   const isActiveStatus = business.status === 'active'
+  // The admin shows what the café CAN manage (the plan ceiling), not the
+  // effective customer mode — so a legacy café (no products set) still sees both
+  // groups and can enable fidelity. Only an explicit 'menu'/'fidelity' plan hides one.
+  const products = getProductMode(business)
+  const hasMenu = products !== 'fidelity'
+  const hasFidelity = products !== 'menu'
 
   const isExpired = !!countdown && countdown.days === 0 && countdown.hours === 0 && countdown.minutes === 0 && countdown.seconds === 0
   const isUrgent = !!countdown && !isExpired && countdown.days <= 3
@@ -243,22 +245,34 @@ export default function AdminHome() {
         />
       )}
 
-      {/* Primary tasks */}
-      <div className="space-y-3">
-        <TaskRow href="/admin/menu" primary title="Gérer le menu" subtitle="Catégories, plats et prix" icon={<IconMenu />} />
-        <TaskRow href="/admin/caisse" title="Caisse" subtitle="Valider les codes et créditer les points" icon={<IconScan />} />
-        <TaskRow href="/admin/roulette" title="Roulette" subtitle="Faites tourner la roue au comptoir" icon={<IconWheel />} />
-        <TaskRow href="/admin/theme" title="Design" subtitle="Style et couleurs de votre menu" icon={<IconBrush />} />
-        <TaskRow href="/admin/share" title="Partage" subtitle="QR code et lien du menu" icon={<IconShare />} />
-      </div>
+      {/* Product groups — only the café's products show */}
+      {hasMenu && (
+        <div>
+          <SectionHeader title="Menu QR" hint="Votre carte numérique" />
+          <div className="space-y-3">
+            <TaskRow href="/admin/menu" primary title="Gérer le menu" subtitle="Catégories, plats et prix" icon={<IconMenu />} />
+            <TaskRow href="/admin/theme" title="Design & marque" subtitle="Logo, couleurs, style" icon={<IconBrush />} />
+            <TaskRow href="/admin/share" title="Partage" subtitle="QR code et lien du menu" icon={<IconShare />} />
+          </div>
+        </div>
+      )}
 
-      {/* Secondary, discoverable */}
+      {hasFidelity && (
+        <div>
+          <SectionHeader title="Fidélité" hint="Roue, points et récompenses" />
+          <div className="space-y-3">
+            <TaskRow href="/admin/fidelite" primary={!hasMenu} title="Programme de fidélité" subtitle="Roue, points et récompenses" icon={<IconGift />} />
+            <TaskRow href="/admin/caisse" title="Caisse" subtitle="Créditer les points, valider les codes" icon={<IconScan />} />
+            <TaskRow href="/admin/roulette" title="Roue au comptoir" subtitle="La roue que vous tournez au comptoir" icon={<IconWheel />} />
+          </div>
+        </div>
+      )}
+
       <div>
-        <SectionHeader title="Plus" />
-        <div className="space-y-3.5">
-          <TaskRow href="/admin/analytics" title="Statistiques" subtitle="Visites de votre menu" icon={<IconChart />} />
-          <TaskRow href="/admin/game" title="Programme de fidélité" subtitle="Roue et points de fidélité" icon={<IconGift />} />
-          <TaskRow href="/admin/settings" title="Réglages" subtitle="Lien du menu, SEO, préférences" icon={<IconGear />} />
+        <SectionHeader title="Compte" />
+        <div className="space-y-3">
+          <TaskRow href="/admin/analytics" title="Statistiques" subtitle="Visites et activité" icon={<IconChart />} />
+          <TaskRow href="/admin/settings" title="Réglages" subtitle="Lien du menu, plan, préférences" icon={<IconGear />} />
         </div>
       </div>
 

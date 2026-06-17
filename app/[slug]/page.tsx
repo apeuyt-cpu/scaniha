@@ -6,8 +6,9 @@ import { getTheme } from '@/lib/themes'
 import PublicMenu from '@/components/menu/PublicMenu'
 import PoweredByScaniha from '@/components/menu/PoweredByScaniha'
 import BottomNav from '@/components/menu/BottomNav'
-import { businessAccent } from '@/lib/db/game'
-import { isFidelityEnabled } from '@/lib/design-settings'
+import FidelityHub from '@/components/game/FidelityHub'
+import { businessAccent, businessGradient } from '@/lib/db/game'
+import { isFidelityLive, resolveMode } from '@/lib/design-settings'
 import LogView from '@/components/LogView'
 import QrScanMint from '@/components/game/QrScanMint'
 import type { Database } from '@/lib/supabase/database.types'
@@ -52,6 +53,24 @@ export default async function PublicMenuPage({
       // But don't update status here (let super admin or cron handle it)
       isPaused = true
     }
+  }
+
+  // Fidelity-only mode: the QR scan lands on the loyalty hub, not a menu.
+  // (Skips menu loading + menu SEO entirely; legacy cafés never hit this.)
+  if (!isPaused && resolveMode(business) === 'fidelity') {
+    return (
+      <>
+        <FidelityHub
+          slug={business.slug}
+          businessName={business.name}
+          accent={businessAccent(business)}
+          gradient={businessGradient(business)}
+        />
+        <LogView businessId={business.id} slug={business.slug} />
+        {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
+        <QrScanMint slug={business.slug} />
+      </>
+    )
   }
 
   // If paused or expired, still load categories but pass isPaused flag
@@ -139,8 +158,8 @@ export default async function PublicMenuPage({
         categories={categories}
         theme={theme}
       />
-      {!isPaused && <PoweredByScaniha liftForNav={isFidelityEnabled(business)} />}
-      {!isPaused && isFidelityEnabled(business) && <BottomNav slug={business.slug} accent={businessAccent(business)} active="menu" />}
+      {!isPaused && <PoweredByScaniha liftForNav={isFidelityLive(business)} />}
+      {!isPaused && isFidelityLive(business) && <BottomNav slug={business.slug} accent={businessAccent(business)} active="menu" />}
       <LogView businessId={business.id} slug={business.slug} />
       {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
       <QrScanMint slug={business.slug} />
@@ -158,6 +177,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         metadataBase: new URL(baseUrl),
         title: { absolute: 'Menu introuvable | Scaniha' },
         description: "Ce menu est introuvable ou n'est plus disponible.",
+        robots: { index: false, follow: false },
+      }
+    }
+
+    // Fidelity-only café: the home is the loyalty hub, not a menu.
+    if (resolveMode(business) === 'fidelity') {
+      return {
+        metadataBase: new URL(baseUrl),
+        title: { absolute: `Fidélité — ${business.name} | Scaniha` },
+        description: `Programme fidélité ${business.name} : tournez la roue, cumulez des points et échangez-les contre des récompenses.`,
+        alternates: { canonical: `${baseUrl}/${business.slug}` },
         robots: { index: false, follow: false },
       }
     }

@@ -4,18 +4,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 /**
- * Fixed bottom navigation for the public menu: Menu · Profil.
- * "Profil" is a real page (/[slug]/profil) — the diner's account/loyalty hub —
- * NOT a popup. Themed with the business accent on the active tab.
+ * Fixed bottom navigation for the public menu of a 'both' café: Menu · Fidélité.
+ * "Fidélité" opens the unified loyalty hub (/[slug]/fidelite) — account, wheel
+ * and boutique in one place. Themed with the business accent on the active tab.
  *
  * Renders a same-height spacer first so page content always clears the bar.
  */
 export default function BottomNav({ slug, accent = '#F47B20', active }: { slug: string; accent?: string; active?: 'menu' | 'profile' }) {
   const pathname = usePathname() || ''
-  const onProfile = active ? active === 'profile' : pathname.startsWith(`/${slug}/profil`)
+  const onFidelity = active ? active === 'profile' : (pathname.startsWith(`/${slug}/fidelite`) || pathname.startsWith(`/${slug}/profil`))
   const tabs = [
-    { key: 'menu', href: `/${slug}`, label: 'Menu', active: !onProfile, icon: <IconMenu /> },
-    { key: 'profile', href: `/${slug}/profil`, label: 'Profil', active: onProfile, icon: <IconUser /> },
+    { key: 'menu', href: `/${slug}`, label: 'Menu', active: !onFidelity, icon: <IconMenu /> },
+    { key: 'profile', href: `/${slug}/fidelite`, label: 'Fidélité', active: onFidelity, icon: <IconUser /> },
   ]
   return (
     <>

@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 export default function AdminRoulettePage() {
   return (
-    <PageShell title="Roulette" subtitle="Faites tourner la roue au comptoir et enregistrez le gain au nom du client.">
+    <PageShell title="Roue au comptoir" subtitle="La roue que vous faites tourner vous-même — différente du jeu de vos clients. Le gain est enregistré au nom du client." backHref="/admin/fidelite">
       <AdminRoulette />
     </PageShell>
   )

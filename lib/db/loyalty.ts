@@ -5,7 +5,7 @@
  */
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { businessAccent, businessGradient, FALLBACK_ACCENT, isMissingRpc } from '@/lib/db/game'
-import { isFidelityEnabled } from '@/lib/design-settings'
+import { isFidelityLive } from '@/lib/design-settings'
 import type { CustomerSummary, RedeemResult, AwardResult, ValidateResult } from '@/lib/game'
 
 /** Normalize a phone to digits (+ optional leading +); 8–15 chars or null. */
@@ -40,7 +40,7 @@ export async function loadLoyalty(slug: string, phoneRaw?: string | null): Promi
     const accent = businessAccent(business)
     const gradient = businessGradient(business)
     // Master switch off → loyalty is dormant (no points/store) regardless of program.
-    if (!isFidelityEnabled(business)) return { ...off, businessName: business.name, accent, gradient }
+    if (!isFidelityLive(business)) return { ...off, businessName: business.name, accent, gradient }
 
     const { data: program } = await supabase
       .from('loyalty_programs')

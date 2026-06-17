@@ -1,10 +1,9 @@
 import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getBusinessBySlugCached } from '@/lib/db/business'
-import { businessAccent, businessGradient } from '@/lib/db/game'
-import { isFidelityEnabled } from '@/lib/design-settings'
-import ProfileClient from '@/components/menu/ProfileClient'
-import BottomNav from '@/components/menu/BottomNav'
+import { isFidelityLive } from '@/lib/design-settings'
+
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -13,29 +12,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: { absolute: `Mon compte — ${name} | Scaniha` },
     description: `Votre compte fidélité chez ${name} : points, bons gagnés et récompenses.`,
-    // Diner account — private, never indexed.
     robots: { index: false, follow: false },
   }
 }
 
+// The standalone profile page was merged into the unified fidelity hub
+// ("Ma carte" tab). Keep the route as a redirect so old links still work.
 export default async function ProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  let business
-  try {
-    business = await getBusinessBySlugCached(slug)
-  } catch {
-    notFound()
-  }
+  const business = await getBusinessBySlugCached(slug).catch(() => null)
   if (!business) notFound()
-  // Fidelity system off → no profile page; send them back to the menu.
-  if (!isFidelityEnabled(business)) redirect(`/${business.slug}`)
-
-  const accent = businessAccent(business)
-  const gradient = businessGradient(business)
-  return (
-    <>
-      <ProfileClient slug={business.slug} businessName={business.name} accent={accent} gradient={gradient} />
-      <BottomNav slug={business.slug} accent={accent} active="profile" />
-    </>
-  )
+  if (!isFidelityLive(business)) redirect(`/${business.slug}`)
+  redirect(`/${business.slug}/fidelite`)
 }

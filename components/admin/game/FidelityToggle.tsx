@@ -24,7 +24,7 @@ export default function FidelityToggle({ businessId }: { businessId: string }) {
         .select('design_settings')
         .eq('id', businessId)
         .maybeSingle()
-      if (!cancelled) setEnabled(data?.design_settings?.loyaltyEnabled === true)
+      if (!cancelled) setEnabled(data?.design_settings?.loyaltyEnabled !== false)
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps

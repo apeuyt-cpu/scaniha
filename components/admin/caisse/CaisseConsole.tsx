@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Button from '@/components/admin/ui/Button'
 import Field, { inputClass } from '@/components/admin/ui/Field'
+import QrScanButton from './QrScanButton'
 import type { ValidateResult, CustomerSummary } from '@/lib/game'
 
 const REASON_LABELS: Record<string, string> = {
@@ -123,14 +124,9 @@ function ValidateResultView({ result, collecting, onCollect, onReset }: { result
         <p className="mt-0.5 text-sm text-zinc-500">
           Client{who}{result.expiresAt ? ` · valable jusqu’au ${fmt(result.expiresAt)}` : ''}
         </p>
-        <button
-          type="button"
-          onClick={onCollect}
-          disabled={collecting}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-green-700 active:scale-[0.99] disabled:opacity-60"
-        >
+        <Button variant="success" onClick={onCollect} disabled={collecting} className="mt-4 w-full">
           {collecting ? 'Validation…' : '✓ Marquer comme récupéré'}
-        </button>
+        </Button>
         <p className="mt-2 text-center text-xs text-zinc-400">Une fois récupéré, ce code ne pourra plus être réutilisé.</p>
       </div>
     )
@@ -181,7 +177,10 @@ function AwardCard() {
       <p className="mt-0.5 text-sm text-zinc-500">Le client donne son numéro — saisissez le montant de l’addition.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_8rem_auto] sm:items-end">
         <Field label="Téléphone">
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+216 …" inputMode="tel" className={inputClass} />
+          <div className="flex gap-2">
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+216 …" inputMode="tel" className={inputClass} />
+            <QrScanButton onScan={setPhone} />
+          </div>
         </Field>
         <Field label="Addition (TND)">
           <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25" inputMode="decimal" className={inputClass} />
@@ -228,6 +227,7 @@ function LookupCard() {
           inputMode="tel"
           className={inputClass}
         />
+        <QrScanButton onScan={setPhone} />
         <Button variant="neutral" onClick={submit} disabled={busy || !phone} className="shrink-0">
           {busy ? '…' : 'Chercher'}
         </Button>
@@ -288,7 +288,7 @@ function LookupCard() {
       )}
 
       <p className="mt-4 text-xs text-zinc-400">
-        Configurer les lots et récompenses : <Link href="/admin/game" className="font-semibold text-orange-600 hover:underline">Programme de fidélité →</Link>
+        Configurer les lots et récompenses : <Link href="/admin/fidelite" className="font-semibold text-orange-600 hover:underline">Programme de fidélité →</Link>
       </p>
     </div>
   )

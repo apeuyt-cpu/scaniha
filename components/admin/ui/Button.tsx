@@ -4,6 +4,8 @@ const VARIANTS = {
   primary: 'bg-orange-500 text-white hover:bg-orange-600',
   neutral: 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200',
   ghost: 'text-zinc-600 hover:bg-zinc-100',
+  // Reserved for confirming/collecting actions at the caisse (success semantics).
+  success: 'bg-green-600 text-white hover:bg-green-700',
 }
 
 /**

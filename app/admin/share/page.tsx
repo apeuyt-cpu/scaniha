@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import PageShell from '@/components/admin/ui/PageShell'
 import Card from '@/components/admin/ui/Card'
+import { resolveMode, type ProductMode } from '@/lib/design-settings'
 
 export default function SharePage() {
   const [slug, setSlug] = useState<string | null>(null)
@@ -11,6 +12,7 @@ export default function SharePage() {
   const [gated, setGated] = useState(false)
   const [qr, setQr] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [mode, setMode] = useState<ProductMode>('menu')
 
   useEffect(() => {
     ;(async () => {
@@ -26,6 +28,11 @@ export default function SharePage() {
           }
         } else if (res.status === 401 || res.status === 403) {
           window.location.href = '/login'
+        }
+        // Product mode → adapt the wording (menu vs fidelity vs both).
+        const bizRes = await fetch('/api/admin/business')
+        if (bizRes.ok && bizRes.headers.get('content-type')?.includes('application/json')) {
+          setMode(resolveMode(await bizRes.json()))
         }
       } catch (e) {
         console.error(e)
@@ -63,12 +70,21 @@ export default function SharePage() {
     a.click()
   }
 
+  // Wording adapts to the café's product.
+  const title = mode === 'fidelity' ? 'Code QR de la fidélité' : mode === 'both' ? 'Code QR' : 'Code QR du menu'
+  const subtitle =
+    mode === 'fidelity' ? 'Imprimez-le pour vos tables — vos clients scannent pour ouvrir leur carte de fidélité.'
+      : mode === 'both' ? 'Imprimez-le pour vos tables — vos clients scannent pour le menu et la fidélité.'
+        : 'Imprimez-le pour vos tables — vos clients scannent pour voir le menu.'
+  const linkLabel = mode === 'fidelity' ? 'Lien de la page' : 'Lien du menu'
+  const viewLabel = mode === 'fidelity' ? 'Voir la page ↗' : mode === 'both' ? 'Voir ↗' : 'Voir le menu ↗'
+
   return (
     <PageShell title="Partage">
       <div className="space-y-4">
         <Card>
-          <h2 className="font-bold text-zinc-900">Code QR du menu</h2>
-          <p className="mt-0.5 text-sm text-zinc-500">Imprimez-le pour vos tables — vos clients scannent pour voir le menu.</p>
+          <h2 className="font-bold text-zinc-900">{title}</h2>
+          <p className="mt-0.5 text-sm text-zinc-500">{subtitle}</p>
           {gated && (
             <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
               🔒 Le scan du QR est requis pour jouer. Ce code contient la clé de jeu — <span className="font-semibold">re-téléchargez-le et ré-imprimez-le</span> après chaque régénération de la clé.
@@ -85,7 +101,7 @@ export default function SharePage() {
             </div>
             <div className="w-full min-w-0 space-y-3">
               <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700">Lien du menu</label>
+                <label className="mb-1 block text-sm font-medium text-zinc-700">{linkLabel}</label>
                 <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
                   <code className="min-w-0 flex-1 truncate text-sm text-zinc-600" dir="ltr">/{slug ?? '…'}</code>
                   <button onClick={copy} disabled={!slug} className={`shrink-0 text-sm font-semibold disabled:opacity-50 ${copied ? 'text-green-600' : 'text-orange-600 hover:text-orange-700'}`}>
@@ -99,7 +115,7 @@ export default function SharePage() {
                   Télécharger
                 </button>
                 <a href={menuUrl || '#'} target="_blank" rel="noopener noreferrer" className={`rounded-xl px-3 py-2.5 text-center text-sm font-semibold text-white transition ${slug ? 'bg-orange-500 hover:bg-orange-600' : 'pointer-events-none bg-zinc-300'}`}>
-                  Voir le menu ↗
+                  {viewLabel}
                 </a>
               </div>
             </div>

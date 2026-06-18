@@ -4,6 +4,7 @@ import { getBusinessBySlugCached } from '@/lib/db/business'
 import { businessAccent, businessGradient } from '@/lib/db/game'
 import { isFidelityLive, resolveMode } from '@/lib/design-settings'
 import FidelityHub from '@/components/game/FidelityHub'
+import QrScanMint from '@/components/game/QrScanMint'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +34,9 @@ export default async function FidelitePage({ params }: { params: Promise<{ slug:
   return (
     <div className="min-h-screen bg-white">
       <FidelityHub slug={business.slug} businessName={business.name} accent={accent} gradient={gradient} hasMenu={hasMenu} />
+      {/* Mints the scan-session cookie when the fidelity QR is opened via `?s=<key>`,
+          so a dedicated fidelity QR still unlocks the wheel. */}
+      <QrScanMint slug={business.slug} />
     </div>
   )
 }

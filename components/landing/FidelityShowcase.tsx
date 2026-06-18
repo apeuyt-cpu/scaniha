@@ -1,7 +1,7 @@
 import Image from 'next/image'
-import cardShot from '../../public/landing/fidelity/card.png'
-import wheelShot from '../../public/landing/fidelity/wheel.png'
-import rewardsShot from '../../public/landing/fidelity/rewards.png'
+import cardShot from '../../public/landing/fidelity/card.webp'
+import wheelShot from '../../public/landing/fidelity/wheel.webp'
+import rewardsShot from '../../public/landing/fidelity/rewards.webp'
 
 // Real mobile screenshots of the live fidelity experience, shown in phone frames.
 const SCREENS = [

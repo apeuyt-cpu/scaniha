@@ -2,22 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { dinerSignup, dinerLogin, dinerSession, dinerLogout } from '@/lib/db/account'
 
 /**
- * Diner-account endpoint — GLOBAL identity (one account per phone, valid at every
- * café). The [slug] is kept for the per-café hub entry: signup passes it so THIS
- * café's welcome bonus is granted, but login/me/logout are café-independent (a
- * token issued anywhere works everywhere — per-café data is scoped at the
- * game/loyalty routes by slug + the server-derived phone). The café-less wallet
- * uses the sibling /api/account route.
+ * Café-less diner-account endpoint for the WALLET (Portefeuille fidélité). Same
+ * GLOBAL identity as /api/account/[slug], but with no café context: wallet signup
+ * grants NO welcome bonus (no café to attribute it to — those are granted when the
+ * diner first acts at a specific café). The token is global and works at every café.
  *
  *   POST { action: 'signup' | 'login' | 'me' | 'logout', phone?, password?, name?, token? }
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
+export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const action = String(body?.action || '')
 
   if (action === 'signup') {
-    const r = await dinerSignup(String(body.phone || ''), String(body.password || ''), body.name ? String(body.name) : undefined, slug)
+    const r = await dinerSignup(String(body.phone || ''), String(body.password || ''), body.name ? String(body.name) : undefined)
     return NextResponse.json(r, { status: r.ok ? 200 : 400 })
   }
   if (action === 'login') {

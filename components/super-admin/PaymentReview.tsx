@@ -103,12 +103,19 @@ export default function PaymentReview({ requests, showHistory }: { requests: Pay
   const [busyId, setBusyId] = useState<string | null>(null)
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<Confirm>(null)
+  const [overrideReason, setOverrideReason] = useState('')
 
   const confirmRef = useRef<HTMLDivElement>(null)
   const lightboxRef = useRef<HTMLDivElement>(null)
 
+  // Closing the confirm dialog must always drop any typed override motive.
+  function closeConfirm() {
+    setConfirm(null)
+    setOverrideReason('')
+  }
+
   // Escape closes the confirm dialog only when no request is in flight.
-  useDialogA11y(confirm !== null, () => setConfirm(null), confirmRef, busyId === null)
+  useDialogA11y(confirm !== null, closeConfirm, confirmRef, busyId === null)
   useDialogA11y(lightbox !== null, () => setLightbox(null), lightboxRef)
 
   const pending = rows.filter((r) => (r.status ?? 'pending') === 'pending')
@@ -134,7 +141,7 @@ export default function PaymentReview({ requests, showHistory }: { requests: Pay
       const res = await fetch(`/api/super-admin/payment-requests/${row.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, overrideMismatch }),
+        body: JSON.stringify({ action, overrideMismatch, amountOverrideReason: overrideReason }),
       })
       const json = await res.json()
 
@@ -149,6 +156,12 @@ export default function PaymentReview({ requests, showHistory }: { requests: Pay
         return
       }
 
+      // Server requires a motive before forcing a mismatch → keep the dialog open.
+      if (res.status === 400 && json.code === 'REASON_REQUIRED') {
+        toast(json.error || 'Un motif est requis.', 'error')
+        return
+      }
+
       if (!res.ok || !json.success) throw new Error(json.error || 'Échec de la mise à jour.')
 
       setRows((cur) =>
@@ -157,6 +170,7 @@ export default function PaymentReview({ requests, showHistory }: { requests: Pay
         )
       )
       setConfirm(null)
+      setOverrideReason('')
       toast(
         action === 'approve'
           ? `Paiement approuvé — « ${row.businessName} » activé.`
@@ -208,7 +222,7 @@ export default function PaymentReview({ requests, showHistory }: { requests: Pay
           className="fixed inset-0 z-[65] flex items-center justify-center bg-black/50 p-4"
           role="dialog"
           aria-modal="true"
-          onClick={() => busyId === null && setConfirm(null)}
+          onClick={() => busyId === null && closeConfirm()}
         >
           <div
             ref={confirmRef}
@@ -230,16 +244,31 @@ export default function PaymentReview({ requests, showHistory }: { requests: Pay
                 </dl>
 
                 {confirm.mismatch && (
-                  <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    <span aria-hidden="true">⚠️ </span>Le montant déclaré ({confirm.mismatch.submitted ?? '—'} TND) ne correspond pas
-                    au prix attendu ({confirm.mismatch.expected} TND). Vérifiez le reçu avant de forcer
-                    l’approbation.
-                  </div>
+                  <>
+                    <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      <span aria-hidden="true">⚠️ </span>Le montant déclaré ({confirm.mismatch.submitted ?? '—'} TND) ne correspond pas
+                      au prix attendu ({confirm.mismatch.expected} TND). Vérifiez le reçu avant de forcer
+                      l’approbation.
+                    </div>
+                    <div className="mt-4">
+                      <label htmlFor="override-reason" className="mb-1 block text-sm font-semibold text-zinc-900">
+                        Motif de la dérogation (obligatoire)
+                      </label>
+                      <textarea
+                        id="override-reason"
+                        rows={3}
+                        value={overrideReason}
+                        onChange={(e) => setOverrideReason(e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm text-zinc-900 focus:border-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-400"
+                        placeholder="Ex. reçu correct, écart dû à une promotion appliquée hors système."
+                      />
+                    </div>
+                  </>
                 )}
 
                 <div className="mt-6 flex justify-end gap-2">
                   <button
-                    onClick={() => setConfirm(null)}
+                    onClick={closeConfirm}
                     disabled={busyId !== null}
                     className="rounded-xl px-4 py-2 text-sm font-semibold text-zinc-600 hover:text-zinc-800 disabled:opacity-50"
                   >
@@ -247,7 +276,7 @@ export default function PaymentReview({ requests, showHistory }: { requests: Pay
                   </button>
                   <button
                     onClick={() => doAct('approve', confirm.row, !!confirm.mismatch)}
-                    disabled={busyId !== null}
+                    disabled={busyId !== null || (!!confirm.mismatch && !overrideReason.trim())}
                     className={`rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 ${
                       confirm.mismatch ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
                     }`}
@@ -269,7 +298,7 @@ export default function PaymentReview({ requests, showHistory }: { requests: Pay
                 </p>
                 <div className="mt-6 flex justify-end gap-2">
                   <button
-                    onClick={() => setConfirm(null)}
+                    onClick={closeConfirm}
                     disabled={busyId !== null}
                     className="rounded-xl px-4 py-2 text-sm font-semibold text-zinc-600 hover:text-zinc-800 disabled:opacity-50"
                   >

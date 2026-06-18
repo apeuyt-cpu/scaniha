@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/auth'
 import { getBusinessByOwner } from '@/lib/db/business'
 import { validateCode, awardPoints, customerSummary, normPhone } from '@/lib/db/loyalty'
+import { businessHasStaffPins, verifyStaffPin } from '@/lib/db/staff-pins'
+import { checkRateLimit } from '@/lib/api/rate-limit'
+
+/** Per-transaction cap on a caisse credit — a typo can't mint a fortune. */
+const MAX_AWARD_TND = 5000
 
 /**
  * Owner "caisse" console — one endpoint, three actions:
@@ -25,6 +30,14 @@ export async function POST(request: Request) {
     const action = body.action
 
     if (action === 'check' || action === 'validate') {
+      // Per-business, per-action rate limit (60/min, 5000/day): ample for human
+      // counter use across all registers; throttles scripted code enumeration.
+      // requireOwner already gates the route → this is defense-in-depth.
+      const rl = checkRateLimit(`caisse:${action}:${business.id}`)
+      if (!rl.ok) {
+        return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
+          { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } })
+      }
       const code = typeof body.code === 'string' ? body.code.trim() : ''
       if (code.length < 4) return NextResponse.json({ error: 'Code invalide.' }, { status: 400 })
       // 'check' peeks (no redeem); 'validate' collects (marks redeemed).
@@ -37,6 +50,25 @@ export async function POST(request: Request) {
       const amount = Number(body.amount)
       if (!phone) return NextResponse.json({ error: 'Numéro invalide.' }, { status: 400 })
       if (!amount || amount <= 0) return NextResponse.json({ error: 'Montant invalide.' }, { status: 400 })
+      if (amount > MAX_AWARD_TND) {
+        return NextResponse.json({ error: `Montant trop élevé (max ${MAX_AWARD_TND} TND). Vérifiez le montant saisi.` }, { status: 400 })
+      }
+      // Opt-in staff PIN gate (only the 'award' action). Zero active pins →
+      // skipped entirely (backward-compatible). PIN is never logged.
+      const pin = typeof body.pin === 'string' ? body.pin.trim() : ''
+      const pinsRequired = await businessHasStaffPins(business.id)
+      if (pinsRequired) {
+        if (!pin) return NextResponse.json({ error: 'Code PIN requis.', code: 'PIN_REQUIRED' }, { status: 401 })
+        // Review fix #3.3 — throttle PIN guesses per café so a 4-6 digit PIN can't be
+        // brute-forced. Separate key from the check/validate limiter (do not share budget).
+        const rlPin = checkRateLimit(`caisse:award:pin:${business.id}`)
+        if (!rlPin.ok) {
+          return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
+            { status: 429, headers: { 'Retry-After': String(rlPin.retryAfter) } })
+        }
+        const okPin = await verifyStaffPin(business.id, pin)
+        if (!okPin) return NextResponse.json({ error: 'Code PIN incorrect.', code: 'PIN_INVALID' }, { status: 401 })
+      }
       const note = typeof body.note === 'string' ? body.note.slice(0, 120) : `Achat de ${amount} TND`
       const result = await awardPoints(business.id, phone, amount, note)
       if (!result.ok) {

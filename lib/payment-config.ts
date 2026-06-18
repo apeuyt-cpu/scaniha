@@ -18,6 +18,12 @@ export const PAYMENT_PLANS: Record<string, { label: string; price: number; grant
   lifetime: { label: 'À vie', price: 250, grantsDays: null },
   // Programme de fidélité (produit séparé) — abonnement annuel.
   fidelity_year: { label: 'Fidélité — 1 an', price: 50, grantsDays: 365 },
+  // ─── API publique de fidélité (add-on développeur) ─────────────────
+  // Annuel manuel (D17/RIB/Flouci), même logique que fidelity_year.
+  // Deux forfaits annuels proposés sur la landing /pricing. Placeholder
+  // vedette: « Découverte ». (Pas d'option « à vie » — abonnement annuel only.)
+  api_year: { label: 'API — Découverte (1 an)', price: 120, grantsDays: 365 },
+  api_pro_year: { label: 'API — Pro (1 an)', price: 200, grantsDays: 365 },
   // ── Legacy variants ───────────────────────────────────────────────
   // No longer offered in the UI, but kept here so any historical pending
   // request that used them still resolves correctly on approval.

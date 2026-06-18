@@ -139,7 +139,7 @@ export default function AccountSheet({
       const res = await fetch(`/api/loyalty/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: session.phone, rewardId: reward.id }),
+        body: JSON.stringify({ phone: session.phone, token: session.token, rewardId: reward.id }),
       })
       const j = await res.json()
       if (!res.ok || !j.success) throw new Error(j.error || 'Échange impossible.')

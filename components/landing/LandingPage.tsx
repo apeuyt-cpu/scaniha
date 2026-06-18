@@ -11,7 +11,7 @@ import AnimatedShapes from '@/components/landing/AnimatedShapes'
 import LocalProductsSection from '@/components/landing/LocalProductsSection'
 import FidelityShowcase from '@/components/landing/FidelityShowcase'
 import logoIcon from '../../public/logo.png'
-import logoFull from '../../public/logo2.png'
+import logoFull from '../../public/logo2.webp'
 import heroPhones from '../../public/hero/hero-phones.webp'
 import qrStands from '../../public/qr-stands.webp'
 import feature1 from '../../public/features/feature-1.webp'
@@ -444,6 +444,70 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
 
           <div className="reveal">
             <PricingComparison />
+          </div>
+        </div>
+      </section>
+
+      {/* API & intégrations — connect Scaniha loyalty to a POS/app */}
+      <section className="bg-white py-20 sm:py-24 lg:py-28">
+        <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
+          <div className="reveal">
+            <div className="mx-auto mb-12 max-w-2xl text-center sm:mb-14">
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-orange-500">
+                API &amp; intégrations
+              </p>
+              <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">
+                Branchez la fidélité Scaniha sur votre caisse
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-zinc-600">
+                Une API REST simple pour connecter votre système de caisse ou votre application
+                au programme de fidélité Scaniha. Créditez des points, validez les codes et
+                consultez les soldes — directement depuis vos outils.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                {
+                  emoji: '💳',
+                  title: 'Créditez des points depuis votre caisse',
+                  desc: 'À chaque achat, ajoutez automatiquement les points de fidélité au numéro du client.',
+                },
+                {
+                  emoji: '🎟️',
+                  title: 'Validez les codes',
+                  desc: 'Vérifiez et consommez les codes de récompense et de gain en un appel d’API.',
+                },
+                {
+                  emoji: '📊',
+                  title: 'Soldes & historique par téléphone',
+                  desc: 'Récupérez le solde, l’historique des points et les codes actifs d’un client.',
+                },
+              ].map((c) => (
+                <div
+                  key={c.title}
+                  className="flex flex-col rounded-3xl border border-zinc-200/80 bg-white p-7 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-2xl">
+                    {c.emoji}
+                  </span>
+                  <h3 className="mt-5 text-lg font-extrabold tracking-tight text-zinc-900">{c.title}</h3>
+                  <p className="mt-2 text-base leading-relaxed text-zinc-600">{c.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-12 text-center">
+              <Link
+                href="/developers"
+                className="btn-shine inline-block rounded-xl bg-gradient-to-r from-[#F47B20] to-[#F5B82E] px-8 py-4 text-base font-extrabold text-white shadow-lg shadow-orange-500/30"
+              >
+                Documentation développeurs →
+              </Link>
+              <p className="mt-4 text-sm text-zinc-500">
+                Clés API par établissement · lecture &amp; écriture fidélité · paiement annuel manuel
+              </p>
+            </div>
           </div>
         </div>
       </section>

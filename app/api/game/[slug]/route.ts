@@ -40,17 +40,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ success: false, error: 'Connectez-vous pour jouer.', authRequired: true }, { status: 401 })
   }
 
-  // Pin the token to THIS café. A diner session is issued per business, so a
-  // café-A token must never be replayable against café B's slug — that would
-  // record a play, credit café B's points and burn its daily limit under a phone
-  // that never created a café-B account. Resolve the slug's business once (also
-  // reused by the QR gate below) and reject any mismatch.
+  // SECURITY: identity is GLOBAL, so the token isn't café-bound — but the phone is
+  // derived from it server-side (never trust client.phone). The play is scoped to
+  // THIS café by the slug; play_game writes to the right café's data for that phone.
+  // A global token replayed at café B can therefore only ever touch café B's rows
+  // for its OWN phone — never another phone, never another café's totals.
   const loaded = await loadQrGate(slug)
   if (!loaded) {
     return NextResponse.json({ success: false, error: ERR.no_business.msg }, { status: 404 })
-  }
-  if (session.businessId && loaded.businessId !== session.businessId) {
-    return NextResponse.json({ success: false, error: 'Connectez-vous pour jouer.', authRequired: true }, { status: 401 })
   }
 
   const phone = session.phone

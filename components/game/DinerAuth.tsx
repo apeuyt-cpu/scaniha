@@ -55,10 +55,14 @@ function PinField({ value, onChange, disabled, autoFocus }: { value: string; onC
 }
 
 /**
- * Diner login / signup for one business by slug — deliberately minimal and
- * low-friction: phone + a 4-digit PIN (first name optional on signup), one
- * toggle link, no email, no OTP. On success it stores the session token in
- * localStorage[`scaniha_diner_${slug}`] and calls onAuthed. French throughout.
+ * Diner login / signup — deliberately minimal and low-friction: phone + a 4-digit
+ * PIN (first name optional on signup), one toggle link, no email, no OTP. Identity
+ * is GLOBAL (one account per phone, valid at every café).
+ *  - With a `slug`: the per-café hub entry — posts to /api/account/[slug] (so that
+ *    café's welcome bonus is granted) and stores the token under that café's key.
+ *  - Without a `slug`: the café-less WALLET entry — posts to /api/account and
+ *    stores the single global token under `scaniha_wallet`.
+ * On success it persists the token and calls onAuthed. French throughout.
  */
 export default function DinerAuth({
   slug,
@@ -67,7 +71,8 @@ export default function DinerAuth({
   welcomePoints = 0,
   onAuthed,
 }: {
-  slug: string
+  /** Café slug for the per-café entry; omit for the global wallet entry. */
+  slug?: string
   accent?: string
   gradient?: string
   /** Welcome bonus credited on signup — shown as the join hook. */
@@ -94,14 +99,19 @@ export default function DinerAuth({
     if (pin.length !== 4) { setError('Votre code doit contenir 4 chiffres.'); return }
     setBusy(true)
     try {
-      const res = await fetch(`/api/account/${slug}`, {
+      const res = await fetch(slug ? `/api/account/${slug}` : '/api/account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: mode, phone: phone.trim(), password: pin, name: mode === 'signup' && name.trim() ? name.trim() : undefined }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok || !json.ok) { setError(json.error || 'Une erreur est survenue. Réessayez.'); return }
-      try { localStorage.setItem(`scaniha_diner_${slug}`, json.token) } catch {}
+      if (!res.ok || !json.ok) {
+        setError(json.error || 'Une erreur est survenue. Réessayez.')
+        if (json.suggestLogin) { setMode('login'); setPin('') }
+        return
+      }
+      // Per-café entry stores under the café key; the wallet stores the one global token.
+      try { localStorage.setItem(slug ? `scaniha_diner_${slug}` : 'scaniha_wallet', json.token) } catch {}
       onAuthed({ token: json.token, phone: json.phone, name: json.name ?? null })
     } catch {
       setError('Connexion impossible. Vérifiez votre réseau.')

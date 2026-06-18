@@ -181,7 +181,7 @@ export default function FidelityHub({
     if (!session) { requireLogin('Connectez-vous pour échanger vos points contre des récompenses.'); return }
     setBusyRewardId(reward.id); setBoutiqueError(null); setBoutiqueRescan(null)
     try {
-      const res = await fetch(`/api/loyalty/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: session.phone, rewardId: reward.id }) })
+      const res = await fetch(`/api/loyalty/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: session.phone, token: session.token, rewardId: reward.id }) })
       const j = await res.json()
       if (res.status === 403 && j.rescanRequired) { setBoutiqueRescan(typeof j.error === 'string' ? j.error : ''); return }
       if (!res.ok || !j.success) throw new Error(j.error || 'Échange impossible.')

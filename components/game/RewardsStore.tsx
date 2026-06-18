@@ -77,7 +77,7 @@ export default function RewardsStore({
       const res = await fetch(`/api/loyalty/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: session.phone, rewardId: reward.id }),
+        body: JSON.stringify({ phone: session.phone, token: session.token, rewardId: reward.id }),
       })
       const j = await res.json()
       // QR-session gate (403 rescanRequired): friendly scan prompt, not a red error.

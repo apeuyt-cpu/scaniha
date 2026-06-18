@@ -154,13 +154,17 @@ function ValidateResultView({ result, collecting, onCollect, onReset }: { result
 function AwardCard() {
   const [phone, setPhone] = useState('')
   const [amount, setAmount] = useState('')
+  const [pin, setPin] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'green' | 'red'; text: string } | null>(null)
 
   async function submit() {
     setBusy(true)
     setMsg(null)
-    const { ok, json } = await caisse('award', { phone, amount: Number(amount) })
+    // pin is harmless when the café has no PINs (the route ignores it). On a 401
+    // PIN error (PIN_REQUIRED / PIN_INVALID) we surface json.error identically
+    // and KEEP the pin so the cashier can correct it.
+    const { ok, json } = await caisse('award', { phone, amount: Number(amount), pin })
     setBusy(false)
     if (!ok || !json.ok) {
       setMsg({ tone: 'red', text: json.error || 'Erreur.' })
@@ -169,6 +173,7 @@ function AwardCard() {
     const welcome = json.welcomeAdded ? ` (+${json.welcomeAdded} bienvenue)` : ''
     setMsg({ tone: 'green', text: `✓ +${json.pointsAdded} points${welcome} · solde ${json.balance}` })
     setAmount('')
+    setPin('')
   }
 
   return (
@@ -188,6 +193,20 @@ function AwardCard() {
         <Button variant="primary" onClick={submit} disabled={busy || !phone || !amount} className="sm:mb-0">
           {busy ? '…' : 'Créditer'}
         </Button>
+      </div>
+      <div className="mt-3 sm:max-w-[12rem]">
+        <Field label="Code PIN (si demandé)">
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={6}
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+            placeholder="••••"
+            autoComplete="off"
+            className={inputClass}
+          />
+        </Field>
       </div>
       {msg && <p className={`mt-3 text-sm font-medium ${msg.tone === 'green' ? 'text-green-600' : 'text-red-600'}`}>{msg.text}</p>}
     </div>
@@ -289,6 +308,9 @@ function LookupCard() {
 
       <p className="mt-4 text-xs text-zinc-400">
         Configurer les lots et récompenses : <Link href="/admin/fidelite" className="font-semibold text-orange-600 hover:underline">Programme de fidélité →</Link>
+      </p>
+      <p className="mt-2 text-xs text-zinc-400">
+        <Link href="/admin/caisse/codes" className="font-semibold text-orange-600 hover:underline">Gérer les codes PIN du personnel →</Link>
       </p>
     </div>
   )

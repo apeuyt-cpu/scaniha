@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadLoyalty, redeemReward, normPhone } from '@/lib/db/loyalty'
 import { loadQrGate } from '@/lib/db/game'
+import { dinerSession } from '@/lib/db/account'
 import { scanCookieName, verifyScan } from '@/lib/qr-session'
 
 /**
@@ -31,6 +32,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const rewardId = typeof body.rewardId === 'string' ? body.rewardId : null
   if (!phone || !rewardId) {
     return NextResponse.json({ success: false, error: 'Numéro ou récompense manquant.' }, { status: 400 })
+  }
+
+  // SECURITY: the requester must hold a valid diner session whose phone matches.
+  // The phone is derived from the token server-side (never trust client.phone) —
+  // without it anyone could POST {phone, rewardId} and drain a stranger's points.
+  // Identity is GLOBAL so the token isn't café-bound, but redeem_reward is scoped
+  // to THIS café by slug + that phone, so a global token can only ever spend its
+  // OWN balance at this café.
+  const session = await dinerSession(typeof body.token === 'string' ? body.token : null)
+  if (!session.ok || session.phone !== phone) {
+    return NextResponse.json({ success: false, error: 'Connectez-vous pour échanger vos points.' }, { status: 401 })
   }
 
   // QR-session gate — only when the owner opted to also lock redemptions.

@@ -14,6 +14,9 @@ export async function PATCH(
     const { action } = body
     // The operator may explicitly acknowledge an amount mismatch to proceed anyway.
     const overrideMismatch = body?.overrideMismatch === true
+    // A motive is required when forcing approval of a mismatched amount (audited).
+    const overrideReason =
+      typeof body?.amountOverrideReason === 'string' ? body.amountOverrideReason.trim().slice(0, 500) : ''
 
     if (action !== 'approve' && action !== 'reject') {
       return NextResponse.json({ error: 'Action invalide.' }, { status: 400 })
@@ -39,10 +42,12 @@ export async function PATCH(
     const updateRequest = async (extra: Record<string, any>) => {
       const payload: Record<string, any> = { ...extra, ...reviewAudit }
       let { error } = await (supabase.from('payment_requests') as any).update(payload).eq('id', id)
-      if (error && /reviewed_by|reviewed_at|column/i.test(error.message || '')) {
-        // Retry without the audit columns if the schema doesn't have them.
+      if (error && /reviewed_by|reviewed_at|amount_override_reason|column/i.test(error.message || '')) {
+        // Retry without the audit columns if the schema doesn't have them. The
+        // override reason rides in `extra`, so drop it here too.
+        const { amount_override_reason: _omit, ...extraSafe } = extra
         const { error: error2 } = await (supabase.from('payment_requests') as any)
-          .update(extra)
+          .update(extraSafe)
           .eq('id', id)
         error = error2
       }
@@ -88,6 +93,16 @@ export async function PATCH(
       )
     }
 
+    if (amountMismatch && overrideMismatch && !overrideReason) {
+      return NextResponse.json(
+        {
+          error: "Un motif est requis pour forcer l'approbation d'un montant différent.",
+          code: 'REASON_REQUIRED',
+        },
+        { status: 400 }
+      )
+    }
+
     // Activate the business and EXTEND its subscription by the plan duration.
     const days = planDef.grantsDays
     let expires_at: string | null = null
@@ -109,13 +124,17 @@ export async function PATCH(
       .eq('id', req.business_id)
     if (bizErr) throw new Error(bizErr.message)
 
-    const updErr = await updateRequest({ status: 'approved' })
+    const updErr = await updateRequest({
+      status: 'approved',
+      ...(amountMismatch && overrideMismatch ? { amount_override_reason: overrideReason } : {}),
+    })
     if (updErr) throw new Error(updErr.message)
 
     if (amountMismatch && overrideMismatch) {
       console.warn(
         `[AUDIT] super-admin ${user.id} approved payment request ${id} with an amount ` +
-          `mismatch (declared ${submittedAmount} TND vs expected ${expectedAmount} TND).`
+          `mismatch (declared ${submittedAmount} TND vs expected ${expectedAmount} TND). ` +
+          `Motif: ${overrideReason}`
       )
     }
 

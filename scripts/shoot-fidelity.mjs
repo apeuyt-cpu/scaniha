@@ -9,6 +9,7 @@ import { mkdirSync } from 'fs'
 import path from 'path'
 const require = createRequire(import.meta.url)
 const { chromium } = require('playwright-core')
+const sharp = require('sharp')
 
 const SLUG = process.argv[2]
 const BASE = process.argv[3] || 'http://localhost:3003'
@@ -75,8 +76,9 @@ for (const s of shots) {
   try { await page.evaluate(() => document.fonts && document.fonts.ready) } catch {}
   await page.evaluate(() => Promise.all([...document.images].map((i) => i.complete ? null : new Promise((r) => { i.onload = i.onerror = r }))))
   await page.waitForTimeout(1100)
-  await page.screenshot({ path: path.join(OUT, `${s.name}.png`) })
-  console.log('saved ' + s.name + '.png')
+  const buf = await page.screenshot({ type: 'png' })
+  await sharp(buf).webp({ quality: 82 }).toFile(path.join(OUT, `${s.name}.webp`))
+  console.log('saved ' + s.name + '.webp')
 }
 
 await browser.close()

@@ -106,7 +106,7 @@ export default function Design6({ business, categories }: { business: any; categ
       <header className="px-6 pt-12 text-center">
         {settings.showLogo && business?.logo_url && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={business.logo_url} alt="" className="mx-auto mb-5 h-16 w-16 rounded-full object-cover ring-1 ring-black/10" />
+          <img src={business.logo_url} alt="" className="mx-auto mb-5 h-16 w-auto max-w-[170px] object-contain" />
         )}
         <p className="text-[10px] uppercase tracking-[0.45em]" style={{ color: FAINT, fontFamily: SANS }}>La Carte</p>
         <h1 className="mx-auto mt-3 max-w-[18ch] text-balance text-[32px] font-bold leading-[1.1] tracking-tight">{business?.name || 'Notre Maison'}</h1>

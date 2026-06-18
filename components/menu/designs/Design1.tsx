@@ -99,7 +99,7 @@ export default function Design1({ business, categories }: { business: any; categ
           {settings.showLogo &&
             (business?.logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={business.logo_url} alt={business?.name || ''} className="h-11 w-11 rounded-2xl object-cover ring-1 ring-black/5" />
+              <img src={business.logo_url} alt={business?.name || ''} className="h-11 w-auto max-w-[120px] object-contain" />
             ) : (
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl text-base font-bold text-white" style={{ backgroundImage: gradient }}>
                 {initial}

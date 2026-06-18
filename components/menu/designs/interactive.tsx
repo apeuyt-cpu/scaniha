@@ -136,13 +136,13 @@ export function CenteredItemModal({ item, onClose, gradient, ink = '#171210', mu
         <button type="button" onClick={onClose} aria-label="Fermer" className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-zinc-700 shadow backdrop-blur transition hover:bg-white active:scale-90">
           <CloseIcon />
         </button>
-        {item.image_url ? (
+        {item.image_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={item.image_url} alt={item.name} className="h-56 w-full object-cover" />
-        ) : (
-          <div className="h-56 w-full" style={{ backgroundImage: gradient }} />
         )}
-        <div className="px-6 pb-7 pt-5">
+        {/* No image → no empty placeholder; just text + details (extra top room so
+            the floating ✕ doesn't collide with the title/price). */}
+        <div className={`px-6 pb-7 ${item.image_url ? 'pt-5' : 'pt-14'}`}>
           <div className="flex items-start justify-between gap-3">
             <h3 id={titleId} className="text-[22px] font-bold leading-tight" style={{ color: ink }}>{item.name}</h3>
             <span className="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-bold text-white" style={{ backgroundImage: gradient }}>{fmt(item.price)}</span>

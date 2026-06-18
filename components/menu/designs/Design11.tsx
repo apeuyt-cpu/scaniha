@@ -132,7 +132,7 @@ export default function Design11({ business, categories }: { business: any; cate
           <div className="d11-rise flex items-center gap-3.5" style={{ animationDelay: '60ms' }}>
             {settings.showLogo && business?.logo_url && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={business.logo_url} alt="" className="h-14 w-14 rounded-2xl object-cover shadow-lg ring-2 ring-white/40" />
+              <img src={business.logo_url} alt="" className="h-14 w-14 rounded-2xl bg-white/90 object-contain p-1.5 shadow-lg ring-2 ring-white/40" />
             )}
             <div className="min-w-0">
               {settings.tagline ? (

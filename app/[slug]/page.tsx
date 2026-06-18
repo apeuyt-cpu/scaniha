@@ -12,7 +12,7 @@ import { isFidelityLive, resolveMode } from '@/lib/design-settings'
 import LogView from '@/components/LogView'
 import QrScanMint from '@/components/game/QrScanMint'
 import type { Database } from '@/lib/supabase/database.types'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 
 
 
@@ -165,6 +165,20 @@ export default async function PublicMenuPage({
       <QrScanMint slug={business.slug} />
     </>
   )
+}
+
+// Per-café browser chrome: the phone's address-bar tint matches the café's own
+// brand colour instead of the platform orange (app/layout.tsx). Reuses the cached
+// business fetch, so no extra DB read. Falls back to the root themeColor on error.
+export async function generateViewport({ params }: { params: Promise<{ slug: string }> }): Promise<Viewport> {
+  try {
+    const { slug } = await params
+    const business = await getBusinessBySlugCached(slug)
+    if (!business) return {}
+    return { themeColor: businessAccent(business) }
+  } catch {
+    return {}
+  }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

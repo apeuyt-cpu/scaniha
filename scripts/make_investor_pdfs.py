@@ -4,6 +4,7 @@ lib/payment-config.ts: Menu QR 1 an 150 / À vie 250 ; Fidélité 45 / 90 / 150.
 Market figures are real & sourced (see 'src'); projections are Scaniha estimates.
 Output: Desktop/Scaniha - Investisseurs/."""
 import os
+import re
 from functools import partial
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
@@ -25,6 +26,11 @@ pdfmetrics.registerFont(TTFont('Ar', r'C:\Windows\Fonts\arial.ttf'))
 pdfmetrics.registerFont(TTFont('ArB', r'C:\Windows\Fonts\arialbd.ttf'))
 
 def ar(s):
+    # A space used as a thousands separator (between two digits) is bidi-neutral,
+    # so the RTL algorithm reorders the digit groups ("30 000" -> "000 30").
+    # Replace it with a NO-BREAK SPACE (bidi class CS), which the algorithm keeps
+    # INSIDE the number, so groups no longer flip.
+    s = re.sub(r'(?<=\d) (?=\d)', ' ', s)
     return get_display(arabic_reshaper.reshape(s), base_dir='R')
 
 def hf(canvas, doc, title, rtl=False):

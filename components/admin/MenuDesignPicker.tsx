@@ -127,17 +127,9 @@ export default function MenuDesignPicker({ themeCtrl, slug, accent = '#F47B20', 
         </div>
       )}
 
-      <h2 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-zinc-400">Designs modernes</h2>
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
         {DESIGNS.map((d) => (
           <Card key={d.id} id={d.id} name={d.name} kind={d.kind} n={d.n} />
-        ))}
-      </div>
-
-      <h2 className="mb-3 mt-8 text-[13px] font-bold uppercase tracking-wide text-zinc-400">Thèmes classiques</h2>
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
-        {LEGACY.map((t) => (
-          <Card key={t.id} id={t.id} name={t.name} kind={t.kind} n={t.n} />
         ))}
       </div>
     </div>

@@ -196,6 +196,7 @@ export async function POST(request: Request) {
         slug: slug,
         expires_at: expirationDate.toISOString(),
         status: 'active',
+        theme_id: 'design12',
         // New cafés start as a plain QR menu — fidelity (points, roulette, the
         // bottom nav) stays hidden until the owner turns it on themselves.
         // Existing cafés (loyaltyEnabled unset) keep today's behaviour.

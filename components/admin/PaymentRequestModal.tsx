@@ -130,7 +130,7 @@ export default function PaymentRequestModal({ businessId, open, onClose, existin
 
             {plan === 'lifetime' && (
               <p className="mt-2 rounded-xl bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
-                Paiement unique de 600 TND — accès à vie, sans expiration.
+                Paiement unique de {PLANS.lifetime.price} TND — accès à vie, sans expiration.
               </p>
             )}
 

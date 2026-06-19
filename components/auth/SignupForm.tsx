@@ -205,6 +205,10 @@ export default function SignupForm({ plan }: { plan?: string }) {
             slug: slug,
             expires_at: null,
             status: 'pending',
+            theme_id: 'design12',
+            // Plain QR menu by default — fidelity (points/roulette/bottom bar)
+            // stays off until the owner turns it on.
+            design_settings: { loyaltyEnabled: false },
           })
           .select()
           .single()
@@ -233,6 +237,10 @@ export default function SignupForm({ plan }: { plan?: string }) {
             slug: slug,
             expires_at: expirationDate.toISOString(),
             status: 'active',
+            theme_id: 'design12',
+            // Plain QR menu by default — fidelity (points/roulette/bottom bar)
+            // stays off until the owner turns it on.
+            design_settings: { loyaltyEnabled: false },
           })
           .select()
           .single()

@@ -18,7 +18,8 @@ export const themes = {
 } as const
 
 export function getTheme(themeId: string, customPrimaryColor?: string | null): Theme {
-  const baseTheme = themes[themeId as keyof typeof themes] || classic
+  // design12 is the default look (the classic/minimal/dark themes were retired).
+  const baseTheme = themes[themeId as keyof typeof themes] || design12
   
   if (customPrimaryColor) {
     return {

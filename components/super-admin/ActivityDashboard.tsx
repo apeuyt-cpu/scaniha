@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import StatCard from '@/components/admin/ui/StatCard'
+import StatTile from './StatTile'
 import { Skeleton, CardSkeleton } from '@/components/admin/ui/Skeleton'
 import { useToast } from '@/components/super-admin/Toast'
 
@@ -127,15 +127,15 @@ export default function ActivityDashboard() {
   return (
     <div className="space-y-8">
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Parties (total)" value={s.playsTotal} />
-        <StatCard label="Parties aujourd’hui" value={s.playsToday} />
-        <StatCard label="Gains à remettre" value={s.winsPending} />
-        <StatCard label="Gains remis" value={s.winsRedeemed} />
-        <StatCard label="Échanges fidélité" value={s.redemptionsTotal} />
-        <StatCard label="Parties (7 j)" value={s.playsWeek} />
-        <StatCard label="Clients (total)" value={s.dinersTotal} />
-        <StatCard label="Nouveaux clients (7 j)" value={s.dinersWeek} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatTile label="Parties (total)" value={s.playsTotal} />
+        <StatTile label="Parties aujourd’hui" value={s.playsToday} tone="orange" />
+        <StatTile label="Gains à remettre" value={s.winsPending} tone={s.winsPending > 0 ? 'amber' : 'zinc'} />
+        <StatTile label="Gains remis" value={s.winsRedeemed} tone="green" />
+        <StatTile label="Échanges fidélité" value={s.redemptionsTotal} />
+        <StatTile label="Parties (7 j)" value={s.playsWeek} />
+        <StatTile label="Clients (total)" value={s.dinersTotal} />
+        <StatTile label="Nouveaux clients (7 j)" value={s.dinersWeek} tone="green" />
       </div>
 
       {/* Points-adjust tool (full data management) */}

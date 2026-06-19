@@ -5,6 +5,7 @@ import Button from '@/components/admin/ui/Button'
 import Field, { inputClass } from '@/components/admin/ui/Field'
 import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
 import { useToast } from '@/components/admin/ui/Toast'
+import { Skeleton } from '@/components/admin/ui/Skeleton'
 import type { StaffPinPublic } from '@/lib/db/staff-pins'
 
 function fmt(iso: string) {
@@ -149,7 +150,9 @@ export default function StaffPinManager() {
         <h2 className="font-bold text-zinc-900">Codes PIN actifs</h2>
 
         {loading ? (
-          <p className="mt-4 text-sm text-zinc-400">Chargement…</p>
+          <div className="mt-4 space-y-2">
+            {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}
+          </div>
         ) : pins.length === 0 ? (
           <p className="mt-4 text-sm text-zinc-400">Aucun code PIN. La caisse reste accessible sans code.</p>
         ) : (

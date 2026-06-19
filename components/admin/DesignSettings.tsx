@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadImage } from '@/lib/storage'
 import { revalidatePublicMenu } from '@/lib/revalidate-menu'
+import { Skeleton } from '@/components/admin/ui/Skeleton'
 import {
   DESIGN_ACCENTS,
   DESIGN_EXTRAS,
@@ -336,7 +337,7 @@ export function ModelControls({ ctrl, designId }: { ctrl: DesignSettingsControll
           {s.source === 'manual' && (
             <Field label={`Plats à la une (${s.featuredIds.length} sélectionné${s.featuredIds.length > 1 ? 's' : ''})`}>
               {!itemsLoaded ? (
-                <p className="text-sm text-zinc-400">Chargement des plats…</p>
+                <div className="space-y-2"><Skeleton className="h-10 w-full rounded-xl" /><Skeleton className="h-10 w-3/4 rounded-xl" /></div>
               ) : items.length === 0 ? (
                 <p className="text-sm text-zinc-400">Aucun plat. Ajoutez des articles dans le menu d&apos;abord.</p>
               ) : (

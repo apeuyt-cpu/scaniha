@@ -9,6 +9,7 @@ import Button from '@/components/admin/ui/Button'
 import { inputClass } from '@/components/admin/ui/Field'
 import SetupCard from '@/components/admin/game/SetupCard'
 import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
+import { CardSkeleton } from '@/components/admin/ui/Skeleton'
 
 /**
  * Owner configuration for the roulette ("everyone wins, variable value").
@@ -116,7 +117,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
   }
 
   if (loading) {
-    return <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-400">Chargement…</div>
+    return <CardSkeleton rows={4} />
   }
 
   if (setupNeeded || !game) {

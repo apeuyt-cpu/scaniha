@@ -8,6 +8,7 @@ import Toggle from '@/components/admin/ui/Toggle'
 import { inputClass } from '@/components/admin/ui/Field'
 import { QR_TTL_OPTIONS } from '@/lib/game'
 import MenuDesignPicker, { type ThemeCtrl } from '@/components/admin/MenuDesignPicker'
+import { Skeleton } from '@/components/admin/ui/Skeleton'
 
 type Business = Database['public']['Tables']['businesses']['Row'] & {
   wheel_enabled?: boolean
@@ -693,7 +694,7 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                 {/* Produits (formule) */}
                 <Section title="Produits (formule)">
                   {productMode === null ? (
-                    <p className="text-sm text-zinc-400">Chargement…</p>
+                    <div className="space-y-2"><Skeleton className="h-9 w-full rounded-xl" /><Skeleton className="h-9 w-2/3 rounded-xl" /></div>
                   ) : (
                     <>
                       <div className="inline-flex flex-wrap gap-1 rounded-xl border border-zinc-200 p-1">
@@ -758,7 +759,7 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                 {/* QR scan-to-play gate */}
                 <Section title="Scan QR pour jouer">
                   {qrGate === null ? (
-                    <p className="text-sm text-zinc-400">Chargement…</p>
+                    <div className="space-y-2"><Skeleton className="h-9 w-full rounded-xl" /><Skeleton className="h-9 w-2/3 rounded-xl" /></div>
                   ) : !qrGate.exists ? (
                     <p className="rounded-xl bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
                       Ce café n’a pas encore configuré la roue — rien à verrouiller pour l’instant.

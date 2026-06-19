@@ -47,41 +47,6 @@ const fidelityPlans: Plan[] = [
   { variant: 'dark', name: '1 an', price: '50', period: 'par an', note: 'Renouvelable chaque année — aucun prélèvement automatique.', href: '/signup?plan=fidelity_year' },
 ]
 
-// ── Produit 3 : API & intégrations (produit séparé) ──────────────────
-// NOTE — deux forfaits ANNUELS (pas d'option « à vie »). La plus pertinente
-// ("Pro") est mise en avant (badge "Recommandé"). Pour changer l'offre vedette,
-// déplacez le badge / variant entre les cartes ci-dessous. Les ids de plan
-// (?plan=api_year / api_pro_year) sont déclarés dans lib/payment-config.ts → PAYMENT_PLANS.
-const FEATURES_API_DISCOVERY = [
-  '1 clé API active',
-  '60 requêtes / min · 5 000 / jour',
-  'Endpoints lecture + écriture fidélité',
-  'Points, récompenses, codes, soldes',
-  'Renouvellement annuel manuel',
-  '30 jours de grâce au renouvellement',
-]
-
-const FEATURES_API_PRO = [
-  'Jusqu’à 3 clés API (test / prod / intégrateur)',
-  '120 requêtes / min · 20 000 / jour',
-  'Endpoints lecture + écriture fidélité',
-  'Environnements séparés sans partager le secret',
-  'Support prioritaire par email',
-  'Renouvellement annuel manuel · 30 j de grâce',
-]
-
-const apiPlans: { plan: Plan; features: string[] }[] = [
-  {
-    plan: { variant: 'light', name: 'Découverte', price: '120', period: 'par an', note: 'Idéal pour brancher une caisse / POS. Paiement annuel manuel.', href: '/signup?plan=api_year' },
-    features: FEATURES_API_DISCOVERY,
-  },
-  {
-    // ⭐ Placeholder recommandé mis en avant.
-    plan: { variant: 'popular', name: 'Pro', price: '200', period: 'par an', note: 'Plusieurs points de vente / environnements. Renouvelable chaque année.', href: '/signup?plan=api_pro_year', badge: 'Recommandé' },
-    features: FEATURES_API_PRO,
-  },
-]
-
 function Check({ variant }: { variant: Variant }) {
   const cls =
     variant === 'popular'
@@ -235,27 +200,6 @@ export default function PricingComparison() {
         <div className="mx-auto grid max-w-sm grid-cols-1 items-stretch gap-7 pt-4">
           {fidelityPlans.map((plan) => (
             <PlanCard key={plan.variant} plan={plan} features={FEATURES_FIDELITY} />
-          ))}
-        </div>
-      </div>
-
-      {/* ── Produit 3 : API & intégrations (produit séparé) ── */}
-      <div>
-        <div className="mx-auto mb-8 max-w-2xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full bg-orange-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-orange-700">
-            Pour développeurs
-          </span>
-          <h3 className="mt-3 text-2xl font-extrabold tracking-tight text-zinc-900">L’API &amp; les intégrations</h3>
-          <p className="mt-2 text-zinc-500">
-            Connectez votre caisse ou votre application à la fidélité Scaniha. Paiement annuel manuel — aucun prélèvement automatique.{' '}
-            <Link href="/developers" className="font-semibold text-orange-600 underline decoration-orange-300 underline-offset-2 hover:text-orange-700">
-              Voir la documentation
-            </Link>
-          </p>
-        </div>
-        <div className="mx-auto grid max-w-3xl grid-cols-1 items-stretch gap-7 pt-4 md:grid-cols-2">
-          {apiPlans.map(({ plan, features }) => (
-            <PlanCard key={plan.variant} plan={plan} features={features} />
           ))}
         </div>
       </div>

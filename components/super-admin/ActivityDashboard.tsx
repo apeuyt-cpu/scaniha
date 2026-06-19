@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import StatCard from '@/components/admin/ui/StatCard'
+import { Skeleton, CardSkeleton } from '@/components/admin/ui/Skeleton'
 import { useToast } from '@/components/super-admin/Toast'
 
 type Ev = {
@@ -106,7 +107,14 @@ export default function ActivityDashboard() {
     finally { setAdjBusy(false) }
   }
 
-  if (loading) return <p className="py-16 text-center text-sm text-zinc-400">Chargement de l’activité…</p>
+  if (loading) return (
+    <div className="space-y-4" aria-busy="true" aria-label="Chargement de l’activité">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[84px] rounded-2xl" />)}
+      </div>
+      <CardSkeleton rows={6} />
+    </div>
+  )
   if (err) return <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{err} <button onClick={load} className="ml-2 font-semibold underline">Réessayer</button></div>
   if (!data) return null
 

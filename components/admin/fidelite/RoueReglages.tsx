@@ -6,25 +6,22 @@ import Field, { inputClass } from '@/components/admin/ui/Field'
 import PlayGates from '@/components/admin/game/PlayGates'
 import QrSessionLock from '@/components/admin/game/QrSessionLock'
 import SurveyResponses from '@/components/admin/game/SurveyResponses'
+import { CardSkeleton } from '@/components/admin/ui/Skeleton'
 import { useRoueGame } from './useRoueGame'
 import { useOwnerBusiness } from './useOwnerBusiness'
 
 /** "Réglages avancés" page body — everything kept off the simple roue screen. */
 export default function RoueReglages() {
   const { business, loading } = useOwnerBusiness()
-  if (loading) return <Loading />
+  if (loading) return <CardSkeleton rows={5} />
   if (!business) return <p className="text-zinc-500">Aucun établissement trouvé</p>
   return <AdvancedBody businessId={business.id} />
-}
-
-function Loading() {
-  return <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-400">Chargement…</div>
 }
 
 function AdvancedBody({ businessId }: { businessId: string }) {
   const { game, setGame, prizes, loading, setupNeeded, error, updateGame, updatePrize } = useRoueGame(businessId)
 
-  if (loading) return <Loading />
+  if (loading) return <CardSkeleton rows={5} />
 
   // No wheel yet → these settings don't exist; send the owner to set it up first.
   if (setupNeeded || !game) {

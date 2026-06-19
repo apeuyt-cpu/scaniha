@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import GameManager from '@/components/admin/GameManager'
 import LoyaltyManager from '@/components/admin/LoyaltyManager'
 import FidelityToggle from '@/components/admin/game/FidelityToggle'
+import { CardSkeleton } from '@/components/admin/ui/Skeleton'
 
 /** Fetches the owner's business, then shows Roue / Fidélité config in tabs. */
 export default function GameTabs() {
@@ -29,7 +30,7 @@ export default function GameTabs() {
   }, [])
 
   if (loading) {
-    return <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-400">Chargement…</div>
+    return <CardSkeleton rows={4} />
   }
   if (!business) return <p className="text-zinc-500">Aucun établissement trouvé</p>
 

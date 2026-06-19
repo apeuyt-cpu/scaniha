@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Scaniha investor PDFs — French + Arabic (RTL). Correct pricing from
-lib/payment-config.ts: Menu QR 1 an 150 / À vie 250 ; Fidélité 50 / an.
+lib/payment-config.ts: Menu QR 1 an 150 / À vie 250 ; Fidélité 45 / 90 / 150.
+Market figures are real & sourced (see 'src'); projections are Scaniha estimates.
 Output: Desktop/Scaniha - Investisseurs/."""
 import os
 from functools import partial
@@ -105,7 +106,13 @@ C = {
   'enbref_h': 'En bref', 'enbref': "Scaniha transforme le menu papier d'un établissement en menu QR numérique élégant — modifiable en temps réel — et y ajoute un programme de fidélité (points, roue de la chance, récompenses) qui fait revenir les clients. Sans application, prix en dinars.",
   'pb_h': 'Le problème', 'pb': ["Des menus papier figés, coûteux à réimprimer à chaque changement de prix ou de plat.", "Aucune donnée client et aucun moyen simple de fidéliser sa clientèle.", "Les solutions étrangères sont chères, en anglais et inadaptées au marché tunisien."],
   'sol_h': 'La solution', 'sol_i': "Une plateforme web tout-en-un, accessible d'un simple scan :", 'sol': ["Menu QR — une carte numérique au design soigné, mise à jour instantanément, 4 styles au choix.", "Programme de fidélité — points à chaque achat, roue de la chance « tout le monde gagne », récompenses et carte client liée au numéro de téléphone.", "Connexion possible à une caisse / un outil tiers."],
-  'march_h': 'Le marché', 'march': "La Tunisie compte des dizaines de milliers de cafés, salons de thé et restaurants, dont une infime minorité est équipée d'outils numériques. Cible immédiate : ________________ (ville / région).",
+  'march_h': 'Le marché — chiffres réels', 'march': "La Tunisie compte plus de 20 000 cafés et salons de thé et environ 2 600 restaurants, pour un secteur des cafés estimé à près d'un milliard de dollars de chiffre d'affaires. La quasi-totalité fonctionne encore au menu papier, sans aucune donnée sur ses clients.",
+  'march_b': ["Plus de 20 000 cafés et salons de thé en Tunisie (Chambre des propriétaires de cafés, 2024).", "Environ 2 600 restaurants recensés, sans compter chaînes et fast-foods.", "Tendance lourde : depuis 2025, l'État impose la caisse enregistreuse fiscale (décret du 14 octobre 2025, système Nacef) aux cafés et restaurants — une vague de numérisation du point de vente sur laquelle Scaniha se branche directement."],
+  'tam': [['Niveau', 'Définition', 'Estimation'], ['Marché total', 'Cafés + restaurants en Tunisie', '≈ 22 600 établissements'], ['Marché adressable', 'Ville / région ciblée (ex. Grand Tunis)', '________ établissements'], ['Objectif à 3 ans', '≈ 5 % des cafés du pays', '≈ 1 000 payants']],
+  'proj_h': 'Projection — hypothèses prudentes', 'proj_i': "Modèle volontairement prudent : un revenu moyen d'environ 200 TND par établissement payant et par an (mélange Menu QR et programme de fidélité) et des coûts marginaux quasi nuls (logiciel, hébergement gratuit). L'objectif de l'Année 3 (~1 000 cafés) ne représente que ~5 % des cafés du pays.",
+  'proj': [['Année', 'Cafés payants', 'Revenu', 'Revenu net (~80 %)'], ['Année 1', '150', '30 000 TND', '24 000 TND'], ['Année 2', '400', '80 000 TND', '64 000 TND'], ['Année 3', '1 000', '200 000 TND', '160 000 TND']],
+  'proj_note': "À ce rythme, le « pool investisseurs » (20 % du revenu net) dépasse 4 000 TND dès l'Année 1 — déjà proche du plafond total de la levée (5 000 TND) : les premiers investisseurs sont remboursés tôt. Chiffres prévisionnels, non garantis.",
+  'src': "Sources : Chambre nationale des propriétaires de cafés ; Webmanagercenter (oct. 2024, nov. 2025) ; presse économique tunisienne. Projections : estimations Scaniha.",
   'modele_h': 'Modèle économique', 'modele': "Des revenus récurrents et des paiements « à vie », avec des marges très élevées (logiciel, infrastructure quasi gratuite) :",
   'price': [['Produit', 'Tarifs'], ['Menu QR', '1 an : 150 TND   ·   À vie : 250 TND'], ['Programme de fidélité', '1 mois : 45  ·  3 mois : 90  ·  1 an : 150 TND']],
   'tract_h': 'Traction', 'tract_s': "À compléter avec vos chiffres réels — c'est ce qui convainc un investisseur.",
@@ -126,7 +133,13 @@ C = {
   'enbref_h': 'باختصار', 'enbref': "تحوِّل Scaniha قائمة الطعام الورقية إلى قائمة QR رقمية أنيقة، قابلة للتعديل فورًا، مع برنامج ولاء (نقاط، عجلة الحظ، مكافآت) يُعيد الزبائن. دون الحاجة إلى تطبيق، والأسعار بالدينار التونسي.",
   'pb_h': 'المشكلة', 'pb': ["قوائم ورقية جامدة ومكلفة لإعادة الطباعة عند كل تغيير في الأسعار أو الأطباق.", "لا توجد بيانات عن الزبائن ولا وسيلة بسيطة للحفاظ على ولائهم.", "الحلول الأجنبية باهظة الثمن، بالإنجليزية، وغير ملائمة للسوق التونسية."],
   'sol_h': 'الحل', 'sol_i': "منصّة ويب متكاملة، يتم الوصول إليها بمسح بسيط:", 'sol': ["قائمة QR — بطاقة رقمية بتصميم أنيق، تُحدَّث فورًا، مع 4 أنماط للاختيار.", "برنامج ولاء — نقاط عند كل عملية شراء، عجلة حظ « الجميع يربح »، مكافآت، وبطاقة زبون مرتبطة برقم الهاتف.", "إمكانية الربط بصندوق الدفع أو أداة خارجية."],
-  'march_h': 'السوق', 'march': "تضمّ تونس عشرات الآلاف من المقاهي وقاعات الشاي والمطاعم، أغلبها غير مجهّز رقميًا. الهدف المباشر: ________________ (المدينة / الجهة).",
+  'march_h': 'السوق — أرقام حقيقية', 'march': "تضمّ تونس أكثر من 20 000 مقهى وقاعة شاي، وحوالي 2 600 مطعم، ضمن قطاع للمقاهي يُقدَّر بنحو مليار دولار من رقم المعاملات. وأغلبها لا يزال يعمل بالقائمة الورقية، دون أي بيانات عن زبائنه.",
+  'march_b': ["أكثر من 20 000 مقهى وقاعة شاي في تونس (غرفة أصحاب المقاهي، 2024).", "حوالي 2 600 مطعم مُحصى، دون احتساب السلاسل والوجبات السريعة.", "توجّه قوي: منذ 2025 تفرض الدولة الصندوق الإلكتروني الجبائي (مرسوم 14 أكتوبر 2025، نظام Nacef) على المقاهي والمطاعم — موجة رقمنة لنقطة البيع تتّصل بها Scaniha مباشرة."],
+  'tam': [['المستوى', 'التعريف', 'التقدير'], ['السوق الإجمالي', 'المقاهي + المطاعم في تونس', '≈ 22 600 مؤسسة'], ['السوق القابل للاستهداف', 'المدينة / الجهة المستهدفة (مثال: تونس الكبرى)', '________ مؤسسة'], ['هدف 3 سنوات', '≈ 5% من مقاهي البلاد', '≈ 1 000 دافع']],
+  'proj_h': 'التوقّعات — فرضيات متحفّظة', 'proj_i': "نموذج متحفّظ عمدًا: إيراد متوسّط بنحو 200 د.ت لكل مؤسسة دافعة في السنة (مزيج قائمة QR وبرنامج ولاء)، وتكاليف هامشية شبه منعدمة (برمجيات، استضافة مجانية). هدف السنة 3 (~1 000 مقهى) لا يمثّل سوى ~5% من مقاهي البلاد.",
+  'proj': [['السنة', 'مقاهٍ دافعة', 'الإيراد', 'الإيراد الصافي (~80%)'], ['السنة 1', '150', '30 000 د.ت', '24 000 د.ت'], ['السنة 2', '400', '80 000 د.ت', '64 000 د.ت'], ['السنة 3', '1 000', '200 000 د.ت', '160 000 د.ت']],
+  'proj_note': "بهذه الوتيرة تتجاوز « محفظة المستثمرين » (20% من الإيراد الصافي) 4 000 د.ت منذ السنة الأولى — أي قريبًا من السقف الإجمالي للتمويل (5 000 د.ت): يُسترجَع أوّل المستثمرين مبكّرًا. أرقام تقديرية وغير مضمونة.",
+  'src': "المصادر: الغرفة الوطنية لأصحاب المقاهي؛ Webmanagercenter (أكتوبر 2024، نوفمبر 2025)؛ الصحافة الاقتصادية التونسية. التوقّعات: تقديرات Scaniha.",
   'modele_h': 'النموذج الاقتصادي', 'modele': "إيرادات متكرّرة ودفعات « مدى الحياة »، بهوامش ربح مرتفعة جدًا (برمجيات، بنية تحتية شبه مجانية):",
   'price': [['المنتج', 'الأسعار'], ['قائمة QR', 'سنة: 150 د.ت   ·   مدى الحياة: 250 د.ت'], ['برنامج الولاء', 'شهر: 45  ·  3 أشهر: 90  ·  سنة: 150 د.ت']],
   'tract_h': 'الإنجازات', 'tract_s': "تُملأ بأرقامك الحقيقية — وهي ما يُقنع المستثمر.",
@@ -151,8 +164,10 @@ def dossier(lang):
     st += [para(d['enbref_h'], 'h2'), para(d['enbref'])]
     st += [para(d['pb_h'], 'h2')] + bullets(d['pb'])
     st += [para(d['sol_h'], 'h2'), para(d['sol_i'])] + bullets(d['sol'])
-    st += [para(d['march_h'], 'h2'), para(d['march'])]
+    st += [para(d['march_h'], 'h2'), para(d['march'])] + bullets(d['march_b'])
+    st += [Spacer(1, 3), tbl([[ch(c) for c in d['tam'][0]]] + [[cc(r[0], True), cc(r[1]), cc(r[2])] for r in d['tam'][1:]], [3.8 * cm, 8.0 * cm, 5.2 * cm])]
     st += [para(d['modele_h'], 'h2'), para(d['modele']), tbl([[ch(d['price'][0][0]), ch(d['price'][0][1])]] + [[cc(r[0], True), cc(r[1])] for r in d['price'][1:]], [5.4 * cm, 11.6 * cm])]
+    st += [para(d['proj_h'], 'h2'), para(d['proj_i']), Spacer(1, 4), tbl([[ch(c) for c in d['proj'][0]]] + [[cc(r[0], True), cc(r[1]), cc(r[2]), cc(r[3])] for r in d['proj'][1:]], [3.0 * cm, 3.8 * cm, 4.6 * cm, 5.6 * cm]), para(d['proj_note'], 'small')]
     st += [para(d['tract_h'], 'h2'), para(d['tract_s'], 'small'), Spacer(1, 4), tbl([[ch(d['tract'][0][0]), ch(d['tract'][0][1])]] + [[cc(r[0]), cc(r[1], r[0] in ('Produit', 'المنتج'))] for r in d['tract'][1:]], [9 * cm, 8 * cm])]
     st += [para(d['dem_h'], 'h2'), callout([para(d['dem_call_h'], 'callh'), Spacer(1, 3), Paragraph((ar(d['dem_call']) if rtl else d['dem_call']), S['cell'] if rtl else ParagraphStyle('x', fontName='Helvetica', fontSize=9.4, textColor=INK, leading=13.5))]), Spacer(1, 7)]
     st += [tbl([[ch(d['funds'][0][0]), ch(d['funds'][0][1])]] + [[cc(r[0]), cc(r[1])] for r in d['funds'][1:]], [12 * cm, 5 * cm])]
@@ -160,7 +175,7 @@ def dossier(lang):
     st += [Spacer(1, 3), tbl([[ch(c) for c in d['tiers'][0]]] + [[cc(r[0], True), cc(r[1]), cc(r[2]), cc(r[3])] for r in d['tiers'][1:]], [3.5 * cm, 2.6 * cm, 5.4 * cm, 5.5 * cm])]
     st += [para(d['ex'], 'small')]
     st += [para(d['now_h'], 'h2'), para(d['now'])]
-    st += [para(d['contact_h'], 'h2'), para(d['contact']), Spacer(1, 6), para(d['risk'], 'small')]
+    st += [para(d['contact_h'], 'h2'), para(d['contact']), Spacer(1, 6), para(d['risk'], 'small'), para(d['src'], 'small')]
     suffix = 'AR' if rtl else 'FR'
     build(os.path.join(OUT, 'Scaniha - Dossier investisseur (%s).pdf' % suffix), d['doc_title'], st, rtl)
 

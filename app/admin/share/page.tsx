@@ -8,6 +8,7 @@ import PageShell from '@/components/admin/ui/PageShell'
 import Card from '@/components/admin/ui/Card'
 import Toggle from '@/components/admin/ui/Toggle'
 import { resolveMode, type ProductMode, type FidelityLanding } from '@/lib/design-settings'
+import StaffAccessCard from '@/components/admin/StaffAccessCard'
 
 type QrKind = 'menu' | 'fidelity'
 
@@ -32,6 +33,8 @@ export default function SharePage() {
   const [hasRoulette, setHasRoulette] = useState(false)
   const [savingLanding, setSavingLanding] = useState(false)
   const [savingMenuFid, setSavingMenuFid] = useState(false)
+  const [staffTarget, setStaffTarget] = useState('/admin/caisse')
+  const [savingStaff, setSavingStaff] = useState(false)
 
   useEffect(() => {
     try { setOrigin(window.location.origin) } catch {}
@@ -63,6 +66,7 @@ export default function SharePage() {
           const ds = (b.design_settings && typeof b.design_settings === 'object' ? b.design_settings : {}) as any
           setLanding(ds.fidelityLanding === 'boutique' || ds.fidelityLanding === 'roue' ? ds.fidelityLanding : 'carte')
           setMenuFid(ds.menuShowsFidelity !== false)
+          setStaffTarget(typeof ds.staffQrTarget === 'string' && ds.staffQrTarget.startsWith('/admin') ? ds.staffQrTarget : '/admin/caisse')
         }
         // Whether the roulette is on (so we only offer "La roue" as a landing).
         if (slg) {
@@ -104,6 +108,12 @@ export default function SharePage() {
     setMenuFid(next)
     setSavingMenuFid(true)
     try { await patchSettings({ menuShowsFidelity: next }) } catch { setMenuFid(prev) } finally { setSavingMenuFid(false) }
+  }
+  async function changeStaffTarget(next: string) {
+    const prev = staffTarget
+    setStaffTarget(next)
+    setSavingStaff(true)
+    try { await patchSettings({ staffQrTarget: next }) } catch { setStaffTarget(prev) } finally { setSavingStaff(false) }
   }
 
   // "Works for both" toggle — only meaningful when the café runs both products.
@@ -153,6 +163,7 @@ export default function SharePage() {
         )}
         {showMenu && <QrCard kind="menu" slug={slug} origin={origin} gated={gated} qrKey={qrKey} footer={menuFooter} />}
         {showFidelity && <QrCard kind="fidelity" slug={slug} origin={origin} gated={gated} qrKey={qrKey} footer={fidFooter} />}
+        <StaffAccessCard origin={origin} target={staffTarget} onChange={changeStaffTarget} disabled={!bizId || savingStaff} />
       </div>
     </PageShell>
   )

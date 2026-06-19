@@ -264,6 +264,7 @@ export default function AdminHome() {
             <TaskRow href="/admin/fidelite" primary={!hasMenu} title="Programme de fidélité" subtitle="Roue, points et récompenses" icon={<IconGift />} />
             <TaskRow href="/admin/caisse" title="Caisse" subtitle="Créditer les points, valider les codes" icon={<IconScan />} />
             <TaskRow href="/admin/roulette" title="Roue au comptoir" subtitle="La roue que vous tournez au comptoir" icon={<IconWheel />} />
+            <TaskRow href="/admin/share" title="Accès staff" subtitle="QR & sticker pour le comptoir" icon={<IconStaff />} />
           </div>
         </div>
       )}
@@ -325,6 +326,7 @@ const IconBrush = () => <svg {...iconProps}><path d="M9.5 14.5 4 20M14 4l6 6M14.
 const IconShare = () => <svg {...iconProps}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><path d="M14 14h3M20 14v3M14 20h3M20 20h.01M17 17h.01" /></svg>
 const IconChart = () => <svg {...iconProps}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
 const IconWheel = () => <svg {...iconProps}><circle cx="12" cy="12" r="9" /><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" /><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" /></svg>
+const IconStaff = () => <svg {...iconProps}><circle cx="12" cy="8" r="3.5" /><path d="M5 21v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1" /></svg>
 const IconGift = () => <svg {...iconProps}><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7S10.5 3 8.5 3 6 5 6 5s1 2 2.5 2M12 7s1.5-4 3.5-4S18 5 18 5s-1 2-2.5 2" /></svg>
 const IconLogout = () => <svg {...iconProps} width={18} height={18}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
 const IconGear = () => <svg {...iconProps}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>

@@ -136,20 +136,44 @@ export async function middleware(req: NextRequest) {
   const redirectTo = (path: string, status = 307) => {
     const url = req.nextUrl.clone()
     url.pathname = path
+    url.search = ''
     const r = NextResponse.redirect(url, status)
     response.cookies.getAll().forEach((c) => r.cookies.set(c.name, c.value))
     return r
   }
 
-  // Authenticated user landing on login/signup → send to their dashboard.
+  // Send an unauthenticated visitor to /login, remembering where they were
+  // headed (?next=…) so we bounce them back after sign-in — the staff-QR flow.
+  const redirectToLogin = () => {
+    const url = req.nextUrl.clone()
+    const dest = pathname + (req.nextUrl.search || '')
+    url.pathname = '/login'
+    url.search = ''
+    url.searchParams.set('next', dest)
+    const r = NextResponse.redirect(url, 307)
+    response.cookies.getAll().forEach((c) => r.cookies.set(c.name, c.value))
+    return r
+  }
+
+  // A `next` target is only honoured when it's an internal path inside the user's
+  // own area — prevents open-redirects and cross-role jumps.
+  const safeNext = (next: string | null, r: UserRole): string | null => {
+    if (!next || !next.startsWith('/') || next.startsWith('//')) return null
+    if (r === 'owner') return next.startsWith('/admin') ? next : null
+    if (r === 'super_admin') return next.startsWith('/super-admin') ? next : null
+    return null
+  }
+
+  // Authenticated user landing on login/signup → send them where they were
+  // headed (?next=…) or to their dashboard.
   if (user && (pathname === '/login' || pathname === '/signup')) {
     const { role, errored } = await getUserRole(supabase, user.id)
     // If we can't resolve the role right now, just let them sit on the page
     // rather than risk a redirect loop.
     if (!errored) {
-      const dashboardUrl = getDashboardUrl(role)
-      if (dashboardUrl !== pathname && dashboardUrl !== '/login') {
-        return redirectTo(dashboardUrl, 302)
+      const dest = safeNext(req.nextUrl.searchParams.get('next'), role) || getDashboardUrl(role)
+      if (dest !== pathname && dest !== '/login') {
+        return redirectTo(dest, 302)
       }
     }
     return response
@@ -166,7 +190,7 @@ export async function middleware(req: NextRequest) {
     // out. Let the request through; the page's own server guard re-checks once
     // Supabase is reachable, and surfaces a retry instead of a forced logout.
     if (transient) return response
-    return redirectTo('/login')
+    return redirectToLogin()
   }
 
   // Authenticated — resolve role (retrying transient failures).

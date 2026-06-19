@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+// Honour a `next` redirect target only when it's an internal path for the user's
+// own area (prevents open-redirects / cross-role jumps).
+function safeNext(next: string | null, role: string | null | undefined): string | null {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) return null
+  if (role === 'super_admin') return next.startsWith('/super-admin') ? next : null
+  return next.startsWith('/admin') ? next : null
+}
+
 export default function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -37,7 +45,9 @@ export default function LoginForm() {
             .eq('user_id', session.user.id)
             .maybeSingle() as { data: { role: string } | null }
 
-          const redirectUrl = profile?.role === 'super_admin' ? '/super-admin' : '/admin'
+          const role = profile?.role
+          const next = new URLSearchParams(window.location.search).get('next')
+          const redirectUrl = safeNext(next, role) || (role === 'super_admin' ? '/super-admin' : '/admin')
           window.location.replace(redirectUrl)
         }
       } catch {
@@ -170,7 +180,9 @@ export default function LoginForm() {
         .eq('user_id', data.user.id)
         .maybeSingle() as { data: { role: string } | null }
 
-      const redirectUrl = profile?.role === 'super_admin' ? '/super-admin' : '/admin'
+      const role = profile?.role
+      const next = new URLSearchParams(window.location.search).get('next')
+      const redirectUrl = safeNext(next, role) || (role === 'super_admin' ? '/super-admin' : '/admin')
 
       // Use router.push for client-side navigation - cookies are already set by Supabase SSR
       router.push(redirectUrl)

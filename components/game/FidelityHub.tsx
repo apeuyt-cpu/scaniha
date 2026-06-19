@@ -314,13 +314,13 @@ export default function FidelityHub({
 
       <div className="px-[18px] pt-1">
         {tab === 'carte' && (
-          <CarteTab session={session} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} welcomePoints={welcomePoints} onPlay={() => requireLogin()} onLogout={logout} />
+          <CarteTab session={session} businessName={businessName} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} welcomePoints={welcomePoints} onPlay={() => requireLogin()} onLogout={logout} />
         )}
         {hasRoulette && tab === 'roue' && (
           <RoueTab prizes={prizes} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} onSpin={() => spin()} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone) } }} onReview={() => setWinModalOpen(true)} />
         )}
         {tab === 'boutique' && (
-          <BoutiqueTab session={session} accent={accent} gradient={gradient} balance={balance} loyaltyActive={loyaltyActive} rewards={rewards} busyRewardId={busyRewardId} redeemed={redeemed} error={boutiqueError} rescan={boutiqueRescan} onRedeem={redeem} />
+          <BoutiqueTab session={session} businessName={businessName} accent={accent} gradient={gradient} balance={balance} loyaltyActive={loyaltyActive} rewards={rewards} busyRewardId={busyRewardId} redeemed={redeemed} error={boutiqueError} rescan={boutiqueRescan} onRedeem={redeem} />
         )}
       </div>
 
@@ -381,10 +381,10 @@ function NavItem({ active, onClick, label, pill, lbl, children }: { active: bool
 
 /* ── Ma carte ────────────────────────────────────────────────────────────────── */
 function CarteTab(props: {
-  session: DinerSession | null; accent: string; gradient: string; greeting: string; balance: number; nextReward: Reward | null; pct: number; loyaltyActive: boolean
+  session: DinerSession | null; businessName: string; accent: string; gradient: string; greeting: string; balance: number; nextReward: Reward | null; pct: number; loyaltyActive: boolean
   rewards: Reward[]; activeCodes: Array<{ code: string; label: string; expires_at: string }>; recent: CustomerSummary['recent']; cardCode: string; qrOpen: boolean; setQrOpen: (v: boolean) => void; hasRoulette: boolean; welcomePoints: number; onPlay: () => void; onLogout: () => void
 }) {
-  const { session, accent, gradient, greeting, balance, nextReward, pct, loyaltyActive, rewards, activeCodes, recent, cardCode, qrOpen, setQrOpen, hasRoulette, welcomePoints, onPlay, onLogout } = props
+  const { session, businessName, accent, gradient, greeting, balance, nextReward, pct, loyaltyActive, rewards, activeCodes, recent, cardCode, qrOpen, setQrOpen, hasRoulette, welcomePoints, onPlay, onLogout } = props
   if (!session) {
     const perks: Array<{ icon: string; title: string; sub: string }> = []
     if (welcomePoints > 0) perks.push({ icon: '🎁', title: `${welcomePoints} points offerts`, sub: 'rien qu’à l’inscription' })
@@ -429,7 +429,8 @@ function CarteTab(props: {
         <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-12 right-8 h-28 w-28 rounded-full bg-white/[0.07]" />
         <div className="relative">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/85">Solde fidélité</p>
+          {businessName && <p className="truncate text-sm font-bold tracking-wide text-white">{businessName}</p>}
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/85">Solde fidélité</p>
           <div className="mt-1 flex items-baseline gap-1.5"><span className="text-[44px] font-bold leading-none tabular-nums">{balance}</span><span className="text-sm text-white/90">points</span></div>
           {loyaltyActive && nextReward && (
             <div className="mt-4"><div className="h-[7px] overflow-hidden rounded-full bg-white/25"><div className="h-full rounded-full bg-white transition-all" style={{ width: `${pct}%` }} /></div><p className="mt-2 text-xs text-white/90">Plus que {nextReward.points_cost - balance} pts → {nextReward.label}</p></div>
@@ -521,8 +522,8 @@ function RoueTab(props: { prizes: string[]; accent: string; gradient: string; ph
 }
 
 /* ── Boutique ────────────────────────────────────────────────────────────────── */
-function BoutiqueTab(props: { session: DinerSession | null; accent: string; gradient: string; balance: number; loyaltyActive: boolean; rewards: Reward[]; busyRewardId: string | null; redeemed: { code: string; rewardLabel: string } | null; error: string | null; rescan: string | null; onRedeem: (r: Reward) => void }) {
-  const { session, accent, gradient, balance, loyaltyActive, rewards, busyRewardId, redeemed, error, rescan, onRedeem } = props
+function BoutiqueTab(props: { session: DinerSession | null; businessName: string; accent: string; gradient: string; balance: number; loyaltyActive: boolean; rewards: Reward[]; busyRewardId: string | null; redeemed: { code: string; rewardLabel: string } | null; error: string | null; rescan: string | null; onRedeem: (r: Reward) => void }) {
+  const { session, businessName, accent, gradient, balance, loyaltyActive, rewards, busyRewardId, redeemed, error, rescan, onRedeem } = props
   if (!loyaltyActive || rewards.length === 0) return <p className="mt-3 rounded-[18px] bg-white px-4 py-10 text-center text-sm" style={{ color: MUT, boxShadow: SOFT }}>Aucune récompense pour le moment.</p>
   return (
     <div className="pt-3">
@@ -530,8 +531,8 @@ function BoutiqueTab(props: { session: DinerSession | null; accent: string; grad
       <div className="relative overflow-hidden rounded-[20px] p-[18px] text-white" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -18px ${accent}` }}>
         <div className="pointer-events-none absolute -right-7 -top-8 h-28 w-28 rounded-full bg-white/10" />
         <div className="relative flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/85">Votre solde</p>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/85">Votre solde{businessName ? ` · ${businessName}` : ''}</p>
             <div className="mt-0.5 flex items-baseline gap-1.5"><span className="text-[34px] font-bold leading-none tabular-nums">{balance}</span><span className="text-sm text-white/90">points</span></div>
           </div>
           <svg viewBox="0 0 24 24" className="h-9 w-9 text-white/85" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8" /><rect x="2" y="7" width="20" height="5" rx="1" /><path d="M12 21V7" /></svg>

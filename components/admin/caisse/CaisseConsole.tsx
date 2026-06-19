@@ -1,11 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Button from '@/components/admin/ui/Button'
 import Field, { inputClass } from '@/components/admin/ui/Field'
 import QrScanButton from './QrScanButton'
 import type { ValidateResult, CustomerSummary } from '@/lib/game'
+
+interface Pending {
+  id: string
+  code: string
+  reward_label: string
+  points_cost: number
+  customer_phone: string
+  created_at: string
+  expires_at: string
+}
 
 const REASON_LABELS: Record<string, string> = {
   purchase: 'Achat',
@@ -33,9 +43,106 @@ async function caisse(action: string, payload: Record<string, unknown>) {
 export default function CaisseConsole() {
   return (
     <div className="space-y-5">
+      <PendingRequestsCard />
       <ValidateCard />
       <AwardCard />
       <LookupCard />
+    </div>
+  )
+}
+
+/* ── Pending reward requests — approve (remit) or decline (refund points) ─── */
+function PendingRequestsCard() {
+  const [list, setList] = useState<Pending[] | null>(null) // null = loading
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [msg, setMsg] = useState<{ tone: 'green' | 'red'; text: string } | null>(null)
+
+  async function load() {
+    const { ok, json } = await caisse('pending', {})
+    setList(ok && Array.isArray(json.pending) ? (json.pending as Pending[]) : [])
+  }
+  useEffect(() => { load() }, [])
+
+  async function approve(p: Pending) {
+    setBusyId(p.id); setConfirmId(null); setMsg(null)
+    const { ok, json } = await caisse('validate', { code: p.code })
+    setBusyId(null)
+    if (ok && json.found && json.status === 'redeemed') {
+      setList((cur) => (cur || []).filter((x) => x.id !== p.id))
+      setMsg({ tone: 'green', text: `✓ « ${p.reward_label} » remis · ${p.customer_phone}` })
+    } else {
+      setMsg({ tone: 'red', text: json.status === 'already' ? 'Déjà remis.' : json.error || 'Action impossible.' })
+      load()
+    }
+  }
+  async function decline(p: Pending) {
+    setBusyId(p.id); setConfirmId(null); setMsg(null)
+    const { ok, json } = await caisse('decline', { code: p.code })
+    setBusyId(null)
+    if (ok && json.ok) {
+      setList((cur) => (cur || []).filter((x) => x.id !== p.id))
+      setMsg({ tone: 'green', text: `Refusé · ${json.refunded} points remboursés à ${p.customer_phone}` })
+    } else {
+      setMsg({ tone: 'red', text: json.error || 'Action impossible.' })
+      load()
+    }
+  }
+
+  const count = list?.length ?? 0
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-bold text-zinc-900">Demandes en attente{count > 0 ? ` (${count})` : ''}</h2>
+          <p className="mt-0.5 text-sm text-zinc-500">Récompenses échangées par vos clients — approuvez pour les remettre, ou refusez pour rembourser les points.</p>
+        </div>
+        <button type="button" onClick={() => { setList(null); load() }} className="shrink-0 text-sm font-semibold text-orange-600 hover:text-orange-700">Actualiser</button>
+      </div>
+
+      {msg && <p className={`mt-3 text-sm font-medium ${msg.tone === 'green' ? 'text-green-600' : 'text-red-600'}`}>{msg.text}</p>}
+
+      <div className="mt-4">
+        {list === null ? (
+          <div className="space-y-2">
+            {[0, 1].map((i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-zinc-100" />)}
+          </div>
+        ) : list.length === 0 ? (
+          <p className="rounded-xl bg-zinc-50 px-4 py-6 text-center text-sm text-zinc-400">Aucune demande en attente.</p>
+        ) : (
+          <div className="space-y-2">
+            {list.map((p) => (
+              <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-100 bg-zinc-50/60 p-3">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-zinc-900">{p.reward_label}</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    {p.customer_phone} · <span className="font-semibold text-zinc-600">{p.points_cost} pts</span> · {fmt(p.created_at)}
+                  </p>
+                  <p className="font-mono text-[11px] tracking-wider text-zinc-400">{p.code}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {confirmId === p.id ? (
+                    <>
+                      <span className="text-xs font-medium text-zinc-500">Refuser&nbsp;?</span>
+                      <button type="button" onClick={() => decline(p)} disabled={busyId === p.id} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50">
+                        {busyId === p.id ? '…' : 'Oui, rembourser'}
+                      </button>
+                      <button type="button" onClick={() => setConfirmId(null)} className="rounded-lg px-2 py-2 text-sm font-semibold text-zinc-500 hover:text-zinc-800">Non</button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => setConfirmId(p.id)} disabled={busyId === p.id} className="rounded-lg px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50">Refuser</button>
+                      <Button variant="success" onClick={() => approve(p)} disabled={busyId === p.id} className="!min-h-0 px-3 py-2 text-sm">
+                        {busyId === p.id ? '…' : '✓ Approuver'}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

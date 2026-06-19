@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/auth'
 import { getBusinessByOwner } from '@/lib/db/business'
-import { validateCode, awardPoints, customerSummary, normPhone } from '@/lib/db/loyalty'
+import { validateCode, awardPoints, customerSummary, normPhone, pendingRedemptions, declineRedemption } from '@/lib/db/loyalty'
 import { businessHasStaffPins, verifyStaffPin } from '@/lib/db/staff-pins'
 import { checkRateLimit } from '@/lib/api/rate-limit'
 
@@ -11,9 +11,11 @@ const MAX_AWARD_TND = 5000
 /**
  * Owner "caisse" console — one endpoint, three actions:
  *   { action: 'check', code }              → PEEK a code (no redeem) — show it first
- *   { action: 'validate', code }          → redeem/collect a win OR reward code
+ *   { action: 'validate', code }          → redeem/collect (= APPROVE) a win OR reward code
  *   { action: 'award', phone, amount, note? } → credit a purchase (+ welcome)
  *   { action: 'lookup', phone }            → balance + history + active codes
+ *   { action: 'pending' }                  → list still-pending reward requests
+ *   { action: 'decline', code }            → reject a pending request + refund points
  *
  * requireOwner gates it; the owner's own business id is the only one ever
  * passed to the RPCs, so an owner can never touch another business.
@@ -83,6 +85,29 @@ export async function POST(request: Request) {
       if (!phone) return NextResponse.json({ error: 'Numéro invalide.' }, { status: 400 })
       const summary = await customerSummary(business.id, phone)
       return NextResponse.json({ phone, ...summary })
+    }
+
+    if (action === 'pending') {
+      const list = await pendingRedemptions(business.id)
+      return NextResponse.json({ pending: list })
+    }
+
+    if (action === 'decline') {
+      const rl = checkRateLimit(`caisse:decline:${business.id}`)
+      if (!rl.ok) {
+        return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
+          { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } })
+      }
+      const code = typeof body.code === 'string' ? body.code.trim() : ''
+      if (code.length < 4) return NextResponse.json({ error: 'Code invalide.' }, { status: 400 })
+      const result = await declineRedemption(business.id, code)
+      if (!result.ok) {
+        const msg = result.error === 'not_pending' ? 'Cette demande a déjà été traitée.'
+          : result.error === 'not_found' ? 'Demande introuvable.'
+            : 'Action momentanément indisponible.'
+        return NextResponse.json({ error: msg }, { status: 409 })
+      }
+      return NextResponse.json(result)
     }
 
     return NextResponse.json({ error: 'Action inconnue.' }, { status: 400 })

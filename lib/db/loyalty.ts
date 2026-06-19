@@ -129,7 +129,7 @@ export async function awardPoints(businessId: string, phone: string, amount: num
  *  - redeem=false → "peek": report status without consuming (status 'valid' when
  *    still claimable), so the caisse can show it before staff confirm.
  *  - redeem=true (default) → atomically mark it redeemed = collected (a code can
- *    never be collected twice).
+ *    never be collected twice). This is the caisse "approve" of a reward request.
  */
 export async function validateCode(businessId: string, code: string, redeem = true): Promise<ValidateResult> {
   try {
@@ -139,5 +139,54 @@ export async function validateCode(businessId: string, code: string, redeem = tr
     return data as ValidateResult
   } catch {
     return { found: false }
+  }
+}
+
+export interface PendingRedemption {
+  id: string
+  code: string
+  reward_label: string
+  points_cost: number
+  customer_phone: string
+  created_at: string
+  expires_at: string
+}
+
+export type DeclineResult =
+  | { ok: true; rewardLabel: string; customerPhone: string; refunded: number; balance: number }
+  | { ok: false; error: string; status?: string }
+
+/** Still-pending reward requests for this café — the caisse "à approuver" list. */
+export async function pendingRedemptions(businessId: string): Promise<PendingRedemption[]> {
+  try {
+    const supabase: any = await createServiceRoleClient()
+    const { data, error } = await supabase
+      .from('loyalty_redemptions')
+      .select('id, code, reward_label, points_cost, customer_phone, created_at, expires_at')
+      .eq('business_id', businessId)
+      .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (error || !data) return []
+    return data as PendingRedemption[]
+  } catch {
+    return []
+  }
+}
+
+/** Decline a pending reward request → cancel it and refund the points (atomic RPC). */
+export async function declineRedemption(businessId: string, code: string): Promise<DeclineResult> {
+  try {
+    const supabase: any = await createServiceRoleClient()
+    const { data, error } = await supabase.rpc('decline_redemption', { p_business: businessId, p_code: code })
+    if (error) {
+      if (isMissingRpc(error)) return { ok: false, error: 'setup' }
+      console.error('decline_redemption rpc:', error.message)
+      return { ok: false, error: 'server' }
+    }
+    return (data as DeclineResult) ?? { ok: false, error: 'server' }
+  } catch {
+    return { ok: false, error: 'server' }
   }
 }

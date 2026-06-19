@@ -13,6 +13,9 @@ import FidelityShowcase from '@/components/landing/FidelityShowcase'
 import logoIcon from '../../public/logo.png'
 import logoFull from '../../public/logo2.webp'
 import heroPhones from '../../public/hero/hero-phones.webp'
+import fidCard from '../../public/landing/fidelity/card.webp'
+import fidWheel from '../../public/landing/fidelity/wheel.webp'
+import fidRewards from '../../public/landing/fidelity/rewards.webp'
 import qrStands from '../../public/qr-stands.webp'
 import feature1 from '../../public/features/feature-1.webp'
 import feature2 from '../../public/features/feature-2.webp'
@@ -48,6 +51,9 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
   const [showStickyCta, setShowStickyCta] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const heroRef = useRef<HTMLElement | null>(null)
+  // Hero promo rotator: 0 = Menu QR, 1 = Programme de fidélité.
+  const [heroSlide, setHeroSlide] = useState(0)
+  const [heroPaused, setHeroPaused] = useState(false)
 
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -66,6 +72,14 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Auto-rotate the hero promo (paused on hover; off when reduced-motion).
+  useEffect(() => {
+    if (heroPaused) return
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return
+    const id = setInterval(() => setHeroSlide((s) => (s + 1) % 2), 5200)
+    return () => clearInterval(id)
+  }, [heroPaused])
 
   return (
     <div className="landing min-h-screen bg-[#FEFEFE]" dir={dir}>
@@ -205,22 +219,72 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
           style={{ background: 'radial-gradient(circle, rgba(244,123,32,0.18), transparent 70%)' }}
         ></div>
 
+        {/* Bright accent glow that shifts colour as the hero rotates */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div
+            className={`absolute -top-24 right-[-12%] h-[520px] w-[520px] rounded-full blur-[120px] transition-opacity duration-[1200ms] ${heroSlide === 0 ? 'opacity-70' : 'opacity-0'}`}
+            style={{ background: 'radial-gradient(circle, rgba(244,123,32,0.22), transparent 70%)' }}
+          />
+          <div
+            className={`absolute -top-24 right-[-12%] h-[520px] w-[520px] rounded-full blur-[120px] transition-opacity duration-[1200ms] ${heroSlide === 1 ? 'opacity-80' : 'opacity-0'}`}
+            style={{ background: 'radial-gradient(circle, rgba(245,184,46,0.30), transparent 70%)' }}
+          />
+        </div>
+
         <div className="relative z-10 mx-auto max-w-[1240px] px-4 pb-10 pt-10 sm:px-6 lg:px-8 lg:pb-8 lg:pt-8">
           {/* Text — centered, image stacked below */}
           <div className="mx-auto max-w-3xl text-center">
-            <div className="hero-up inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5" style={{ ['--hero-delay' as string]: '0ms' }}>
-              <span aria-hidden="true">🔥</span>
-              <span className="text-sm font-semibold text-orange-700">Tendance</span>
+            <div
+              className="hero-up relative"
+              style={{ ['--hero-delay' as string]: '0ms' }}
+              onMouseEnter={() => setHeroPaused(true)}
+              onMouseLeave={() => setHeroPaused(false)}
+            >
+              <div className="grid">
+                {/* Slide 1 — Menu QR */}
+                <div className={`transition-all duration-700 ease-out [grid-area:1/1] ${heroSlide === 0 ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}`}>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5">
+                    <span aria-hidden="true">🍽️</span>
+                    <span className="text-sm font-semibold text-orange-700">Menu QR</span>
+                  </div>
+                  <h1 className="headline mt-6 text-4xl font-extrabold leading-[1.08] text-zinc-900 sm:text-5xl lg:text-6xl">
+                    Votre menu QR,<br />
+                    <span className="text-orange-500">en un scan</span>
+                  </h1>
+                  <p className="mx-auto mt-6 max-w-md text-lg leading-relaxed text-zinc-600">
+                    <strong className="font-semibold text-zinc-800">Scaniha</strong> crée le menu QR de votre restaurant ou café — élégant, rapide, sans application, prêt en quelques minutes.
+                  </p>
+                </div>
+
+                {/* Slide 2 — Programme de fidélité */}
+                <div className={`transition-all duration-700 ease-out [grid-area:1/1] ${heroSlide === 1 ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5">
+                    <span aria-hidden="true">🎯</span>
+                    <span className="text-sm font-semibold text-amber-700">Programme de fidélité</span>
+                  </div>
+                  <h1 className="headline mt-6 text-4xl font-extrabold leading-[1.08] text-zinc-900 sm:text-5xl lg:text-6xl">
+                    Faites revenir<br />
+                    <span className="text-orange-500">vos clients</span>
+                  </h1>
+                  <p className="mx-auto mt-6 max-w-md text-lg leading-relaxed text-zinc-600">
+                    Une carte de fidélité dans le téléphone : on s’inscrit en 10 secondes, on tourne la roue, on cumule des points et on les échange contre des récompenses.
+                  </p>
+                </div>
+              </div>
+
+              {/* Rotator dots */}
+              <div className="mt-7 flex items-center justify-center gap-2.5">
+                {[0, 1].map((i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setHeroSlide(i)}
+                    aria-label={i === 0 ? 'Voir le menu QR' : 'Voir le programme de fidélité'}
+                    className={`h-2.5 rounded-full transition-all duration-500 ${heroSlide === i ? 'w-7 bg-orange-500' : 'w-2.5 bg-orange-200 hover:bg-orange-300'}`}
+                  />
+                ))}
+              </div>
             </div>
-
-            <h1 className="hero-up headline mt-6 text-4xl font-extrabold leading-[1.08] text-zinc-900 sm:text-5xl lg:text-6xl" style={{ ['--hero-delay' as string]: '120ms' }}>
-              Votre menu QR,<br />
-              <span className="text-orange-500">en un scan</span>
-            </h1>
-
-            <p className="hero-up mx-auto mt-6 max-w-md text-lg leading-relaxed text-zinc-600" style={{ ['--hero-delay' as string]: '240ms' }}>
-              <strong className="font-semibold text-zinc-800">Scaniha</strong> crée le menu QR de votre restaurant ou café — élégant, rapide, sans application, prêt en quelques minutes.
-            </p>
 
             {/* CTA buttons — desktop */}
             <div className="hero-up mt-8 hidden justify-center gap-3 lg:flex" style={{ ['--hero-delay' as string]: '340ms' }}>
@@ -252,18 +316,33 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
 
           {/* Visual — under the text on every breakpoint */}
           <div className="hero-up mt-10 lg:mt-8" style={{ ['--hero-delay' as string]: '200ms' }}>
-            <div className="relative mx-auto w-full max-w-[880px] lg:max-w-[960px]">
-              <div className="hero-aura" aria-hidden="true">
-                <div className="rays" />
-                <div className="glow" />
+            <div className="relative mx-auto grid w-full max-w-[880px] place-items-center lg:max-w-[960px]">
+              {/* Menu visual */}
+              <div className={`relative w-full transition-all duration-700 ease-out [grid-area:1/1] ${heroSlide === 0 ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0'}`}>
+                <div className="hero-aura" aria-hidden="true">
+                  <div className="rays" />
+                  <div className="glow" />
+                </div>
+                <Image
+                  src={heroPhones}
+                  alt="Le menu numérique Scaniha affiché sur plusieurs smartphones"
+                  sizes="(min-width: 1024px) 960px, 100vw"
+                  priority
+                  className="float-img relative z-10 mx-auto block h-auto w-full"
+                />
               </div>
-              <Image
-                src={heroPhones}
-                alt="Le menu numérique Scaniha affiché sur plusieurs smartphones"
-                sizes="(min-width: 1024px) 960px, 100vw"
-                priority
-                className="float-img relative z-10 mx-auto block h-auto w-full"
-              />
+              {/* Fidélité visual — the 3 real screens (carte · roue · boutique) */}
+              <div className={`flex w-full items-end justify-center gap-3 transition-all duration-700 ease-out [grid-area:1/1] sm:gap-5 ${heroSlide === 1 ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0'}`}>
+                {[{ src: fidCard, t: 'La carte' }, { src: fidWheel, t: 'La roue' }, { src: fidRewards, t: 'La boutique' }].map((p, i) => (
+                  <div key={p.t} className={`w-[112px] sm:w-[150px] lg:w-[184px] ${i === 1 ? 'z-10 lg:-translate-y-6' : ''}`}>
+                    <div className="float-img overflow-hidden rounded-[1.6rem] border border-zinc-200 bg-zinc-900 p-1.5 shadow-2xl shadow-orange-900/15" style={{ animationDelay: `${i * 1.2}s` }}>
+                      <div className="aspect-[39/73] overflow-hidden rounded-[1.2rem] bg-white">
+                        <Image src={p.src} alt={`${p.t} — programme de fidélité Scaniha`} sizes="184px" className="h-full w-full object-cover object-top" placeholder="blur" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
             {/* CTA buttons — mobile (side by side, under the image) */}
             <div className="mt-6 flex gap-3 lg:hidden">

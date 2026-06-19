@@ -76,7 +76,7 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
   useEffect(() => { setBusinesses(initial) }, [initial])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [sortKey, setSortKey] = useState<SortKey>('expiry_asc')
+  const [sortKey, setSortKey] = useState<SortKey>('recent')
   const [page, setPage] = useState(1)
 
   const [selectedId, setSelectedId] = useState<string | null>(null)

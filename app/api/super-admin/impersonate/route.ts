@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { IMPERSONATION_COOKIE } from '@/lib/admin-impersonation'
+import { logAudit } from '@/lib/audit'
 
 /**
  * Super-admin impersonation ("Gérer comme l'établissement").
@@ -20,7 +21,7 @@ const cookieOpts = {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireSuperAdmin()
+    const { user } = await requireSuperAdmin()
     const body = await req.json().catch(() => ({}))
     const businessId = typeof body?.businessId === 'string' ? body.businessId : null
     if (!businessId) {
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
     if (!biz) {
       return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }
+    await logAudit({ actor: user.id, actorRole: 'super_admin', action: 'impersonate.start', businessId })
     const res = NextResponse.json({ ok: true })
     res.cookies.set(IMPERSONATION_COOKIE, businessId, { ...cookieOpts, maxAge: 60 * 60 * 8 })
     return res
@@ -42,8 +44,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE() {
-  // Clearing is harmless (the cookie is ignored for non-super-admins anyway).
+export async function DELETE(req: NextRequest) {
+  // Log who stopped (best-effort), then clear. Clearing is harmless regardless.
+  try {
+    const { user } = await requireSuperAdmin()
+    await logAudit({ actor: user.id, actorRole: 'super_admin', action: 'impersonate.stop', businessId: req.cookies.get(IMPERSONATION_COOKIE)?.value || null })
+  } catch { /* not a super-admin / not logged in — just clear the cookie */ }
   const res = NextResponse.json({ ok: true })
   res.cookies.set(IMPERSONATION_COOKIE, '', { ...cookieOpts, maxAge: 0 })
   return res

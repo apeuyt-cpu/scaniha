@@ -6,9 +6,10 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const TABS = [
-  { href: '/super-admin', label: 'Aperçu' },
-  { href: '/super-admin/activity', label: 'Activité' },
   { href: '/super-admin/businesses', label: 'Comptes' },
+  { href: '/super-admin/super-eyes', label: 'Super Eyes' },
+  { href: '/super-admin/apercu', label: 'Aperçu' },
+  { href: '/super-admin/activity', label: 'Activité' },
   { href: '/super-admin/payments', label: 'Paiements', badge: true },
   { href: '/super-admin/devis', label: 'Devis' },
   { href: '/super-admin/analytics', label: 'Stats' },
@@ -21,7 +22,7 @@ export default function SuperAdminShell({ email, pendingCount = 0 }: { email?: s
   const supabase = createClient()
   const [out, setOut] = useState(false)
 
-  const isActive = (href: string) => (href === '/super-admin' ? pathname === '/super-admin' : pathname.startsWith(href))
+  const isActive = (href: string) => pathname.startsWith(href)
 
   const signOut = async () => {
     setOut(true)

@@ -31,11 +31,14 @@ export default function SuperAdminShell({ email, pendingCount = 0 }: { email?: s
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4 lg:px-6">
-        <span className="flex shrink-0 items-center gap-2 font-semibold text-zinc-900">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-xs font-bold text-white">S</span>
-          <span className="hidden sm:inline">Super-admin</span>
+    <header className="sticky top-0 z-30 border-b border-zinc-200/80 bg-white/85 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4 lg:px-6">
+        <span className="flex shrink-0 items-center gap-2.5 font-semibold text-zinc-900">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-sm font-bold text-white shadow-sm shadow-orange-500/30">S</span>
+          <span className="hidden flex-col leading-none sm:flex">
+            <span className="text-sm font-bold">Scaniha</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-orange-500">Super-admin</span>
+          </span>
         </span>
 
         <nav className="no-scrollbar flex flex-1 items-center gap-1 overflow-x-auto">
@@ -45,8 +48,11 @@ export default function SuperAdminShell({ email, pendingCount = 0 }: { email?: s
               <Link
                 key={t.href}
                 href={t.href}
-                className={`relative whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                  active ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
+                aria-current={active ? 'page' : undefined}
+                className={`relative whitespace-nowrap rounded-xl px-3 py-1.5 text-sm transition ${
+                  active
+                    ? 'bg-orange-50 font-semibold text-orange-700 ring-1 ring-orange-200'
+                    : 'font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
                 }`}
               >
                 {t.label}
@@ -65,7 +71,7 @@ export default function SuperAdminShell({ email, pendingCount = 0 }: { email?: s
           type="button"
           onClick={signOut}
           disabled={out}
-          className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+          className="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-zinc-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
         >
           {out ? '…' : 'Déconnexion'}
         </button>

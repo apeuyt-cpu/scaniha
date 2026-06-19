@@ -10,6 +10,7 @@ import { inputClass } from '@/components/admin/ui/Field'
 import { QR_TTL_OPTIONS } from '@/lib/game'
 import MenuDesignPicker, { type ThemeCtrl } from '@/components/admin/MenuDesignPicker'
 import { Skeleton } from '@/components/admin/ui/Skeleton'
+import StatTile, { type StatTone } from './StatTile'
 
 type Business = Database['public']['Tables']['businesses']['Row'] & {
   profiles: { email: string | null; phone_number: string | null } | null
@@ -438,25 +439,30 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
     }
   }
 
-  const filterChips: { key: StatusFilter; label: string; count: number }[] = [
-    { key: 'all', label: 'Tous', count: counts.all },
-    { key: 'active', label: 'Actifs', count: counts.active },
-    { key: 'expiring', label: 'Expire ≤7 j', count: counts.expiring },
-    { key: 'expired', label: 'Expirés', count: counts.expired },
-    { key: 'suspended', label: 'Suspendus', count: counts.suspended },
-    { key: 'unlimited', label: 'Illimités', count: counts.unlimited },
+  // One control: the KPI tiles double as the status filter (no separate chip row).
+  const summaryTiles: { key: StatusFilter; label: string; count: number; tone: StatTone }[] = [
+    { key: 'all', label: 'Total', count: counts.all, tone: 'zinc' },
+    { key: 'active', label: 'Actifs', count: counts.active, tone: 'green' },
+    { key: 'expiring', label: 'Expire ≤7 j', count: counts.expiring, tone: 'amber' },
+    { key: 'expired', label: 'Expirés', count: counts.expired, tone: 'red' },
+    { key: 'suspended', label: 'Suspendus', count: counts.suspended, tone: 'zinc' },
+    { key: 'unlimited', label: 'Illimités', count: counts.unlimited, tone: 'zinc' },
   ]
 
   return (
     <div>
-      {/* Summary */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <SummaryCard label="Total" value={counts.all} />
-        <SummaryCard label="Actifs" value={counts.active} color="text-green-600" />
-        <SummaryCard label="Expire ≤7 j" value={counts.expiring} color="text-amber-600" />
-        <SummaryCard label="Expirés" value={counts.expired} color="text-red-600" />
-        <SummaryCard label="Suspendus" value={counts.suspended} color="text-zinc-700" />
-        <SummaryCard label="Illimités" value={counts.unlimited} color="text-zinc-700" />
+      {/* KPI tiles — also the status filter (click to filter the list) */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {summaryTiles.map((t) => (
+          <StatTile
+            key={t.key}
+            label={t.label}
+            value={t.count}
+            tone={t.tone}
+            active={statusFilter === t.key}
+            onClick={() => { setStatusFilter(t.key); resetPage() }}
+          />
+        ))}
       </div>
 
       {/* Search + sort + sync */}
@@ -484,25 +490,6 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
         </Button>
       </div>
 
-      {/* Filter chips */}
-      <div className="no-scrollbar mb-5 flex flex-wrap gap-2">
-        {filterChips.map((chip) => {
-          const active = statusFilter === chip.key
-          return (
-            <button
-              key={chip.key}
-              onClick={() => { setStatusFilter(chip.key); resetPage() }}
-              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                active ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
-              }`}
-            >
-              {chip.label}
-              <span className={`ml-1.5 text-xs ${active ? 'text-orange-600' : 'text-zinc-400'}`}>{chip.count}</span>
-            </button>
-          )
-        })}
-      </div>
-
       {/* List */}
       <div className="space-y-2">
         {paged.map((business) => {
@@ -512,8 +499,15 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
             <button
               key={business.id}
               onClick={() => setSelectedId(business.id)}
-              className="flex w-full items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 text-left transition hover:border-zinc-300 hover:shadow-sm"
+              className="flex w-full items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white p-3.5 text-left shadow-sm transition hover:border-zinc-300 hover:shadow-md"
             >
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm"
+                style={{ background: business.primary_color || '#F47B20' }}
+                aria-hidden="true"
+              >
+                {business.name?.trim()?.[0]?.toUpperCase() || '?'}
+              </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="truncate font-semibold text-zinc-900">{business.name}</h3>
@@ -523,7 +517,7 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                 <p className="mt-0.5 truncate text-xs text-zinc-400" dir="ltr">/{business.slug}</p>
               </div>
               <div className="shrink-0 text-right">
-                <div className={`text-sm font-medium ${business.expires_at ? timeInfo?.color : 'text-zinc-400'}`}>
+                <div className={`text-sm font-semibold ${business.expires_at ? timeInfo?.color : 'text-zinc-400'}`}>
                   {business.expires_at ? (<>{timeInfo?.urgent && <span aria-hidden="true">⚠️ </span>}{timeInfo?.text}</>) : 'Illimité'}
                 </div>
               </div>
@@ -899,13 +893,22 @@ function DetailSheet({ business, onClose, children }: { business: Business; onCl
         aria-label={`Détails de l’établissement ${business.name}`}
         className="relative z-10 flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
       >
-        <header className="sticky top-0 flex items-start justify-between gap-3 border-b border-zinc-200 bg-white px-5 py-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="truncate text-lg font-bold text-zinc-900">{business.name}</h2>
-              <StatusChip status={business.status} />
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-zinc-200 bg-white px-5 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white shadow-sm"
+              style={{ background: business.primary_color || '#F47B20' }}
+              aria-hidden="true"
+            >
+              {business.name?.trim()?.[0]?.toUpperCase() || '?'}
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="truncate text-lg font-bold text-zinc-900">{business.name}</h2>
+                <StatusChip status={business.status} />
+              </div>
+              <p className="truncate text-xs text-zinc-400" dir="ltr">/{business.slug}</p>
             </div>
-            <p className="truncate text-xs text-zinc-400" dir="ltr">/{business.slug}</p>
           </div>
           <button ref={closeRef} onClick={onClose} aria-label="Fermer" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
@@ -938,15 +941,6 @@ function StatusChip({ status }: { status: string }) {
     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${active ? 'bg-green-100 text-green-700' : 'bg-zinc-200 text-zinc-700'}`}>
       {active ? 'Actif' : 'Suspendu'}
     </span>
-  )
-}
-
-function SummaryCard({ label, value, color }: { label: string; value: number; color?: string }) {
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-4">
-      <p className={`text-2xl font-bold ${color || 'text-zinc-900'}`}>{value}</p>
-      <p className="text-xs text-zinc-500">{label}</p>
-    </div>
   )
 }
 

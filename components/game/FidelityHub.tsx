@@ -38,8 +38,8 @@ function readToken(slug: string): string | null { try { return localStorage.getI
 function clearToken(slug: string) { try { localStorage.removeItem(KEY(slug)) } catch {} }
 
 export default function FidelityHub({
-  slug, businessName, accent = '#F47B20', gradient = 'linear-gradient(135deg, #F47B20, #F5B82E)', hasMenu = false,
-}: { slug: string; businessName: string; accent?: string; gradient?: string; hasMenu?: boolean }) {
+  slug, businessName, accent = '#F47B20', gradient = 'linear-gradient(135deg, #F47B20, #F5B82E)', hasMenu = false, defaultTab = 'carte',
+}: { slug: string; businessName: string; accent?: string; gradient?: string; hasMenu?: boolean; defaultTab?: Tab }) {
   // The loyalty hub is a Scaniha feature → fixed Scaniha-orange palette (matches
   // the approved redesign + DinerAuth + the game), NOT the café's menu brand
   // (which can be dark/low-contrast). Per-café brand theming is a later phase.
@@ -126,9 +126,11 @@ export default function FidelityHub({
         let qTab: Tab | null = null
         try { const q = new URLSearchParams(window.location.search).get('t'); if (q === 'carte' || q === 'roue' || q === 'boutique') qTab = q } catch {}
         if (qTab === 'roue' && !roulette) qTab = null
-        // Land on "Ma carte" first — value shown before any form (incl. roulette
-        // cafés, which now sign the diner up first, then offer the spin).
-        setTabState(qTab ?? 'carte')
+        // Default landing is owner-configured (defaultTab) — e.g. land on the
+        // boutique instead of the roulette. Falls back to 'carte' if the chosen
+        // page is the roue but the roulette is off. An explicit ?t= still wins.
+        const landing: Tab = defaultTab === 'roue' && !roulette ? 'carte' : defaultTab
+        setTabState(qTab ?? landing)
 
         if (authed) {
           setSession(authed); loadAccount(authed.phone)
@@ -141,7 +143,7 @@ export default function FidelityHub({
       } catch { if (!cancelled) setPhase('inactive') }
     })()
     return () => { cancelled = true }
-  }, [slug, loadAccount, loadPublicRewards])
+  }, [slug, loadAccount, loadPublicRewards, defaultTab])
 
   function onAuthed(s: DinerSession) {
     setSession(s); setAuthMessage(null); setError(null); setPhase('ready'); loadAccount(s.phone)

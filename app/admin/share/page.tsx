@@ -1,19 +1,37 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import QRCode from 'qrcode'
+import { createClient } from '@/lib/supabase/client'
+import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 import PageShell from '@/components/admin/ui/PageShell'
 import Card from '@/components/admin/ui/Card'
-import { resolveMode, type ProductMode } from '@/lib/design-settings'
+import Toggle from '@/components/admin/ui/Toggle'
+import { resolveMode, type ProductMode, type FidelityLanding } from '@/lib/design-settings'
 
 type QrKind = 'menu' | 'fidelity'
 
+const LANDINGS: { id: FidelityLanding; label: string }[] = [
+  { id: 'carte', label: 'La carte' },
+  { id: 'boutique', label: 'La boutique' },
+  { id: 'roue', label: 'La roue' },
+]
+
 export default function SharePage() {
+  const supabase = createClient()
   const [slug, setSlug] = useState<string | null>(null)
   const [qrKey, setQrKey] = useState<string>('') // play key embedded in the QR when the gate is on
   const [gated, setGated] = useState(false)
   const [mode, setMode] = useState<ProductMode>('menu')
   const [origin, setOrigin] = useState('')
+
+  // Owner QR-destination settings (persisted to design_settings).
+  const [bizId, setBizId] = useState<string | null>(null)
+  const [landing, setLanding] = useState<FidelityLanding>('carte')
+  const [menuFid, setMenuFid] = useState(true)
+  const [hasRoulette, setHasRoulette] = useState(false)
+  const [savingLanding, setSavingLanding] = useState(false)
+  const [savingMenuFid, setSavingMenuFid] = useState(false)
 
   useEffect(() => {
     try { setOrigin(window.location.origin) } catch {}
@@ -22,9 +40,11 @@ export default function SharePage() {
   useEffect(() => {
     ;(async () => {
       try {
+        let slg: string | null = null
         const res = await fetch('/api/admin/game')
         if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
           const j = await res.json()
+          slg = j.slug
           setSlug(j.slug)
           const g = j.config?.qrGate
           if (g && typeof g === 'object' && g.enabled && typeof g.qrKey === 'string' && g.qrKey) {
@@ -34,10 +54,22 @@ export default function SharePage() {
         } else if (res.status === 401 || res.status === 403) {
           window.location.href = '/login'
         }
-        // Product mode → which QR codes to show (menu vs fidelity vs both).
+        // Product mode + current QR-destination settings.
         const bizRes = await fetch('/api/admin/business')
         if (bizRes.ok && bizRes.headers.get('content-type')?.includes('application/json')) {
-          setMode(resolveMode(await bizRes.json()))
+          const b = await bizRes.json()
+          setMode(resolveMode(b))
+          setBizId(b.id ?? null)
+          const ds = (b.design_settings && typeof b.design_settings === 'object' ? b.design_settings : {}) as any
+          setLanding(ds.fidelityLanding === 'boutique' || ds.fidelityLanding === 'roue' ? ds.fidelityLanding : 'carte')
+          setMenuFid(ds.menuShowsFidelity !== false)
+        }
+        // Whether the roulette is on (so we only offer "La roue" as a landing).
+        if (slg) {
+          const gRes = await fetch(`/api/game/${slg}`)
+          if (gRes.ok && gRes.headers.get('content-type')?.includes('application/json')) {
+            setHasRoulette(Boolean((await gRes.json()).active))
+          }
         }
       } catch (e) {
         console.error(e)
@@ -51,6 +83,65 @@ export default function SharePage() {
   const showMenu = mode === 'menu' || mode === 'both'
   const showFidelity = mode === 'fidelity' || mode === 'both'
 
+  // Persist a design_settings patch (re-read first so sibling keys aren't clobbered).
+  async function patchSettings(patch: Record<string, unknown>) {
+    if (!bizId) return
+    const { data: fresh } = await (supabase.from('businesses') as any).select('design_settings').eq('id', bizId).maybeSingle()
+    const ds = fresh?.design_settings && typeof fresh.design_settings === 'object' ? fresh.design_settings : {}
+    const { error } = await (supabase.from('businesses') as any).update({ design_settings: { ...ds, ...patch } }).eq('id', bizId)
+    if (error) throw error
+    revalidatePublicMenu() // push the routing change to the live menu/hub now
+  }
+
+  async function changeLanding(next: FidelityLanding) {
+    const prev = landing
+    setLanding(next)
+    setSavingLanding(true)
+    try { await patchSettings({ fidelityLanding: next }) } catch { setLanding(prev) } finally { setSavingLanding(false) }
+  }
+  async function changeMenuFid(next: boolean) {
+    const prev = menuFid
+    setMenuFid(next)
+    setSavingMenuFid(true)
+    try { await patchSettings({ menuShowsFidelity: next }) } catch { setMenuFid(prev) } finally { setSavingMenuFid(false) }
+  }
+
+  // "Works for both" toggle — only meaningful when the café runs both products.
+  const menuFooter = mode === 'both' ? (
+    <div className="mt-4 border-t border-zinc-100 pt-4">
+      <Toggle
+        checked={menuFid}
+        disabled={!bizId || savingMenuFid}
+        onChange={changeMenuFid}
+        label="Accès à la fidélité depuis le menu"
+        hint={menuFid
+          ? 'Ce QR ouvre le menu avec un onglet Fidélité en bas — un seul code pour les deux.'
+          : 'Ce QR ouvre uniquement le menu. La fidélité reste accessible via son propre QR.'}
+      />
+    </div>
+  ) : null
+
+  // Landing-page picker for the fidelity QR (so the roulette isn't always the front door).
+  const fidFooter = (
+    <div className="mt-4 border-t border-zinc-100 pt-4">
+      <p className="mb-2 text-sm font-medium text-zinc-700">Ce QR ouvre sur</p>
+      <div className="flex flex-wrap gap-2">
+        {LANDINGS.filter((l) => l.id !== 'roue' || hasRoulette).map((l) => (
+          <button
+            key={l.id}
+            type="button"
+            onClick={() => changeLanding(l.id)}
+            disabled={!bizId || savingLanding}
+            className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50 ${landing === l.id ? 'bg-orange-500 text-white' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}
+          >
+            {l.label}
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] text-zinc-400">La première page que vos clients voient — par ex. la boutique des récompenses au lieu de la roue.</p>
+    </div>
+  )
+
   return (
     <PageShell title="Partage">
       <div className="space-y-4">
@@ -60,15 +151,15 @@ export default function SharePage() {
             <span className="font-semibold text-zinc-800">fidélité</span>. Imprimez celui qui correspond à chaque emplacement.
           </p>
         )}
-        {showMenu && <QrCard kind="menu" slug={slug} origin={origin} gated={gated} qrKey={qrKey} />}
-        {showFidelity && <QrCard kind="fidelity" slug={slug} origin={origin} gated={gated} qrKey={qrKey} />}
+        {showMenu && <QrCard kind="menu" slug={slug} origin={origin} gated={gated} qrKey={qrKey} footer={menuFooter} />}
+        {showFidelity && <QrCard kind="fidelity" slug={slug} origin={origin} gated={gated} qrKey={qrKey} footer={fidFooter} />}
       </div>
     </PageShell>
   )
 }
 
 /** One downloadable QR card for a single product (menu or fidelity). */
-function QrCard({ kind, slug, origin, gated, qrKey }: { kind: QrKind; slug: string | null; origin: string; gated: boolean; qrKey: string }) {
+function QrCard({ kind, slug, origin, gated, qrKey, footer }: { kind: QrKind; slug: string | null; origin: string; gated: boolean; qrKey: string; footer?: ReactNode }) {
   const [qr, setQr] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -148,6 +239,7 @@ function QrCard({ kind, slug, origin, gated, qrKey }: { kind: QrKind; slug: stri
           </div>
         </div>
       </div>
+      {footer}
     </Card>
   )
 }

@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getBusinessBySlugCached } from '@/lib/db/business'
 import { businessAccent, businessGradient } from '@/lib/db/game'
-import { isFidelityLive, resolveMode } from '@/lib/design-settings'
+import { isFidelityLive, resolveMode, fidelityLanding } from '@/lib/design-settings'
 import FidelityHub from '@/components/game/FidelityHub'
 import QrScanMint from '@/components/game/QrScanMint'
 
@@ -33,7 +33,7 @@ export default async function FidelitePage({ params }: { params: Promise<{ slug:
   const hasMenu = resolveMode(business) === 'both'
   return (
     <div className="min-h-screen bg-white">
-      <FidelityHub slug={business.slug} businessName={business.name} accent={accent} gradient={gradient} hasMenu={hasMenu} />
+      <FidelityHub slug={business.slug} businessName={business.name} accent={accent} gradient={gradient} hasMenu={hasMenu} defaultTab={fidelityLanding(business)} />
       {/* Mints the scan-session cookie when the fidelity QR is opened via `?s=<key>`,
           so a dedicated fidelity QR still unlocks the wheel. */}
       <QrScanMint slug={business.slug} />

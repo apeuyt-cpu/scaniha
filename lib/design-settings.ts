@@ -312,6 +312,29 @@ export function isFidelityLive(business: any): boolean {
   return resolveMode(business) !== 'menu'
 }
 
+export type FidelityLanding = 'carte' | 'boutique' | 'roue'
+
+/**
+ * Which page the fidelity hub opens on by default (the "front door" the owner
+ * sets, so the QR/nav doesn't always land on the roulette). Business-wide sibling
+ * key in design_settings. Defaults to 'carte'. The hub falls back to 'carte' if
+ * 'roue' is chosen while the roulette is off.
+ */
+export function fidelityLanding(business: any): FidelityLanding {
+  const v = business?.design_settings?.fidelityLanding
+  return v === 'boutique' || v === 'roue' ? v : 'carte'
+}
+
+/**
+ * Whether the QR menu also exposes the fidelity program (the bottom-nav Fidélité
+ * tab), i.e. whether the MENU QR "works for both". Business-wide sibling key in
+ * design_settings. Defaults ON (true) — existing 'both' cafés are unchanged. Only
+ * meaningful when fidelity is live; turn OFF to keep the menu QR menu-only.
+ */
+export function menuShowsFidelity(business: any): boolean {
+  return business?.design_settings?.menuShowsFidelity !== false
+}
+
 type AnyItem = { id: string | number; available?: boolean }
 
 /** Deterministic-ish shuffle seeded by a number (so SSR/CSR agree per render seed). */

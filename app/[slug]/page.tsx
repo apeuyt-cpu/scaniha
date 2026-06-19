@@ -8,7 +8,7 @@ import PoweredByScaniha from '@/components/menu/PoweredByScaniha'
 import BottomNav from '@/components/menu/BottomNav'
 import FidelityHub from '@/components/game/FidelityHub'
 import { businessAccent, businessGradient } from '@/lib/db/game'
-import { isFidelityLive, resolveMode } from '@/lib/design-settings'
+import { isFidelityLive, resolveMode, fidelityLanding, menuShowsFidelity } from '@/lib/design-settings'
 import LogView from '@/components/LogView'
 import QrScanMint from '@/components/game/QrScanMint'
 import type { Database } from '@/lib/supabase/database.types'
@@ -65,6 +65,7 @@ export default async function PublicMenuPage({
           businessName={business.name}
           accent={businessAccent(business)}
           gradient={businessGradient(business)}
+          defaultTab={fidelityLanding(business)}
         />
         <LogView businessId={business.id} slug={business.slug} />
         {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
@@ -159,7 +160,7 @@ export default async function PublicMenuPage({
         theme={theme}
       />
       {!isPaused && <PoweredByScaniha liftForNav={isFidelityLive(business)} />}
-      {!isPaused && isFidelityLive(business) && <BottomNav slug={business.slug} accent={businessAccent(business)} active="menu" />}
+      {!isPaused && isFidelityLive(business) && menuShowsFidelity(business) && <BottomNav slug={business.slug} accent={businessAccent(business)} active="menu" />}
       <LogView businessId={business.id} slug={business.slug} />
       {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
       <QrScanMint slug={business.slug} />

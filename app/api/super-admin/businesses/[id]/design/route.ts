@@ -5,13 +5,16 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { businessCacheTag } from '@/lib/db/business'
 
 /**
- * Super-admin: change a business's menu design (theme_id) and/or accent colour
- * (primary_color). Both live on the `businesses` table. Validated against the
- * known design ids so a bad value can't break the public menu, then the public
- * menu cache (keyed by slug) is busted so the change shows live.
+ * Super-admin: change a business's menu design (theme_id), accent colour
+ * (primary_color) and/or logo (logo_url). All live on the `businesses` table.
+ * Theme/colour are validated against the known ids/format so a bad value can't
+ * break the public menu; logo_url is a Supabase-storage URL we just uploaded
+ * (or null to remove). The public menu cache (keyed by slug) is then busted so
+ * the change shows live.
  */
 const THEME_IDS = ['design1', 'design6', 'design11', 'design12', 'classic', 'minimal', 'dark']
 const HEX = /^#[0-9a-fA-F]{6}$/
+const STORAGE_URL = /\/storage\/v1\/object\/public\//
 
 export async function PATCH(
   request: NextRequest,
@@ -22,7 +25,7 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json().catch(() => ({}))
-    const updates: Record<string, string> = {}
+    const updates: Record<string, string | null> = {}
 
     if (typeof body?.theme_id === 'string') {
       if (!THEME_IDS.includes(body.theme_id)) {
@@ -36,6 +39,16 @@ export async function PATCH(
       }
       updates.primary_color = body.primary_color
     }
+    // logo_url: null clears it; a string must be a Supabase-storage URL (one we
+    // just optimised + uploaded), never an arbitrary external link.
+    if (body?.logo_url === null) {
+      updates.logo_url = null
+    } else if (typeof body?.logo_url === 'string') {
+      if (!STORAGE_URL.test(body.logo_url)) {
+        return NextResponse.json({ error: 'Logo invalide.' }, { status: 400 })
+      }
+      updates.logo_url = body.logo_url
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'Aucun changement de design.' }, { status: 400 })
@@ -46,7 +59,7 @@ export async function PATCH(
       .from('businesses') as any)
       .update(updates)
       .eq('id', id)
-      .select('id, slug, theme_id, primary_color')
+      .select('id, slug, theme_id, primary_color, logo_url')
       .single()
 
     if (error) {

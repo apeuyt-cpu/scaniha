@@ -10,6 +10,7 @@ import { inputClass } from '@/components/admin/ui/Field'
 import { QR_TTL_OPTIONS } from '@/lib/game'
 import MenuDesignPicker, { type ThemeCtrl } from '@/components/admin/MenuDesignPicker'
 import { Skeleton } from '@/components/admin/ui/Skeleton'
+import { uploadBusinessLogo, deleteImage } from '@/lib/storage'
 import StatTile, { type StatTone } from './StatTile'
 
 type Business = Database['public']['Tables']['businesses']['Row'] & {
@@ -100,6 +101,9 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
   const [themeSaving, setThemeSaving] = useState<string | null>(null)
   const [themeSaved, setThemeSaved] = useState<string | null>(null)
   const [designError, setDesignError] = useState<string | null>(null)
+  // Logo (logo_url on the business row).
+  const [logoBusy, setLogoBusy] = useState(false)
+  const [removeLogoConfirm, setRemoveLogoConfirm] = useState(false)
 
   const selected = useMemo(() => businesses.find((b) => b.id === selectedId) || null, [businesses, selectedId])
 
@@ -118,6 +122,8 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
     setThemeSaving(null)
     setThemeSaved(null)
     setDesignError(null)
+    setLogoBusy(false)
+    setRemoveLogoConfirm(false)
   }, [selectedId])
 
   // Lazy-load the café's QR-gate state when a detail sheet opens.
@@ -315,6 +321,55 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
       toast(err.message || 'Une erreur est survenue.', 'error')
     } finally {
       setLoading(null)
+    }
+  }
+
+  // ── Logo ────────────────────────────────────────────────────────────
+  // Upload (optimised) via the shared client helper, then persist the URL via
+  // the super-admin design route (service role) so RLS doesn't block us.
+  const uploadLogo = async (businessId: string, file: File) => {
+    if (!file.type.startsWith('image/')) { toast('Veuillez choisir un fichier image.', 'error'); return }
+    if (file.size > 5 * 1024 * 1024) { toast('Image trop lourde (max 5 Mo).', 'error'); return }
+    const oldUrl = businesses.find((b) => b.id === businessId)?.logo_url || null
+    setLogoBusy(true)
+    try {
+      const url = await uploadBusinessLogo(businessId, file)
+      const res = await fetch(`/api/super-admin/businesses/${businessId}/design`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo_url: url }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour du logo.')
+      setBusinesses((cur) => cur.map((b) => (b.id === businessId ? { ...b, logo_url: url } : b)))
+      if (oldUrl && oldUrl !== url) { try { await deleteImage(oldUrl) } catch {} }
+      toast('Logo mis à jour.', 'success')
+    } catch (err: any) {
+      toast(err.message || 'Échec du téléversement du logo.', 'error')
+    } finally {
+      setLogoBusy(false)
+    }
+  }
+
+  const removeLogo = async (businessId: string) => {
+    const oldUrl = businesses.find((b) => b.id === businessId)?.logo_url || null
+    setLogoBusy(true)
+    try {
+      const res = await fetch(`/api/super-admin/businesses/${businessId}/design`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo_url: null }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Échec de la suppression du logo.')
+      setBusinesses((cur) => cur.map((b) => (b.id === businessId ? { ...b, logo_url: null } : b)))
+      if (oldUrl) { try { await deleteImage(oldUrl) } catch {} }
+      setRemoveLogoConfirm(false)
+      toast('Logo retiré.', 'success')
+    } catch (err: any) {
+      toast(err.message || 'Une erreur est survenue.', 'error')
+    } finally {
+      setLogoBusy(false)
     }
   }
 
@@ -699,6 +754,44 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                       </p>
                     </>
                   )}
+                </Section>
+
+                {/* Logo */}
+                <Section title="Logo">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-200 bg-white">
+                      {b.logo_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={b.logo_url} alt={`Logo ${b.name}`} className="h-full w-full object-contain" />
+                      ) : (
+                        <span className="px-1 text-center text-[10px] leading-tight text-zinc-400">Aucun logo</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <label className={`inline-flex cursor-pointer items-center rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 ${logoBusy ? 'pointer-events-none opacity-50' : ''}`}>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={logoBusy}
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(b.id, f); e.currentTarget.value = '' }}
+                        />
+                        {logoBusy ? 'Téléversement…' : b.logo_url ? 'Modifier le logo' : 'Téléverser un logo'}
+                      </label>
+                      {b.logo_url && !logoBusy && (
+                        removeLogoConfirm ? (
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span className="text-xs text-zinc-500">Retirer le logo ?</span>
+                            <button onClick={() => removeLogo(b.id)} className="rounded-lg bg-red-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-red-700">Confirmer</button>
+                            <button onClick={() => setRemoveLogoConfirm(false)} className="text-xs font-semibold text-zinc-500 hover:text-zinc-700">Annuler</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setRemoveLogoConfirm(true)} className="mt-2 block text-xs font-semibold text-zinc-400 transition hover:text-red-600">Retirer le logo</button>
+                        )
+                      )}
+                      <p className="mt-2 text-[11px] text-zinc-400">PNG ou JPG, max 5 Mo — optimisé automatiquement, visible aussitôt sur la page publique.</p>
+                    </div>
+                  </div>
                 </Section>
 
                 {/* Design du menu (modèle + couleur) */}

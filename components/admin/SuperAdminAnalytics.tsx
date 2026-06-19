@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Skeleton } from '@/components/admin/ui/Skeleton'
 
 interface BusinessStat {
   name: string
@@ -88,9 +89,24 @@ export default function SuperAdminAnalytics() {
 
   if (loading) {
     return (
-      <div className="bg-[#FEFEFE] rounded-2xl p-6 border border-zinc-200">
-        <div className="flex items-center justify-center py-12">
-          <div className="w-8 h-8 border-2 border-zinc-300 border-t-orange-500 rounded-full animate-spin" />
+      <div className="bg-[#FEFEFE] rounded-2xl border border-zinc-200 overflow-hidden">
+        <div className="p-5 lg:p-6 border-b border-zinc-100">
+          <div className="mb-4 flex items-center gap-3">
+            <Skeleton className="h-7 w-7 rounded-lg" />
+            <Skeleton className="h-6 w-72 max-w-[70%] rounded-lg" />
+          </div>
+          <Skeleton className="h-11 w-full rounded-xl" />
+        </div>
+        <div className="divide-y divide-zinc-100">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-4 lg:px-6">
+              <Skeleton className="h-4 flex-1 rounded" />
+              <Skeleton className="h-4 w-10 rounded" />
+              <Skeleton className="h-4 w-10 rounded" />
+              <Skeleton className="h-4 w-10 rounded" />
+              <Skeleton className="h-4 w-12 rounded" />
+            </div>
+          ))}
         </div>
       </div>
     )

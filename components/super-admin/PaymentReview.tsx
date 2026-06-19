@@ -328,7 +328,22 @@ export default function PaymentReview({ requests, showHistory }: { requests: Pay
           onClick={() => setLightbox(null)}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightbox} alt="Reçu" className="max-h-[90vh] max-w-full rounded-lg object-contain" onClick={(e) => e.stopPropagation()} />
+          <img
+            src={lightbox}
+            alt="Reçu"
+            className="max-h-[90vh] max-w-full rounded-lg object-contain"
+            onClick={(e) => e.stopPropagation()}
+            onError={(e) => {
+              const el = e.currentTarget
+              el.onerror = null
+              el.replaceWith(
+                Object.assign(document.createElement('div'), {
+                  className: 'rounded-lg bg-white/10 px-6 py-10 text-center text-sm text-white/80',
+                  textContent: 'Reçu indisponible — l’image n’a pas pu être chargée.',
+                })
+              )
+            }}
+          />
           <button
             onClick={() => setLightbox(null)}
             aria-label="Fermer"
@@ -400,16 +415,7 @@ function RequestCard({
       {(r.receipt_urls || []).length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {r.receipt_urls.map((u, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => onZoom(u)}
-              className="h-24 w-24 overflow-hidden rounded-xl border border-zinc-200 transition hover:border-orange-400"
-              aria-label={`Agrandir le reçu ${i + 1}`}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={u} alt={`Reçu ${i + 1}`} className="h-full w-full object-cover" />
-            </button>
+            <ReceiptThumb key={i} url={u} index={i} onZoom={onZoom} />
           ))}
         </div>
       )}
@@ -435,5 +441,29 @@ function RequestCard({
         </div>
       )}
     </div>
+  )
+}
+
+/** Receipt thumbnail with a graceful fallback when the image fails to load. */
+function ReceiptThumb({ url, index, onZoom }: { url: string; index: number; onZoom: (u: string) => void }) {
+  const [errored, setErrored] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={() => !errored && onZoom(url)}
+      disabled={errored}
+      className="h-24 w-24 overflow-hidden rounded-xl border border-zinc-200 transition hover:border-orange-400 disabled:cursor-default disabled:hover:border-zinc-200"
+      aria-label={errored ? `Reçu ${index + 1} indisponible` : `Agrandir le reçu ${index + 1}`}
+    >
+      {errored ? (
+        <span className="flex h-full w-full flex-col items-center justify-center gap-1 bg-zinc-50 px-1 text-center text-[10px] leading-tight text-zinc-400">
+          <span aria-hidden="true" className="text-base">🚫</span>
+          Indisponible
+        </span>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt={`Reçu ${index + 1}`} className="h-full w-full object-cover" onError={() => setErrored(true)} />
+      )}
+    </button>
   )
 }

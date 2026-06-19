@@ -39,6 +39,7 @@ export default function ActivityDashboard() {
   const { toast } = useToast()
   const [data, setData] = useState<Data | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [bizFilter, setBizFilter] = useState('all')
@@ -55,6 +56,7 @@ export default function ActivityDashboard() {
 
   const load = useCallback(async () => {
     setErr(null)
+    setRefreshing(true)
     try {
       const res = await fetch('/api/super-admin/activity', { cache: 'no-store' })
       const j = await res.json()
@@ -64,6 +66,7 @@ export default function ActivityDashboard() {
       setErr(e.message || 'Erreur de chargement.')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [])
   useEffect(() => { load() }, [load])
@@ -161,7 +164,7 @@ export default function ActivityDashboard() {
             <option value="all">Tous les cafés</option>
             {data.businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
-          <button type="button" onClick={load} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50">↻ Actualiser</button>
+          <button type="button" onClick={load} disabled={refreshing} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 disabled:opacity-50">{refreshing ? '↻ Actualisation…' : '↻ Actualiser'}</button>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {(['all', 'play', 'win', 'redeem', 'points', 'signup'] as const).map((t) => (

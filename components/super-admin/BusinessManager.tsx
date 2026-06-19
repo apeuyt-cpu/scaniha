@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Database } from '@/lib/supabase/database.types'
 import { useToast } from './Toast'
 import Button from '@/components/admin/ui/Button'
@@ -11,7 +12,6 @@ import MenuDesignPicker, { type ThemeCtrl } from '@/components/admin/MenuDesignP
 import { Skeleton } from '@/components/admin/ui/Skeleton'
 
 type Business = Database['public']['Tables']['businesses']['Row'] & {
-  wheel_enabled?: boolean
   profiles: { email: string | null; phone_number: string | null } | null
 }
 
@@ -67,7 +67,10 @@ function bucketOf(b: Business): Exclude<StatusFilter, 'all'> {
 
 export default function BusinessManager({ businesses: initial }: BusinessManagerProps) {
   const { toast } = useToast()
+  const router = useRouter()
   const [businesses, setBusinesses] = useState(initial)
+  // Re-seed from fresh server data after a soft refresh (e.g. profile sync).
+  useEffect(() => { setBusinesses(initial) }, [initial])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [sortKey, setSortKey] = useState<SortKey>('expiry_asc')
@@ -273,30 +276,6 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
     }
   }
 
-  // ── Wheel ───────────────────────────────────────────────────────────
-  const toggleWheel = async (business: Business) => {
-    setLoading(`wheel-${business.id}`)
-    const next = !business.wheel_enabled
-    try {
-      const res = await fetch(`/api/super-admin/businesses/${business.id}/wheel`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wheel_enabled: next }),
-      })
-      if (!res.ok) {
-        let msg = 'Échec de la mise à jour de la roue.'
-        try { msg = (await res.json()).error || msg } catch {}
-        throw new Error(msg)
-      }
-      setBusinesses((cur) => cur.map((b) => (b.id === business.id ? { ...b, wheel_enabled: next } : b)))
-      toast(next ? 'Roue de la chance activée.' : 'Roue de la chance désactivée.', 'success')
-    } catch (err: any) {
-      toast(err.message || 'Une erreur est survenue.', 'error')
-    } finally {
-      setLoading(null)
-    }
-  }
-
   // ── QR scan-to-play gate ────────────────────────────────────────────
   const patchQrGate = async (businessId: string, patch: Record<string, unknown>, okMsg: string) => {
     setLoading(`qr-${businessId}`)
@@ -430,7 +409,7 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
       } else {
         toast(result.message || `Synchronisation réussie : ${result.synced || 0} mis à jour.`, 'success')
       }
-      setTimeout(() => window.location.reload(), 1500)
+      router.refresh()
     } catch (err: any) {
       toast(err.message || 'Une erreur est survenue.', 'error')
     } finally {
@@ -540,7 +519,6 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                   <h3 className="truncate font-semibold text-zinc-900">{business.name}</h3>
                   <StatusChip status={business.status} />
                   {expiredButActive && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Expiré</span>}
-                  {business.wheel_enabled && <span title="Roue activée" aria-label="Roue activée">🎡</span>}
                 </div>
                 <p className="mt-0.5 truncate text-xs text-zinc-400" dir="ltr">/{business.slug}</p>
               </div>
@@ -667,14 +645,7 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
 
                 {/* State */}
                 <Section title="État">
-                  <Toggle
-                    checked={Boolean(b.wheel_enabled)}
-                    onChange={() => toggleWheel(b)}
-                    disabled={loading === `wheel-${b.id}`}
-                    label="Roue de la chance"
-                    hint="Autorise ce compte à utiliser la roue."
-                  />
-                  <div className="mt-4">
+                  <div>
                     {b.status === 'active' ? (
                       suspendConfirm ? (
                         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">

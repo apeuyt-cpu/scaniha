@@ -77,7 +77,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
   useEffect(() => {
     if (heroPaused) return
     if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return
-    const id = setInterval(() => setHeroSlide((s) => (s + 1) % 2), 5200)
+    const id = setInterval(() => setHeroSlide((s) => (s + 1) % 2), 3500)
     return () => clearInterval(id)
   }, [heroPaused])
 
@@ -332,9 +332,13 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
                 />
               </div>
               {/* Fidélité visual — the 3 real screens (carte · roue · boutique) */}
-              <div className={`flex w-full items-end justify-center gap-3 transition-all duration-700 ease-out [grid-area:1/1] sm:gap-5 ${heroSlide === 1 ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0'}`}>
+              <div className={`relative flex w-full items-end justify-center gap-3 transition-all duration-700 ease-out [grid-area:1/1] sm:gap-5 ${heroSlide === 1 ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0'}`}>
+                <div className="hero-aura" aria-hidden="true">
+                  <div className="rays" />
+                  <div className="glow" />
+                </div>
                 {[{ src: fidCard, t: 'La carte' }, { src: fidWheel, t: 'La roue' }, { src: fidRewards, t: 'La boutique' }].map((p, i) => (
-                  <div key={p.t} className={`w-[112px] sm:w-[150px] lg:w-[184px] ${i === 1 ? 'z-10 lg:-translate-y-6' : ''}`}>
+                  <div key={p.t} className={`relative z-10 w-[112px] sm:w-[150px] lg:w-[184px] ${i === 1 ? 'lg:-translate-y-6' : ''}`}>
                     <div className="float-img overflow-hidden rounded-[1.6rem] border border-zinc-200 bg-zinc-900 p-1.5 shadow-2xl shadow-orange-900/15" style={{ animationDelay: `${i * 1.2}s` }}>
                       <div className="aspect-[39/73] overflow-hidden rounded-[1.2rem] bg-white">
                         <Image src={p.src} alt={`${p.t} — programme de fidélité Scaniha`} sizes="184px" className="h-full w-full object-cover object-top" placeholder="blur" />

@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache'
 import { requireSuperAdmin } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { businessCacheTag } from '@/lib/db/business'
+import { isDesignId } from '@/lib/design-settings'
 
 /**
  * Super-admin: change a business's menu design (theme_id), accent colour
@@ -25,7 +26,7 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json().catch(() => ({}))
-    const updates: Record<string, string | null> = {}
+    const updates: Record<string, any> = {}
 
     if (typeof body?.theme_id === 'string') {
       if (!THEME_IDS.includes(body.theme_id)) {
@@ -33,11 +34,14 @@ export async function PATCH(
       }
       updates.theme_id = body.theme_id
     }
-    if (typeof body?.primary_color === 'string') {
-      if (!HEX.test(body.primary_color)) {
+    // Accept `color` (preferred) or legacy `primary_color`.
+    const colorRaw = typeof body?.color === 'string' ? body.color
+      : typeof body?.primary_color === 'string' ? body.primary_color : null
+    if (colorRaw !== null) {
+      if (!HEX.test(colorRaw)) {
         return NextResponse.json({ error: 'Couleur invalide (format #RRGGBB).' }, { status: 400 })
       }
-      updates.primary_color = body.primary_color
+      updates.primary_color = colorRaw
     }
     // logo_url: null clears it; a string must be a Supabase-storage URL (one we
     // just optimised + uploaded), never an arbitrary external link.
@@ -50,16 +54,48 @@ export async function PATCH(
       updates.logo_url = body.logo_url
     }
 
-    if (Object.keys(updates).length === 0) {
+    // Advanced appearance (gradient / showcase / tagline) + the flat accent all
+    // live in design_settings[designId]. Whitelist every key so a bad value can't
+    // corrupt the JSON the public menu parses.
+    const sIn = body?.settings && typeof body.settings === 'object' ? body.settings : null
+    const dsPatch: Record<string, any> = {}
+    if (colorRaw !== null) dsPatch.accent = colorRaw
+    if (sIn) {
+      if (typeof sIn.gradientEnabled === 'boolean') dsPatch.gradientEnabled = sIn.gradientEnabled
+      if (typeof sIn.gradientFrom === 'string' && HEX.test(sIn.gradientFrom)) dsPatch.gradientFrom = sIn.gradientFrom
+      if (typeof sIn.gradientTo === 'string' && HEX.test(sIn.gradientTo)) dsPatch.gradientTo = sIn.gradientTo
+      if (typeof sIn.gradientAngle === 'number' && Number.isFinite(sIn.gradientAngle)) dsPatch.gradientAngle = Math.max(0, Math.min(360, Math.round(sIn.gradientAngle)))
+      if (typeof sIn.showcase === 'boolean') dsPatch.showcase = sIn.showcase
+      if (typeof sIn.tagline === 'string') dsPatch.tagline = sIn.tagline.slice(0, 200)
+    }
+
+    if (Object.keys(updates).length === 0 && Object.keys(dsPatch).length === 0) {
       return NextResponse.json({ error: 'Aucun changement de design.' }, { status: 400 })
     }
 
     const supabase = await createServiceRoleClient()
+
+    // Merge the accent + advanced options into the ACTIVE design's settings —
+    // modern designs (design1/6/11/12) read design_settings[designId], NOT
+    // primary_color, so this is where the change actually takes effect. Classic
+    // themes ignore it and keep using primary_color.
+    if (Object.keys(dsPatch).length > 0) {
+      const { data: cur } = await (supabase.from('businesses') as any)
+        .select('theme_id, design_settings')
+        .eq('id', id)
+        .single()
+      const theme = (typeof updates.theme_id === 'string' ? updates.theme_id : null) || cur?.theme_id || 'design1'
+      if (isDesignId(theme)) {
+        const ds = cur?.design_settings && typeof cur.design_settings === 'object' ? cur.design_settings : {}
+        updates.design_settings = { ...ds, [theme]: { ...(ds[theme] || {}), ...dsPatch } }
+      }
+    }
+
     const { data, error } = await (supabase
       .from('businesses') as any)
       .update(updates)
       .eq('id', id)
-      .select('id, slug, theme_id, primary_color, logo_url')
+      .select('id, slug, theme_id, primary_color, design_settings, logo_url')
       .single()
 
     if (error) {

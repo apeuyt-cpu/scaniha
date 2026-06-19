@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { createServerClient } from '@/lib/supabase/server'
-import { getBusinessByOwner, businessCacheTag } from '@/lib/db/business'
+import { getActiveBusiness, businessCacheTag } from '@/lib/db/business'
 
 /**
  * Busts the public menu cache for the authenticated owner's business so menu /
@@ -24,7 +24,7 @@ export async function POST() {
 
   let business
   try {
-    business = await getBusinessByOwner(user.id)
+    business = await getActiveBusiness()
   } catch {
     business = null
   }

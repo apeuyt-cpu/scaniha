@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/auth'
-import { getBusinessByOwner } from '@/lib/db/business'
+import { getActiveBusiness } from '@/lib/db/business'
 import { validateCode, awardPoints, customerSummary, normPhone, pendingRedemptions, declineRedemption } from '@/lib/db/loyalty'
 import { businessHasStaffPins, verifyStaffPin } from '@/lib/db/staff-pins'
 import { checkRateLimit } from '@/lib/api/rate-limit'
@@ -23,8 +23,8 @@ const MAX_AWARD_TND = 5000
 export async function POST(request: Request) {
   try {
     const { user } = await requireOwner()
-    const business = await getBusinessByOwner(user.id)
-    if (!business || business.owner_id !== user.id) {
+    const business = await getActiveBusiness()
+    if (!business) {
       return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }
 

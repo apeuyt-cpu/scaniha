@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/auth'
-import { getBusinessByOwner } from '@/lib/db/business'
+import { getActiveBusiness } from '@/lib/db/business'
 import { createApiKey, listApiKeys, revokeApiKey } from '@/lib/api/keys'
 
 export const runtime = 'nodejs'
@@ -21,8 +21,8 @@ export const dynamic = 'force-dynamic'
 
 async function resolveBusiness() {
   const { user } = await requireOwner()
-  const business = await getBusinessByOwner(user.id)
-  if (!business || business.owner_id !== user.id) return null
+  const business = await getActiveBusiness()
+  if (!business) return null
   return business
 }
 

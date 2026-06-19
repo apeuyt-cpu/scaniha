@@ -199,9 +199,15 @@ export async function middleware(req: NextRequest) {
   // already-authenticated user. The page guard will enforce the role properly.
   if (errored) return response
 
-  // Protect /admin — owners only.
+  // Protect /admin — owners only, EXCEPT a super-admin "acting as" a business
+  // ("Gérer comme l'établissement"): the sa_business cookie lets them use the
+  // real owner admin for it. (Cookie name mirrors lib/admin-impersonation.ts;
+  // not imported here because middleware runs on the edge.)
   if (pathname.startsWith('/admin') && role !== 'owner') {
-    return redirectTo(role === 'super_admin' ? '/super-admin' : '/login')
+    const saImpersonating = role === 'super_admin' && Boolean(req.cookies.get('sa_business')?.value)
+    if (!saImpersonating) {
+      return redirectTo(role === 'super_admin' ? '/super-admin' : '/login')
+    }
   }
 
   // Protect /super-admin — super_admin only (block owners).

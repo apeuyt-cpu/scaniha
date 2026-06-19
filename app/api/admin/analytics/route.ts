@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getActiveBusiness } from '@/lib/db/business'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -36,11 +37,8 @@ export async function GET(req: Request) {
     }
     businessId = biz.id
   } else {
-    const { data: business } = await (authClient
-      .from('businesses') as any)
-      .select('id')
-      .eq('owner_id', user.id)
-      .single()
+    // Owner → own business; super_admin "Gérer comme" → the impersonated one.
+    const business = await getActiveBusiness()
     if (!business) {
       return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }

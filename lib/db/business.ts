@@ -3,6 +3,7 @@ import { createServerClient } from '../supabase/server'
 import { createServiceRoleClient, createPublicClient } from '../supabase/server'
 import type { Database } from '../supabase/database.types'
 import { menuImageUrl } from '../image-url'
+import { getImpersonatedBusinessId } from '../admin-impersonation'
 
 type Business = Database['public']['Tables']['businesses']['Row']
 
@@ -160,9 +161,40 @@ export async function getBusinessByOwner(ownerId: string): Promise<Business | nu
     .select('*')
     .eq('owner_id', ownerId)
     .maybeSingle()
-  
+
   if (error) throw error
   return data
+}
+
+/**
+ * The business the current ADMIN session should act on:
+ *  - owner            → their own business (via getBusinessByOwner),
+ *  - super_admin with an active impersonation cookie → that business,
+ *  - otherwise         → null.
+ * This is the single resolver for the admin layout + every /api/admin route, so
+ * super-admin "Gérer comme l'établissement" works everywhere the owner admin does.
+ * It is the authorization boundary (the cookie is only honoured for a server-
+ * verified super_admin), so callers no longer need an owner_id === user.id check.
+ */
+export async function getActiveBusiness(): Promise<Business | null> {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: profile } = await (supabase.from('profiles') as any)
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (profile?.role === 'super_admin') {
+    const impId = await getImpersonatedBusinessId()
+    if (!impId) return null
+    const admin = await createServiceRoleClient()
+    const { data } = await (admin.from('businesses') as any).select('*').eq('id', impId).maybeSingle()
+    return (data as Business) || null
+  }
+
+  return getBusinessByOwner(user.id)
 }
 
 export async function getBusinessWithCategoriesAndItems(businessId: string) {

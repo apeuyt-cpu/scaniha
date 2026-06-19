@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/auth'
-import { getBusinessByOwner } from '@/lib/db/business'
+import { getActiveBusiness } from '@/lib/db/business'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { normPhone } from '@/lib/db/loyalty'
 import { generateWinCode } from '@/lib/game'
@@ -57,8 +57,8 @@ function weightedIndex(weights: number[]): number {
 export async function POST(request: Request) {
   try {
     const { user } = await requireOwner()
-    const business = await getBusinessByOwner(user.id)
-    if (!business || business.owner_id !== user.id) {
+    const business = await getActiveBusiness()
+    if (!business) {
       return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }
     const supabase: any = await createServiceRoleClient()

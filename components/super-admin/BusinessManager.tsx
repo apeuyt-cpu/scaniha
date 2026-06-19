@@ -9,6 +9,7 @@ import Toggle from '@/components/admin/ui/Toggle'
 import { inputClass } from '@/components/admin/ui/Field'
 import { QR_TTL_OPTIONS } from '@/lib/game'
 import MenuDesignPicker, { type ThemeCtrl } from '@/components/admin/MenuDesignPicker'
+import { isDesignId, DESIGN_ACCENTS, getDesignSettings, type DesignId } from '@/lib/design-settings'
 import { Skeleton } from '@/components/admin/ui/Skeleton'
 import { uploadBusinessLogo, deleteImage } from '@/lib/storage'
 import StatTile, { type StatTone } from './StatTile'
@@ -399,6 +400,103 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
     patchDesign(businessId, { theme_id: themeId }, 'Design appliqué.').finally(() => setThemeSaving(null))
   }
 
+  // The colour the live menu actually shows: modern designs read
+  // design_settings[designId].accent (gradient overrides it); classic themes
+  // read primary_color. Reading the wrong one is why the picker looked "stuck".
+  const effectiveAccent = (b: Business): string => {
+    const theme = b.theme_id || 'design1'
+    if (isDesignId(theme)) {
+      const ds = (b.design_settings as any)?.[theme]
+      return ds?.accent || DESIGN_ACCENTS[theme as DesignId] || '#F47B20'
+    }
+    return b.primary_color || '#F47B20'
+  }
+
+  // Live preview while dragging the colour input (mirrors what the API will save).
+  const applyLocalColor = (bizId: string, color: string) =>
+    setBusinesses((cur) => cur.map((x) => {
+      if (x.id !== bizId) return x
+      const theme = x.theme_id || 'design1'
+      const next: any = { ...x, primary_color: color }
+      if (isDesignId(theme)) {
+        const ds = x.design_settings && typeof x.design_settings === 'object' ? (x.design_settings as any) : {}
+        next.design_settings = { ...ds, [theme]: { ...(ds[theme] || {}), accent: color } }
+      }
+      return next
+    }))
+
+  // Commit on blur — the API writes accent (modern) or primary_color (classic).
+  const commitColor = async (bizId: string, color: string) => {
+    setDesignError(null)
+    try {
+      const res = await fetch(`/api/super-admin/businesses/${bizId}/design`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ color }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour.')
+      if (json.data) {
+        setBusinesses((cur) => cur.map((b) => (b.id === bizId
+          ? { ...b, primary_color: json.data.primary_color ?? b.primary_color, design_settings: json.data.design_settings ?? b.design_settings }
+          : b)))
+      }
+      toast('Couleur mise à jour.', 'success')
+    } catch (err: any) {
+      setDesignError(err.message || 'Une erreur est survenue.')
+      toast(err.message || 'Une erreur est survenue.', 'error')
+    }
+  }
+
+  // Advanced appearance (gradient / showcase / tagline) — lives in
+  // design_settings[designId], written via the same service-role endpoint.
+  const applyLocalSettings = (bizId: string, patch: Record<string, any>) =>
+    setBusinesses((cur) => cur.map((x) => {
+      if (x.id !== bizId) return x
+      const theme = x.theme_id || 'design1'
+      if (!isDesignId(theme)) return x
+      const ds = x.design_settings && typeof x.design_settings === 'object' ? (x.design_settings as any) : {}
+      return { ...x, design_settings: { ...ds, [theme]: { ...(ds[theme] || {}), ...patch } } }
+    }))
+
+  const commitSettings = async (bizId: string, patch: Record<string, any>) => {
+    applyLocalSettings(bizId, patch)
+    setDesignError(null)
+    try {
+      const res = await fetch(`/api/super-admin/businesses/${bizId}/design`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: patch }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour.')
+      if (json.data) {
+        setBusinesses((cur) => cur.map((b) => (b.id === bizId ? { ...b, design_settings: json.data.design_settings ?? b.design_settings } : b)))
+      }
+      toast('Apparence mise à jour.', 'success')
+    } catch (err: any) {
+      setDesignError(err.message || 'Une erreur est survenue.')
+      toast(err.message || 'Une erreur est survenue.', 'error')
+    }
+  }
+
+  // "Gérer comme l'établissement" — start impersonation then open the real owner admin.
+  const manageAs = async (businessId: string) => {
+    setLoading(`manage-${businessId}`)
+    try {
+      const res = await fetch('/api/super-admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessId }),
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Échec.')
+      window.location.href = '/admin'
+    } catch (err: any) {
+      toast(err.message || 'Une erreur est survenue.', 'error')
+      setLoading(null)
+    }
+  }
+
   // ── Profile ─────────────────────────────────────────────────────────
   const startEditProfile = (business: Business) => {
     setEditingProfile(true)
@@ -611,6 +709,19 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
             const timeBusy = loading === `time-${b.id}`
             return (
               <div className="space-y-6">
+                {/* Full owner admin (impersonation) — the primary action */}
+                <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                  <p className="text-sm font-semibold text-zinc-900">Gérer comme l’établissement</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">Ouvre l’admin complet de ce café (menu, apparence, partage, fidélité, caisse, réglages, stats) — exactement comme le propriétaire.</p>
+                  <button
+                    onClick={() => manageAs(b.id)}
+                    disabled={loading === `manage-${b.id}`}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-orange-600 disabled:opacity-50"
+                  >
+                    {loading === `manage-${b.id}` ? 'Ouverture…' : 'Ouvrir l’admin complet →'}
+                  </button>
+                </div>
+
                 {/* Profile */}
                 <Section title="Profil">
                   {editingProfile ? (
@@ -804,13 +915,13 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                     <input
                       id={`color-${b.id}`}
                       type="color"
-                      value={b.primary_color || '#F47B20'}
-                      onChange={(e) => setBusinesses((cur) => cur.map((x) => (x.id === b.id ? { ...x, primary_color: e.target.value } : x)))}
-                      onBlur={(e) => patchDesign(b.id, { primary_color: e.target.value }, 'Couleur principale mise à jour.')}
+                      value={effectiveAccent(b)}
+                      onChange={(e) => applyLocalColor(b.id, e.target.value)}
+                      onBlur={(e) => commitColor(b.id, e.target.value)}
                       className="h-9 w-12 cursor-pointer rounded-lg border border-zinc-200 bg-white p-0.5"
                       aria-label="Couleur principale"
                     />
-                    <span className="font-mono text-xs text-zinc-400">{(b.primary_color || '#F47B20').toUpperCase()}</span>
+                    <span className="font-mono text-xs text-zinc-400">{effectiveAccent(b).toUpperCase()}</span>
                   </div>
                   <MenuDesignPicker
                     themeCtrl={{
@@ -821,8 +932,47 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                       error: designError,
                     } as ThemeCtrl}
                     slug={b.slug}
-                    accent={b.primary_color || '#F47B20'}
+                    accent={effectiveAccent(b)}
                   />
+                  {isDesignId(b.theme_id || 'design1') && (() => {
+                    const theme = (b.theme_id || 'design1') as DesignId
+                    const ds = getDesignSettings(b, theme)
+                    return (
+                      <div className="mt-5 space-y-4 border-t border-zinc-100 pt-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Apparence avancée</p>
+                        <Toggle
+                          checked={!!ds.gradientEnabled}
+                          onChange={(v) => commitSettings(b.id, { gradientEnabled: v })}
+                          label="Mode dégradé"
+                          hint="Remplace la couleur plate par un dégradé sur tout le menu."
+                        />
+                        {ds.gradientEnabled && (
+                          <div className="flex items-center gap-2 pl-1">
+                            <input type="color" value={ds.gradientFrom || '#F47B20'} onChange={(e) => applyLocalSettings(b.id, { gradientFrom: e.target.value })} onBlur={(e) => commitSettings(b.id, { gradientFrom: e.target.value })} className="h-9 w-12 cursor-pointer rounded-lg border border-zinc-200 bg-white p-0.5" aria-label="Couleur de départ" />
+                            <span className="text-xs text-zinc-400">→</span>
+                            <input type="color" value={ds.gradientTo || '#F5B82E'} onChange={(e) => applyLocalSettings(b.id, { gradientTo: e.target.value })} onBlur={(e) => commitSettings(b.id, { gradientTo: e.target.value })} className="h-9 w-12 cursor-pointer rounded-lg border border-zinc-200 bg-white p-0.5" aria-label="Couleur de fin" />
+                          </div>
+                        )}
+                        <Toggle
+                          checked={ds.showcase !== false}
+                          onChange={(v) => commitSettings(b.id, { showcase: v })}
+                          label="Vitrine « À la une »"
+                          hint="Carrousel des plats mis en avant en haut du menu."
+                        />
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-zinc-600">Slogan (tagline)</label>
+                          <input
+                            key={`tagline-${b.id}-${theme}`}
+                            className={inputClass}
+                            defaultValue={ds.tagline || ''}
+                            onBlur={(e) => commitSettings(b.id, { tagline: e.target.value })}
+                            placeholder="Ex. Bienvenue chez nous"
+                            maxLength={200}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </Section>
 
                 {/* QR scan-to-play gate */}

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/auth'
-import { getBusinessByOwner } from '@/lib/db/business'
+import { getActiveBusiness } from '@/lib/db/business'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { generateSlug } from '@/lib/utils/slug'
 import { PAYMENT_PLANS } from '@/lib/payment-config'
@@ -50,21 +50,13 @@ async function currentPlan(business: any): Promise<string | null> {
 export async function GET() {
   try {
     // requireOwner already ensures user is owner and redirects super_admin
-    const { user } = await requireOwner()
-    
-    // Get business owned by this user only
-    const business = await getBusinessByOwner(user.id)
+    await requireOwner()
+
+    // Owner → their own business; super_admin "Gérer comme" → the impersonated one.
+    const business = await getActiveBusiness()
 
     if (!business) {
       return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
-    }
-
-    // Verify the business actually belongs to this user (extra security check)
-    if (business.owner_id !== user.id) {
-      return NextResponse.json(
-        { error: 'Accès refusé : cet établissement ne vous appartient pas.' },
-        { status: 403 }
-      )
     }
 
     // Don't auto-pause here - owners should always access their dashboard
@@ -83,16 +75,13 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const { user } = await requireOwner()
+    await requireOwner()
     const supabase = await createServerClient()
     const body = await request.json()
 
-    const { data: business } = await (supabase
-      .from('businesses') as any)
-      .select('id')
-      .eq('owner_id', user.id)
-      .single()
-
+    // Owner → own business (RLS owner policy); super_admin "Gérer comme" → the
+    // impersonated one (RLS super_admin policy). Write is filtered by id below.
+    const business = await getActiveBusiness()
     if (!business) {
       return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }

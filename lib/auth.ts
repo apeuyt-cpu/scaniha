@@ -2,6 +2,7 @@ import { createServerClient } from './supabase/server'
 import { redirect } from 'next/navigation'
 import type { Database } from './supabase/database.types'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getImpersonatedBusinessId } from './admin-impersonation'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 type UserRole = 'owner' | 'super_admin'
@@ -123,12 +124,17 @@ export async function requireAuth(): Promise<AuthResult> {
  */
 export async function requireOwner(): Promise<AuthResult> {
   const { user, supabase, profile } = await requireAuth()
-  
-  // If user is super_admin, redirect them to their dashboard
+
+  // Super-admins are normally bounced to their own dashboard — EXCEPT when they
+  // are "acting as" a business ("Gérer comme l'établissement"): then they use the
+  // real owner admin for it. The impersonation cookie is only ever honoured for a
+  // server-verified super_admin, so this is not a privilege escalation.
   if (profile.role === 'super_admin') {
+    const impersonating = await getImpersonatedBusinessId()
+    if (impersonating) return { user, supabase, profile }
     redirect('/super-admin')
   }
-  
+
   // Only allow owners
   if (profile.role !== 'owner') {
     console.error(`[AUTH] User ${user.id} has role '${profile.role}', expected 'owner'`)

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/auth'
-import { getBusinessByOwner } from '@/lib/db/business'
+import { getActiveBusiness } from '@/lib/db/business'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { isFidelityLive } from '@/lib/design-settings'
 
@@ -15,8 +15,8 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     const { user } = await requireOwner()
-    const business = await getBusinessByOwner(user.id)
-    if (!business || business.owner_id !== user.id) {
+    const business = await getActiveBusiness()
+    if (!business) {
       return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }
     if (!isFidelityLive(business)) return NextResponse.json({ hasFidelity: false })

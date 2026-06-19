@@ -1,12 +1,12 @@
 import { requireOwner } from '@/lib/auth'
-import { getBusinessByOwner } from '@/lib/db/business'
+import { getActiveBusiness } from '@/lib/db/business'
 import AdminLayoutClient from '@/components/admin/AdminLayoutClient'
 import type { Metadata } from 'next'
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
-    const { user } = await requireOwner()
-    const business = await getBusinessByOwner(user.id)
+    await requireOwner()
+    const business = await getActiveBusiness()
     
     if (business?.logo_url) {
       return {
@@ -50,19 +50,15 @@ export default async function AdminLayout({
 }) {
   // requireOwner will redirect if user is not authenticated or doesn't have owner role
   // It automatically redirects super_admin users to /super-admin
-  const { user, profile } = await requireOwner()
-  
-  // Get business owned by this user only
-  let business = await getBusinessByOwner(user.id)
-  
-  // Verify business belongs to this user if it exists
-  if (business && business.owner_id !== user.id) {
-    // Security check: business doesn't belong to user
-    business = null // Don't show business if ownership doesn't match
-  }
+  const { profile } = await requireOwner()
+
+  // Owner → their own business; super_admin "Gérer comme l'établissement" → the
+  // impersonated one. getActiveBusiness is the authorization boundary.
+  const business = await getActiveBusiness()
+  const impersonating = profile.role === 'super_admin'
 
   return (
-    <AdminLayoutClient business={business}>
+    <AdminLayoutClient business={business} impersonating={impersonating}>
       {children}
     </AdminLayoutClient>
   )

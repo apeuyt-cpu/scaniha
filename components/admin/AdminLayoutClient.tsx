@@ -10,10 +10,11 @@ type Business = Database['public']['Tables']['businesses']['Row']
 
 interface AdminLayoutClientProps {
   business: Business | null
+  impersonating?: boolean
   children: React.ReactNode
 }
 
-export default function AdminLayoutClient({ business: initialBusiness, children }: AdminLayoutClientProps) {
+export default function AdminLayoutClient({ business: initialBusiness, impersonating = false, children }: AdminLayoutClientProps) {
   const { t, dir } = useLocale()
   const [business, setBusiness] = useState<Business | null>(initialBusiness)
   const [showCreateForm, setShowCreateForm] = useState(!initialBusiness)
@@ -55,6 +56,12 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
     } finally {
       setLoading(false)
     }
+  }
+
+  // Super-admin "Gérer comme l'établissement" → leave + go back to the list.
+  const exitImpersonation = async () => {
+    try { await fetch('/api/super-admin/impersonate', { method: 'DELETE' }) } catch {}
+    window.location.href = '/super-admin/businesses'
   }
 
   if (!business) {
@@ -124,9 +131,21 @@ export default function AdminLayoutClient({ business: initialBusiness, children 
   // Home hub (/admin); sub-pages get a slim top bar via PageShell.
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-zinc-50" dir={dir}>
+      <div className="min-h-screen bg-zinc-50" dir={dir} style={impersonating ? { paddingBottom: 60 } : undefined}>
         <DynamicFavicon logoUrl={business.logo_url} businessName={business.name} />
         {children}
+        {impersonating && (
+          <div className="fixed inset-x-0 bottom-0 z-50 border-t border-orange-300 bg-orange-500 text-white shadow-[0_-6px_20px_rgba(0,0,0,0.12)]">
+            <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5" dir="ltr">
+              <span className="min-w-0 truncate text-sm font-semibold">
+                👁️ Vous gérez « {business.name} » en tant que super-admin
+              </span>
+              <button onClick={exitImpersonation} className="shrink-0 rounded-lg bg-white/20 px-3 py-1.5 text-sm font-bold transition hover:bg-white/30">
+                Quitter
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </ToastProvider>
   )

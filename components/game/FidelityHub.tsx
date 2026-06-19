@@ -546,7 +546,7 @@ function BoutiqueTab(props: { session: DinerSession | null; businessName: string
           <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: `${accent}1a`, color: accent }} aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></div>
           <p className="mt-2 font-semibold" style={{ color: INK }}>{redeemed.rewardLabel}</p>
           <div className="mx-auto mt-3 w-fit rounded-xl px-5 py-2.5 font-mono text-xl font-bold tracking-[0.2em]" style={{ background: '#FAF8F5', color: INK }}>{redeemed.code}</div>
-          <p className="mt-2 text-xs" style={{ color: MUT }}>Montrez ce code au personnel pour récupérer votre récompense.</p>
+          <p className="mt-2 text-xs leading-relaxed" style={{ color: MUT }}>Présentez ce code au comptoir pour récupérer votre récompense. Vos points vous sont rendus si la demande est refusée.</p>
         </div>
       )}
 

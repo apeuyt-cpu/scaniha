@@ -85,6 +85,7 @@ export default function DinerAuth({
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [forgot, setForgot] = useState(false)
 
   // The account is a Scaniha feature → pinned brand orange. Props kept for the contract.
   void accent
@@ -120,7 +121,7 @@ export default function DinerAuth({
     }
   }
 
-  function switchMode() { setMode(mode === 'login' ? 'signup' : 'login'); setError(null); setPin('') }
+  function switchMode() { setMode(mode === 'login' ? 'signup' : 'login'); setError(null); setPin(''); setForgot(false) }
 
   const input = 'w-full rounded-2xl bg-[#FAF8F5] px-4 text-[15px] outline-none transition placeholder:text-[#B7AFA4] focus:bg-white focus:ring-2 disabled:opacity-60'
   const inputStyle = { height: 52, color: INK, border: `1px solid ${LINE}`, ['--tw-ring-color' as any]: `${ORANGE}55` }
@@ -158,14 +159,32 @@ export default function DinerAuth({
         </button>
       </form>
 
-      <p className="mt-4 text-center text-sm" style={{ color: MUT }}>
-        {mode === 'login' ? 'Pas encore de compte ? ' : 'Déjà un compte ? '}
-        <button type="button" onClick={switchMode} disabled={busy} className="font-semibold" style={{ color: ORANGE }}>
-          {mode === 'login' ? 'Inscrivez-vous' : 'Connectez-vous'}
-        </button>
-      </p>
+      {/* Prominent secondary action — a real button, not a tiny link, so the
+          "I already have an account" / "create one" path is easy to spot. */}
+      <button
+        type="button"
+        onClick={switchMode}
+        disabled={busy}
+        className="mt-3 w-full rounded-2xl border-2 bg-white py-3.5 text-base font-bold transition active:scale-[0.99] disabled:opacity-50"
+        style={{ borderColor: `${ORANGE}66`, color: '#9a4d10' }}
+      >
+        {mode === 'login' ? 'Créer un compte' : 'J’ai déjà un compte — Se connecter'}
+      </button>
 
-      <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: FAINT }}>
+      {mode === 'login' && (
+        <div className="mt-3 text-center">
+          <button type="button" onClick={() => setForgot((v) => !v)} disabled={busy} className="text-sm font-semibold underline-offset-2 hover:underline" style={{ color: MUT }}>
+            Code oublié&nbsp;?
+          </button>
+          {forgot && (
+            <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-left text-xs leading-relaxed text-amber-800">
+              Pas de souci — présentez-vous au café avec votre numéro&nbsp;: le personnel réinitialise votre code à 4 chiffres en caisse.
+            </p>
+          )}
+        </div>
+      )}
+
+      <p className="mt-4 text-center text-[11px] leading-relaxed" style={{ color: FAINT }}>
         Pas d’e-mail, pas de mot de passe compliqué — juste votre numéro et un code à 4 chiffres.
       </p>
     </div>

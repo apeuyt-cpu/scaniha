@@ -11,7 +11,7 @@
 import { useState } from 'react'
 import { SocialPopup, getSocials } from './SocialLinks'
 import { brandGradient } from './kit'
-import { isFidelityLive } from '@/lib/design-settings'
+import { isFidelityLive, menuShowsFidelity } from '@/lib/design-settings'
 
 export function MenuDock({
   business,
@@ -32,9 +32,10 @@ export function MenuDock({
   const socials = getSocials(business)
   if (socials.length === 0) return null
 
-  // Lift above the bottom nav only when it's actually there (fidelity on);
-  // otherwise sit in the normal bottom corner so there's no empty gap below.
-  const lift = isFidelityLive(business)
+  // Lift above the bottom nav only when it's ACTUALLY rendered (fidelity live AND
+  // the menu exposes it) — same condition as the BottomNav — so the dock never
+  // floats over an empty gap.
+  const lift = isFidelityLive(business) && menuShowsFidelity(business)
 
   return (
     <>

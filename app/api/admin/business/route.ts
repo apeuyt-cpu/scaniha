@@ -194,7 +194,11 @@ export async function POST(request: Request) {
         name: businessName.trim(),
         slug: slug,
         expires_at: expirationDate.toISOString(),
-        status: 'active'
+        status: 'active',
+        // New cafés start as a plain QR menu — fidelity (points, roulette, the
+        // bottom nav) stays hidden until the owner turns it on themselves.
+        // Existing cafés (loyaltyEnabled unset) keep today's behaviour.
+        design_settings: { loyaltyEnabled: false },
       })
       .select()
       .single()

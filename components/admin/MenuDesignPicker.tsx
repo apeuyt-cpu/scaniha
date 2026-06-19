@@ -10,7 +10,7 @@ import { getTheme } from '@/lib/themes'
 // design remounts the keyed workspace, so if the picker owned its own active
 // state it would reset to the stale saved value and the first click would look
 // ignored (the old "click twice" bug).
-const DESIGNS = [
+export const DESIGNS = [
   { id: 'design1', n: '1', name: 'Spécial du Jour', kind: 'd1' as const },
   { id: 'design6', n: '6', name: 'Liste Élégante', kind: 'd6' as const },
   { id: 'design11', n: '11', name: 'Vitrine Immersive', kind: 'd11' as const },
@@ -153,7 +153,7 @@ function Line({ w = '100%', c = '#d4d4d8', h = 4 }: { w?: string; c?: string; h?
   return <span className="block rounded-full" style={{ width: w, height: h, backgroundColor: c }} />
 }
 
-function Thumb({ kind, accent, gradient }: { kind: ThumbKind; accent: string; gradient: string }) {
+export function Thumb({ kind, accent, gradient }: { kind: ThumbKind; accent: string; gradient: string }) {
   if (kind === 'd1') {
     return (
       <div className="flex h-full flex-col gap-1.5 p-2.5" style={{ backgroundColor: '#F6F4F0' }}>

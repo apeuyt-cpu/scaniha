@@ -4,6 +4,7 @@ import { getBusinessByOwner } from '@/lib/db/business'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { generateSlug } from '@/lib/utils/slug'
 import { PAYMENT_PLANS } from '@/lib/payment-config'
+import { seedDemoMenu } from '@/lib/demo-menu-seed'
 
 /** Friendly plan name — all lifetime variants collapse to "À vie". */
 function planDisplayLabel(plan: string): string {
@@ -216,6 +217,9 @@ export async function POST(request: Request) {
         { status: 500 }
       )
     }
+
+    // Pre-fill a starter demo menu (best-effort, idempotent).
+    if (business?.id) await seedDemoMenu(supabase, business.id)
 
     return NextResponse.json(business)
   } catch (error: any) {

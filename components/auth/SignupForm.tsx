@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/utils/slug'
 import { useLocale } from '@/lib/i18n/LocaleContext'
 import { PAYMENT_PLANS } from '@/lib/payment-config'
+import { seedDemoMenu } from '@/lib/demo-menu-seed'
 
 const MIN_PASSWORD_LENGTH = 8
 
@@ -196,7 +197,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
       // If plan selected → create as pending (no expires_at), payment required first
       // If no plan → create as active with 7-day free trial
       if (plan) {
-        const { error: businessError } = await (supabase
+        const { data: business, error: businessError } = await (supabase
           .from('businesses') as any)
           .insert({
             owner_id: userId,
@@ -215,14 +216,16 @@ export default function SignupForm({ plan }: { plan?: string }) {
           return
         }
 
+        // Pre-fill a starter demo menu, then show the first-run showcase.
+        if (business?.id) await seedDemoMenu(supabase, business.id)
         // Manual payment: the owner submits their bank-transfer receipt from the dashboard.
-        window.location.href = '/admin'
+        window.location.href = '/welcome'
       } else {
         // No plan: create with 7-day free trial
         const expirationDate = new Date()
         expirationDate.setDate(expirationDate.getDate() + 7)
 
-        const { error: businessError } = await (supabase
+        const { data: business, error: businessError } = await (supabase
           .from('businesses') as any)
           .insert({
             owner_id: userId,
@@ -241,7 +244,9 @@ export default function SignupForm({ plan }: { plan?: string }) {
           return
         }
 
-        window.location.href = '/admin'
+        // Pre-fill a starter demo menu, then show the first-run showcase.
+        if (business?.id) await seedDemoMenu(supabase, business.id)
+        window.location.href = '/welcome'
       }
     } catch (err: any) {
       console.error('Signup unexpected error:', err?.message)

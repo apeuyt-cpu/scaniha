@@ -22,10 +22,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'URL manquante.' }, { status: 400 })
     }
 
+    const admin = await createServiceRoleClient()
+
+    // Super-admin may manage (and clean up) any business's images.
+    const { data: prof } = await (admin.from('profiles') as any)
+      .select('role').eq('user_id', user.id).maybeSingle()
+    if (prof?.role === 'super_admin') {
+      const deleted = await deleteStoredImage(url)
+      return NextResponse.json({ success: true, deleted })
+    }
+
     // Ownership check: only delete an image actually referenced by the caller's
     // own business (logo, a category/item image, or a design-settings image).
     // Without this, any logged-in owner could delete another business's images.
-    const admin = await createServiceRoleClient()
     const { data: biz } = await (admin.from('businesses') as any)
       .select('id, logo_url, design_settings')
       .eq('owner_id', user.id)

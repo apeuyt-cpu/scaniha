@@ -618,6 +618,17 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                   )}
                 </Section>
 
+                {/* Menu — full management (categories, items, images) */}
+                <Section title="Menu">
+                  <a
+                    href={`/super-admin/businesses/${b.id}/menu`}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"
+                  >
+                    Gérer le menu — catégories, plats, photos →
+                  </a>
+                  <p className="mt-2 text-xs text-zinc-400">Gestion complète comme côté établissement, avec optimisation des images.</p>
+                </Section>
+
                 {/* Subscription / time */}
                 <Section title="Abonnement">
                   <div className="mb-3 flex items-center justify-between rounded-xl bg-zinc-50 px-4 py-3">

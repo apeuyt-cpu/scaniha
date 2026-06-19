@@ -16,8 +16,10 @@ export const PLANS: Record<PlanId, { id: PlanId; label: string; price: number }>
 export const PAYMENT_PLANS: Record<string, { label: string; price: number; grantsDays: number | null }> = {
   '1year': { label: '1 an', price: 150, grantsDays: 365 },
   lifetime: { label: 'À vie', price: 250, grantsDays: null },
-  // Programme de fidélité (produit séparé) — abonnement annuel.
-  fidelity_year: { label: 'Fidélité — 1 an', price: 50, grantsDays: 365 },
+  // Programme de fidélité (produit séparé) — mensuel / trimestriel / annuel.
+  fidelity_month: { label: 'Fidélité — 1 mois', price: 45, grantsDays: 31 },
+  fidelity_3months: { label: 'Fidélité — 3 mois', price: 90, grantsDays: 92 },
+  fidelity_year: { label: 'Fidélité — 1 an', price: 150, grantsDays: 365 },
   // ─── API publique de fidélité (add-on développeur) ─────────────────
   // Annuel manuel (D17/RIB/Flouci), même logique que fidelity_year.
   // Deux forfaits annuels proposés sur la landing /pricing. Placeholder

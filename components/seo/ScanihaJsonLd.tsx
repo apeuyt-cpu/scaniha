@@ -75,7 +75,7 @@ export default function ScanihaJsonLd() {
         '@type': 'Offer',
         price: '0',
         priceCurrency: 'TND',
-        description: 'Essai gratuit disponible. Menu QR à partir de 100 TND ; programme de fidélité à partir de 15 TND/mois.',
+        description: 'Essai gratuit disponible. Menu QR à partir de 150 TND ; programme de fidélité à partir de 45 TND/mois.',
       },
     },
     {

@@ -44,7 +44,9 @@ const FEATURES_FIDELITY = [
 ]
 
 const fidelityPlans: Plan[] = [
-  { variant: 'dark', name: '1 an', price: '50', period: 'par an', note: 'Renouvelable chaque année — aucun prélèvement automatique.', href: '/signup?plan=fidelity_year' },
+  { variant: 'light', name: 'Mensuel', price: '45', period: 'par mois', href: '/signup?plan=fidelity_month' },
+  { variant: 'popular', name: '3 mois', price: '90', period: 'pour 3 mois', href: '/signup?plan=fidelity_3months', badge: 'Le plus populaire' },
+  { variant: 'dark', name: '1 an', price: '150', period: 'par an', note: 'Renouvelable chaque année — aucun prélèvement automatique.', href: '/signup?plan=fidelity_year', badge: 'Meilleure offre', save: 'Économisez 390 TND' },
 ]
 
 function Check({ variant }: { variant: Variant }) {
@@ -197,7 +199,7 @@ export default function PricingComparison() {
             Points, récompenses et roue de la chance pour faire revenir vos clients. Un produit à part — prenez-le avec votre menu QR ou tout seul.
           </p>
         </div>
-        <div className="mx-auto grid max-w-sm grid-cols-1 items-stretch gap-7 pt-4">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 items-stretch gap-7 pt-4 md:grid-cols-3">
           {fidelityPlans.map((plan) => (
             <PlanCard key={plan.variant} plan={plan} features={FEATURES_FIDELITY} />
           ))}

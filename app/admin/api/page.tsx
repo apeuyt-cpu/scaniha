@@ -1,15 +1,10 @@
-import PageShell from '@/components/admin/ui/PageShell'
-import ApiKeyManager from '@/components/admin/api/ApiKeyManager'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
+// The API / developer keys feature is still in test mode — kept out of owners'
+// hands. The dashboard link is hidden and a direct URL bounces to /admin. To
+// re-enable when it ships, restore the ApiKeyManager render (see git history).
 export default function ApiKeysPage() {
-  return (
-    <PageShell
-      title="API & Développeurs"
-      subtitle="Générez des clés API pour connecter votre caisse ou un outil tiers à votre programme de fidélité. Consultez la documentation pour les détails techniques."
-    >
-      <ApiKeyManager />
-    </PageShell>
-  )
+  redirect('/admin')
 }

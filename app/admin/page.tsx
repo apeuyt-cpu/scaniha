@@ -276,13 +276,8 @@ export default function AdminHome() {
         </div>
       </div>
 
-      <div>
-        <SectionHeader title="Intégration & API" hint="Connectez votre caisse ou un outil tiers" />
-        <div className="space-y-3">
-          <TaskRow href="/admin/api" title="Clés API" subtitle="Créez et gérez vos clés API" icon={<IconCode />} />
-          <TaskRow href="/developers" title="Documentation" subtitle="Guide d’intégration développeurs" icon={<IconBook />} />
-        </div>
-      </div>
+      {/* "Intégration & API" (clés API + doc développeurs) hidden — still in test
+          mode, not exposed to owners yet. Restore this block when it ships. */}
 
       {/* Logout */}
       <button
@@ -332,6 +327,4 @@ const IconChart = () => <svg {...iconProps}><path d="M4 20V10M10 20V4M16 20v-7M2
 const IconWheel = () => <svg {...iconProps}><circle cx="12" cy="12" r="9" /><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" /><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" /></svg>
 const IconGift = () => <svg {...iconProps}><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7S10.5 3 8.5 3 6 5 6 5s1 2 2.5 2M12 7s1.5-4 3.5-4S18 5 18 5s-1 2-2.5 2" /></svg>
 const IconLogout = () => <svg {...iconProps} width={18} height={18}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
-const IconCode = () => <svg {...iconProps}><path d="m16 18 6-6-6-6M8 6l-6 6 6 6M14 4l-4 16" /></svg>
-const IconBook = () => <svg {...iconProps}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
 const IconGear = () => <svg {...iconProps}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>

@@ -15,39 +15,55 @@ const IMG = {
   cheesecake: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=640&q=70',
 }
 
-// Shared demo settings so EVERY design preview renders fully populated —
-// logo, tagline, "À la une" showcase and the contact/hours footer — instead
-// of looking sparse. Real menus get this from each owner's own settings.
-const demoSettings = {
+// "Saveurs" brand identity — ONE logo + ONE theme shared identically by all 4
+// designs, so the /menu/1..4 links read as the same restaurant in four layouts
+// (not four different brands). Dark, premium look with a subtle silver gradient.
+const SAVEUR_LOGO = 'https://ywgunhtmprxaxlwvnkme.supabase.co/storage/v1/object/public/menu-images/logos/03f376ef-bd31-4df4-8bc3-64337ce149b0/46e47f59-4713-4867-a2a8-21bdc5a5ca8e.webp'
+const SAVEUR_COVER = 'https://ywgunhtmprxaxlwvnkme.supabase.co/storage/v1/object/public/menu-images/covers/03f376ef-bd31-4df4-8bc3-64337ce149b0/f8522881-af8d-43a0-ba5e-324d3cf4db20.webp'
+
+// The single shared theme. Applied to every design unchanged → identical brand.
+const brand = {
+  accent: '#1C1917',
+  gradientEnabled: true,
+  gradientFrom: '#232526',
+  gradientTo: '#414345',
+  gradientAngle: 135,
   showLogo: true,
-  tagline: 'Cuisine maison · Sousse',
   showcase: true,
+  autoSlide: true,
+  intervalMs: 4000,
   showPrices: true,
   showDescriptions: true,
+  showSoldOut: false,
+  featuredIds: [],
+  tagline: 'Bistro · Cuisine de saison',
+  title: 'À la une',
+  subtitle: 'Nos incontournables',
   contactEnabled: true,
-  phone: '+216 20 123 456',
-  address: '12 Av. Habib Bourguiba, Sousse',
-  hours: 'Lun–Dim · 8h – 23h',
+  phone: '+216 71 180 200',
+  address: 'Les Berges du Lac, Tunis',
+  hours: 'Lun – Dim · 12h – 23h',
 }
 
 export const mockBusiness = {
   id: 'demo',
   slug: 'saveur',
-  name: 'Saveur',
+  name: 'Saveurs',
   status: 'active',
   theme_id: 'design1',
-  logo_url: '/logo.png',
-  primary_color: '#F47B20',
+  logo_url: SAVEUR_LOGO,
+  primary_color: '#1C1917',
   instagram_url: 'https://instagram.com',
   facebook_url: 'https://facebook.com',
-  whatsapp_number: '+216 20 123 456',
+  whatsapp_number: '+216 71 180 200',
   website_url: 'https://scaniha.com',
+  // Same `brand` for every design; cover-led designs (1 & 11) also get the cover.
   design_settings: {
-    design1: demoSettings,
-    design2: demoSettings,
-    design6: demoSettings,
-    design11: demoSettings,
-    design12: demoSettings,
+    design1: { ...brand, coverImage: SAVEUR_COVER },
+    design2: brand,
+    design6: brand,
+    design11: { ...brand, coverImage: SAVEUR_COVER },
+    design12: brand,
   },
 }
 

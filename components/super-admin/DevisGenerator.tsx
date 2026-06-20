@@ -529,7 +529,7 @@ export default function DevisGenerator({ businesses }: { businesses: Biz[] }) {
                       <p className="text-[12.5px] leading-snug text-amber-900"><span className="font-bold">Support supplémentaire : {money(extraStandCost)} TND / unité</span> au-delà des supports offerts.</p>
                     </div>
                   )}
-                  {install2x && (
+                  {install2x && total > 0 && (
                     <div className="flex items-start gap-2.5 rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-3">
                       <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>
                       <p className="text-[12.5px] leading-snug text-zinc-600"><span className="font-bold text-zinc-900">Paiement en 2×</span> — 2 mensualités de {money(total / 2)} TND/mois.</p>

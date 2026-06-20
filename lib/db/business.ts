@@ -194,7 +194,11 @@ export async function getActiveBusiness(): Promise<Business | null> {
     return (data as Business) || null
   }
 
-  return getBusinessByOwner(user.id)
+  // Owner: role already confirmed above, so query the business directly (avoids
+  // getBusinessByOwner re-fetching the same profile row).
+  if (profile?.role !== 'owner') return null
+  const { data } = await (supabase.from('businesses') as any).select('*').eq('owner_id', user.id).maybeSingle()
+  return (data as Business) || null
 }
 
 export async function getBusinessWithCategoriesAndItems(businessId: string) {

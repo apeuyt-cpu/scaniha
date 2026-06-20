@@ -122,9 +122,13 @@ export async function PATCH(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    // requireOwner already ensures user is owner and redirects super_admin
-    const { user } = await requireOwner()
-    
+    const { user, profile } = await requireOwner()
+    // A super-admin "Gérer comme l'établissement" must never create a business —
+    // it would be owned by the super-admin's own account. Owners only.
+    if (profile.role === 'super_admin') {
+      return NextResponse.json({ error: 'Action réservée au propriétaire.' }, { status: 403 })
+    }
+
     const { businessName } = await request.json()
 
     if (!businessName || !businessName.trim()) {

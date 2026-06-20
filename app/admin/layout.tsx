@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { requireOwner } from '@/lib/auth'
 import { getActiveBusiness } from '@/lib/db/business'
 import AdminLayoutClient from '@/components/admin/AdminLayoutClient'
@@ -56,6 +57,11 @@ export default async function AdminLayout({
   // impersonated one. getActiveBusiness is the authorization boundary.
   const business = await getActiveBusiness()
   const impersonating = profile.role === 'super_admin'
+
+  // Impersonating but the target no longer resolves (deleted café / stale cookie):
+  // never fall through to the owner "create a business" form (that would let the
+  // super-admin spawn a business owned by themselves). Send them back to the list.
+  if (impersonating && !business) redirect('/super-admin/businesses')
 
   return (
     <AdminLayoutClient business={business} impersonating={impersonating}>

@@ -338,7 +338,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
                   <div className="glow" />
                 </div>
                 {[{ src: fidCard, t: 'La carte' }, { src: fidWheel, t: 'La roue' }, { src: fidRewards, t: 'La boutique' }].map((p, i) => (
-                  <div key={p.t} className={`relative z-10 w-[112px] sm:w-[150px] lg:w-[184px] ${i === 1 ? 'lg:-translate-y-6' : ''}`}>
+                  <div key={p.t} className={`relative z-10 w-[124px] sm:w-[178px] lg:w-[226px] ${i === 1 ? 'lg:-translate-y-7' : ''}`}>
                     <div className="float-img overflow-hidden rounded-[1.6rem] border border-zinc-200 bg-zinc-900 p-1.5 shadow-2xl shadow-orange-900/15" style={{ animationDelay: `${i * 1.2}s` }}>
                       <div className="aspect-[39/73] overflow-hidden rounded-[1.2rem] bg-white">
                         <Image src={p.src} alt={`${p.t} — programme de fidélité Scaniha`} sizes="184px" className="h-full w-full object-cover object-top" placeholder="blur" />

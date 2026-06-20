@@ -24,7 +24,12 @@ export async function GET(req: NextRequest) {
     if (table) q = q.eq('table_name', table)
     if (business) q = q.eq('business_id', business)
     const { data: rows, error } = await q
-    if (error) return NextResponse.json({ items: [] }) // table not created yet → empty feed
+    if (error) {
+      // Only "relation does not exist" (table not created yet) is an empty feed;
+      // surface real errors instead of masking them as "no activity".
+      if ((error as any).code === '42P01') return NextResponse.json({ items: [] })
+      return NextResponse.json({ error: 'Erreur lors du chargement du journal.' }, { status: 500 })
+    }
 
     const bizIds = Array.from(new Set((rows || []).map((r: any) => r.business_id).filter(Boolean)))
     const actorIds = Array.from(new Set((rows || []).map((r: any) => r.actor).filter(Boolean)))

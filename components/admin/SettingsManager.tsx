@@ -8,6 +8,7 @@ import { useLocale } from '@/lib/i18n/LocaleContext'
 import { useToast } from '@/components/admin/ui/Toast'
 import { inputClass } from '@/components/admin/ui/Field'
 import { revalidatePublicMenu } from '@/lib/revalidate-menu'
+import { getProductMode } from '@/lib/design-settings'
 
 interface Business {
   id: string
@@ -24,6 +25,8 @@ export default function SettingsManager({ business, onUpdate }: { business: Busi
   const toast = useToast()
   const [copied, setCopied] = useState(false)
   const supabase = createClient()
+  // Fidélité-only cafés have no menu → hide menu-only sections.
+  const mode = getProductMode(business)
 
   // Business name — editable here as well as in « Design » → Marque.
   const [editingName, setEditingName] = useState(false)
@@ -129,7 +132,8 @@ export default function SettingsManager({ business, onUpdate }: { business: Busi
         </div>
       </section>
 
-      {/* Lien du menu — account info */}
+      {/* Lien du menu — menu-only (a fidélité-only café has no menu) */}
+      {mode !== 'fidelity' && (
       <section className="rounded-2xl border border-zinc-200 bg-white p-5">
         <h2 className="text-base font-bold text-zinc-900">Lien du menu</h2>
         <p className="mt-0.5 text-sm text-zinc-500">Le lien public de votre menu en ligne.</p>
@@ -144,6 +148,7 @@ export default function SettingsManager({ business, onUpdate }: { business: Busi
           <p className="mt-1.5 text-xs text-zinc-400">Les réseaux et le style du menu se règlent dans « Design ».</p>
         </div>
       </section>
+      )}
 
       {/* SEO & partage */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5">

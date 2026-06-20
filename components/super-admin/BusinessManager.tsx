@@ -407,9 +407,16 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
     const theme = b.theme_id || 'design1'
     if (isDesignId(theme)) {
       const ds = (b.design_settings as any)?.[theme]
+      // Mirror resolveAccent: in gradient mode the live menu uses gradientFrom,
+      // so the flat-colour swatch must reflect that (not a dead accent value).
+      if (ds?.gradientEnabled && ds?.gradientFrom) return ds.gradientFrom
       return ds?.accent || DESIGN_ACCENTS[theme as DesignId] || '#F47B20'
     }
     return b.primary_color || '#F47B20'
+  }
+  const gradientOn = (b: Business): boolean => {
+    const theme = b.theme_id || 'design1'
+    return isDesignId(theme) && !!(b.design_settings as any)?.[theme]?.gradientEnabled
   }
 
   // Live preview while dragging the colour input (mirrors what the API will save).
@@ -910,18 +917,22 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                   <p className="mb-3 text-xs text-zinc-400">
                     Modèle de menu et couleur principale de ce café — visible aussitôt sur sa page publique.
                   </p>
-                  <div className="mb-5 flex items-center gap-3">
-                    <label htmlFor={`color-${b.id}`} className="text-sm font-medium text-zinc-600">Couleur principale</label>
-                    <input
-                      id={`color-${b.id}`}
-                      type="color"
-                      value={effectiveAccent(b)}
-                      onChange={(e) => applyLocalColor(b.id, e.target.value)}
-                      onBlur={(e) => commitColor(b.id, e.target.value)}
-                      className="h-9 w-12 cursor-pointer rounded-lg border border-zinc-200 bg-white p-0.5"
-                      aria-label="Couleur principale"
-                    />
-                    <span className="font-mono text-xs text-zinc-400">{effectiveAccent(b).toUpperCase()}</span>
+                  <div className="mb-5">
+                    <div className="flex items-center gap-3">
+                      <label htmlFor={`color-${b.id}`} className="text-sm font-medium text-zinc-600">Couleur principale</label>
+                      <input
+                        id={`color-${b.id}`}
+                        type="color"
+                        value={effectiveAccent(b)}
+                        disabled={gradientOn(b)}
+                        onChange={(e) => applyLocalColor(b.id, e.target.value)}
+                        onBlur={(e) => commitColor(b.id, e.target.value)}
+                        className="h-9 w-12 cursor-pointer rounded-lg border border-zinc-200 bg-white p-0.5 disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label="Couleur principale"
+                      />
+                      <span className="font-mono text-xs text-zinc-400">{effectiveAccent(b).toUpperCase()}</span>
+                    </div>
+                    {gradientOn(b) && <p className="mt-1.5 text-[11px] text-zinc-400">Désactivé en mode dégradé — modifiez les couleurs du dégradé ci-dessous.</p>}
                   </div>
                   <MenuDesignPicker
                     themeCtrl={{

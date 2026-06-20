@@ -4,6 +4,7 @@ import { requireSuperAdmin } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { businessCacheTag } from '@/lib/db/business'
 import { isDesignId } from '@/lib/design-settings'
+import { logAudit } from '@/lib/audit'
 
 /**
  * Super-admin: change a business's menu design (theme_id), accent colour
@@ -22,7 +23,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireSuperAdmin()
+    const { user } = await requireSuperAdmin()
 
     const { id } = await params
     const body = await request.json().catch(() => ({}))
@@ -110,6 +111,9 @@ export async function PATCH(
       revalidateTag(businessCacheTag(data.slug), 'max')
     } catch {}
 
+    // Service-role writes have no auth.uid(), so the DB trigger logs them as
+    // 'system' — record an attributed event so Super Eyes shows WHO changed it.
+    await logAudit({ actor: user.id, actorRole: 'super_admin', action: 'design.update', table: 'businesses', rowId: id, businessId: id })
     return NextResponse.json({ data })
   } catch (error: any) {
     if (error?.digest?.startsWith?.('NEXT_REDIRECT') || error?.message === 'NEXT_REDIRECT') {

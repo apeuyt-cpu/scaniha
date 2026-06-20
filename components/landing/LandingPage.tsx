@@ -54,6 +54,24 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
   // Hero promo rotator: 0 = Menu QR, 1 = Programme de fidélité.
   const [heroSlide, setHeroSlide] = useState(0)
   const [heroPaused, setHeroPaused] = useState(false)
+  const [heroNudge, setHeroNudge] = useState(0) // bump → restarts the auto-rotate timer after a manual change
+  const heroTouch = useRef<{ x: number; y: number } | null>(null)
+
+  // Manual nav (dots + swipe): change the slide AND restart the auto-timer so it
+  // doesn't jump again immediately after the user interacts.
+  const goToSlide = (i: number) => { setHeroSlide(((i % 2) + 2) % 2); setHeroNudge((n) => n + 1) }
+  const stepSlide = (d: number) => { setHeroSlide((s) => (s + d + 2) % 2); setHeroNudge((n) => n + 1) }
+  const onHeroTouchStart = (e: React.TouchEvent) => { const t = e.touches[0]; heroTouch.current = { x: t.clientX, y: t.clientY } }
+  const onHeroTouchEnd = (e: React.TouchEvent) => {
+    const start = heroTouch.current
+    heroTouch.current = null
+    if (!start) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    // Horizontal swipe only (don't hijack vertical scroll).
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) stepSlide(dx < 0 ? 1 : -1)
+  }
 
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -77,9 +95,9 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
   useEffect(() => {
     if (heroPaused) return
     if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return
-    const id = setInterval(() => setHeroSlide((s) => (s + 1) % 2), 3500)
+    const id = setInterval(() => setHeroSlide((s) => (s + 1) % 2), 2500)
     return () => clearInterval(id)
-  }, [heroPaused])
+  }, [heroPaused, heroNudge])
 
   return (
     <div className="landing min-h-screen bg-[#FEFEFE]" dir={dir}>
@@ -208,7 +226,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
       </header>
 
       {/* Hero Section */}
-      <section ref={heroRef} className="relative overflow-hidden bg-gradient-to-b from-[#FEFEFE] via-[#FEFEFE] to-[#FEFEFE]">
+      <section ref={heroRef} onTouchStart={onHeroTouchStart} onTouchEnd={onHeroTouchEnd} className="relative overflow-hidden bg-gradient-to-b from-[#FEFEFE] via-[#FEFEFE] to-[#FEFEFE]">
         {/* Decorations are desktop-only — mobile keeps a perfectly white hero */}
         <div className="hidden lg:block">
           <AnimatedShapes />
@@ -278,7 +296,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
                   <button
                     key={i}
                     type="button"
-                    onClick={() => setHeroSlide(i)}
+                    onClick={() => goToSlide(i)}
                     aria-label={i === 0 ? 'Voir le menu QR' : 'Voir le programme de fidélité'}
                     className={`h-2.5 rounded-full transition-all duration-500 ${heroSlide === i ? 'w-7 bg-orange-500' : 'w-2.5 bg-orange-200 hover:bg-orange-300'}`}
                   />

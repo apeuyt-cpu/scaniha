@@ -1,6 +1,7 @@
 import { requireSuperAdmin } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import SuperAdminShell from '@/components/super-admin/SuperAdminShell'
+import ActivityTracker from '@/components/admin/ActivityTracker'
 import { ToastProvider } from '@/components/super-admin/Toast'
 import type { Metadata } from 'next'
 
@@ -31,6 +32,7 @@ export default async function SuperAdminLayout({ children }: { children: React.R
     <ToastProvider>
       <div className="min-h-screen bg-zinc-50" dir="ltr">
         <SuperAdminShell email={user?.email ?? null} pendingCount={pendingCount} />
+        <ActivityTracker />
         <main className="mx-auto max-w-5xl p-5 lg:p-8">{children}</main>
       </div>
     </ToastProvider>

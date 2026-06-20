@@ -10,6 +10,7 @@ type Row = {
   table_name: string
   row_id: string | null
   business_id: string | null
+  detail: string | null
   created_at: string
   business_name: string | null
   business_slug: string | null
@@ -20,7 +21,6 @@ const ROLE_FILTERS = [
   { key: '', label: 'Tous' },
   { key: 'super_admin', label: 'Super-admin' },
   { key: 'owner', label: 'Propriétaires' },
-  { key: 'system', label: 'Système' },
 ]
 
 const TABLE_LABEL: Record<string, string> = {
@@ -30,7 +30,24 @@ const TABLE_LABEL: Record<string, string> = {
 }
 const ACTION_LABEL: Record<string, string> = {
   INSERT: 'Création', UPDATE: 'Modification', DELETE: 'Suppression',
-  'impersonate.start': 'A ouvert l’admin du café', 'impersonate.stop': 'A quitté l’admin du café',
+  'impersonate.start': 'A ouvert l’admin', 'impersonate.stop': 'A quitté l’admin',
+  'page.view': 'A visité', 'design.update': 'A modifié le design',
+}
+
+const PAGE_LABEL: Record<string, string> = {
+  '/admin': 'Accueil', '/admin/menu': 'Menu', '/admin/theme': 'Design', '/admin/share': 'Partage',
+  '/admin/fidelite': 'Fidélité', '/admin/fidelite/roue': 'Roue', '/admin/fidelite/recompenses': 'Récompenses',
+  '/admin/caisse': 'Caisse', '/admin/roulette': 'Roue (comptoir)', '/admin/analytics': 'Statistiques',
+  '/admin/settings': 'Réglages', '/admin/game': 'Jeu & fidélité',
+  '/super-admin': 'Super-admin', '/super-admin/businesses': 'Comptes', '/super-admin/super-eyes': 'Super Eyes',
+  '/super-admin/apercu': 'Aperçu', '/super-admin/activity': 'Activité', '/super-admin/payments': 'Paiements',
+  '/super-admin/devis': 'Devis', '/super-admin/analytics': 'Stats',
+}
+function pageName(path: string | null): string {
+  if (!path) return '—'
+  if (PAGE_LABEL[path]) return PAGE_LABEL[path]
+  if (path.includes('/businesses/') && path.endsWith('/menu')) return 'Menu d’un café'
+  return path
 }
 const roleTone: Record<string, string> = {
   super_admin: 'bg-purple-100 text-purple-700',
@@ -112,7 +129,7 @@ export default function SuperEyes() {
         ) : (
           <ul className="divide-y divide-zinc-100">
             {rows.map((r) => {
-              const isEvent = r.action.includes('.')
+              const sub = r.action === 'page.view' ? pageName(r.detail) : r.action.includes('.') ? (r.detail || '') : (TABLE_LABEL[r.table_name] || r.table_name)
               return (
                 <li key={r.id} className="flex items-center gap-3 px-4 py-3">
                   <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${roleTone[r.actor_role || ''] || 'bg-zinc-100 text-zinc-500'}`}>
@@ -121,7 +138,7 @@ export default function SuperEyes() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm text-zinc-900">
                       <span className={`font-bold ${actionTone[r.action] || 'text-zinc-700'}`}>{ACTION_LABEL[r.action] || r.action}</span>
-                      {!isEvent && <> · <span className="font-semibold">{TABLE_LABEL[r.table_name] || r.table_name}</span></>}
+                      {sub && <> · <span className="font-semibold text-zinc-700">{sub}</span></>}
                       {r.business_name && <> · <span className="text-zinc-500">{r.business_name}</span></>}
                     </p>
                     <p className="truncate text-xs text-zinc-400">

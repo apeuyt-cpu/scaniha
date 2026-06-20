@@ -13,6 +13,7 @@ export async function logAudit(entry: {
   table?: string
   rowId?: string | null
   businessId?: string | null
+  detail?: string | null
 }) {
   try {
     const admin = await createServiceRoleClient()
@@ -23,6 +24,7 @@ export async function logAudit(entry: {
       table_name: entry.table ?? 'event',
       row_id: entry.rowId ?? null,
       business_id: entry.businessId ?? null,
+      detail: entry.detail ?? null,
     })
   } catch {
     // auditing must never break the action it records

@@ -1,25 +1,27 @@
 -- ════════════════════════════════════════════════════════════════════
--- Scaniha — "Super Eyes": platform-wide audit log.
--- Every config/admin write (by ANY user — owner, super_admin, or service
--- role) is captured uniformly via exception-safe AFTER triggers. The triggers
--- swallow their own errors so auditing can NEVER block the real operation.
--- High-volume customer events (plays/wins/points) are intentionally NOT
--- triggered (they already live in their own tables + the Activity page) to
--- keep this table lean on the free tier.
+-- Scaniha — "Super Eyes": platform ACTIVITY log (deliberate user actions).
+-- Records writes that carry a REAL signed-in user (owner / super_admin via the
+-- browser client) via exception-safe AFTER triggers. AUTOMATIC / service-role /
+-- background writes (auth.uid() IS NULL) are SKIPPED, so the feed shows what
+-- people DID, not machine noise. Rich action events + page views are added
+-- explicitly through lib/audit.ts. High-volume customer events (plays/wins/
+-- points) are NOT triggered.
 -- Run once (idempotent):
 --   node scripts/apply-sql-api.mjs supabase/audit_log.sql
 -- ════════════════════════════════════════════════════════════════════
 
 create table if not exists public.audit_log (
   id          bigint generated always as identity primary key,
-  actor       uuid,                         -- auth.uid() of whoever did it (null = service role / system)
-  actor_role  text,                         -- 'super_admin' | 'owner' | 'system' | …
-  action      text not null,                -- 'INSERT' | 'UPDATE' | 'DELETE' | 'impersonate.start' | …
+  actor       uuid,
+  actor_role  text,
+  action      text not null,
   table_name  text not null,
   row_id      text,
   business_id uuid,
+  detail      text,                            -- human-readable detail (what changed / which page)
   created_at  timestamptz not null default now()
 );
+alter table public.audit_log add column if not exists detail text;
 create index if not exists idx_audit_log_created on public.audit_log (created_at desc);
 create index if not exists idx_audit_log_business on public.audit_log (business_id, created_at desc);
 
@@ -28,8 +30,8 @@ drop policy if exists audit_log_superadmin_read on public.audit_log;
 create policy audit_log_superadmin_read on public.audit_log
   for select using (exists (select 1 from public.profiles p where p.user_id = auth.uid() and p.role = 'super_admin'));
 
--- The generic trigger (SECURITY DEFINER so it can read profiles + insert past
--- RLS; exception-safe so a logging failure never rolls back the real write).
+-- Trigger (SECURITY DEFINER; exception-safe). Logs ONLY deliberate user writes:
+-- service-role / automatic writes have no auth.uid() and are skipped entirely.
 create or replace function public.audit_trigger() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
@@ -37,6 +39,10 @@ declare
   v_row  jsonb;
   v_biz  text;
 begin
+  -- Skip automatic / service-role / background writes (no signed-in user).
+  if auth.uid() is null then
+    return case when TG_OP = 'DELETE' then OLD else NEW end;
+  end if;
   begin
     select role into v_role from public.profiles where user_id = auth.uid();
     v_row := case when TG_OP = 'DELETE' then to_jsonb(OLD) else to_jsonb(NEW) end;
@@ -67,3 +73,7 @@ begin
     end if;
   end loop;
 end $$;
+
+-- One-time cleanup: drop the automatic / service-role rows already captured
+-- (actor IS NULL) so the feed only shows deliberate user actions.
+delete from public.audit_log where actor is null;

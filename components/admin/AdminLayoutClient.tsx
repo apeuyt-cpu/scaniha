@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import DynamicFavicon from '@/components/admin/DynamicFavicon'
+import ActivityTracker from '@/components/admin/ActivityTracker'
 import { ToastProvider } from '@/components/admin/ui/Toast'
 import type { Database } from '@/lib/supabase/database.types'
 import { useLocale } from '@/lib/i18n/LocaleContext'
@@ -133,6 +134,7 @@ export default function AdminLayoutClient({ business: initialBusiness, impersona
     <ToastProvider>
       <div className="min-h-screen bg-zinc-50" dir={dir} style={impersonating ? { paddingBottom: 60 } : undefined}>
         <DynamicFavicon logoUrl={business.logo_url} businessName={business.name} />
+        <ActivityTracker />
         {children}
         {impersonating && (
           <div className="fixed inset-x-0 bottom-0 z-50 border-t border-orange-300 bg-orange-500 text-white shadow-[0_-6px_20px_rgba(0,0,0,0.12)]">

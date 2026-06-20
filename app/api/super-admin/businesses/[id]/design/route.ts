@@ -112,8 +112,16 @@ export async function PATCH(
     } catch {}
 
     // Service-role writes have no auth.uid(), so the DB trigger logs them as
-    // 'system' — record an attributed event so Super Eyes shows WHO changed it.
-    await logAudit({ actor: user.id, actorRole: 'super_admin', action: 'design.update', table: 'businesses', rowId: id, businessId: id })
+    // 'system' — record an attributed event so Super Eyes shows WHO changed it,
+    // with a human summary of exactly what changed.
+    const changed: string[] = []
+    if (dsPatch.accent !== undefined || 'primary_color' in updates) changed.push('couleur')
+    if (typeof updates.theme_id === 'string') changed.push('modèle')
+    if ('logo_url' in updates) changed.push(updates.logo_url ? 'logo' : 'logo retiré')
+    if (dsPatch.gradientEnabled !== undefined) changed.push(dsPatch.gradientEnabled ? 'dégradé activé' : 'dégradé désactivé')
+    if (dsPatch.showcase !== undefined) changed.push('vitrine')
+    if (dsPatch.tagline !== undefined) changed.push('slogan')
+    await logAudit({ actor: user.id, actorRole: 'super_admin', action: 'design.update', table: 'businesses', rowId: id, businessId: id, detail: changed.length ? changed.join(', ') : null })
     return NextResponse.json({ data })
   } catch (error: any) {
     if (error?.digest?.startsWith?.('NEXT_REDIRECT') || error?.message === 'NEXT_REDIRECT') {

@@ -23,15 +23,19 @@ const SELLER = {
 
 // Plain-French cover message to send to the client with the PDF. Editable in the
 // tool; does NOT appear on the devis itself.
+// Numbers derived from the live pricing source (lib/payment-config) so the cover
+// message can never drift from the actual à-vie price again.
+const LIFETIME = PLANS.lifetime.price
+const HALF = Math.round(LIFETIME / 2)
 const DEFAULT_MESSAGE = `Bonjour,
 
 Voici notre offre pour votre établissement :
 
-• Menu QR + fidélité, à vie : 600 TND (un seul paiement, c'est à vous pour toujours).
+• Menu QR + fidélité, à vie : ${LIFETIME} TND (un seul paiement, c'est à vous pour toujours).
 • 15 présentoirs QR pour vos tables : offerts.
 • Présentoir en plus : 8 TND l'unité (selon le nombre de vos tables).
 
-Vous pouvez payer en 2 fois : 300 TND maintenant, 300 TND le mois d'après.
+Vous pouvez payer en 2 fois : ${HALF} TND maintenant, ${HALF} TND le mois d'après.
 
 Dès qu'on reçoit l'avance (la moitié), on commence à préparer votre menu et vos présentoirs.
 
@@ -274,7 +278,7 @@ export default function DevisGenerator({ businesses }: { businesses: Biz[] }) {
               <p className="text-[11px] text-zinc-400">Cliquez à nouveau pour retirer le forfait (devis supports seuls).</p>
               <label className="mt-1 flex items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2.5 text-[12px] font-medium text-zinc-700">
                 <input type="checkbox" checked={install2x} onChange={(e) => setInstall2x(e.target.checked)} className="h-4 w-4 accent-orange-500" />
-                Paiement en 2× — 2 mensualités de {money(PLANS.lifetime.price / 2)} TND
+                Paiement en 2× — 2 mensualités de {money(total / 2)} TND
               </label>
             </div>
           </section>
@@ -528,7 +532,7 @@ export default function DevisGenerator({ businesses }: { businesses: Biz[] }) {
                   {install2x && (
                     <div className="flex items-start gap-2.5 rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-3">
                       <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg>
-                      <p className="text-[12.5px] leading-snug text-zinc-600"><span className="font-bold text-zinc-900">Paiement en 2×</span> — 2 mensualités de {money(PLANS.lifetime.price / 2)} TND/mois.</p>
+                      <p className="text-[12.5px] leading-snug text-zinc-600"><span className="font-bold text-zinc-900">Paiement en 2×</span> — 2 mensualités de {money(total / 2)} TND/mois.</p>
                     </div>
                   )}
                 </div>

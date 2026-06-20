@@ -33,7 +33,7 @@ export default async function FidelitePage({ params }: { params: Promise<{ slug:
   const hasMenu = resolveMode(business) === 'both'
   return (
     <div className="min-h-screen bg-white">
-      <FidelityHub slug={business.slug} businessName={business.name} accent={accent} gradient={gradient} hasMenu={hasMenu} defaultTab={fidelityLanding(business)} />
+      <FidelityHub slug={business.slug} businessName={business.name} logoUrl={business.logo_url} accent={accent} gradient={gradient} hasMenu={hasMenu} defaultTab={fidelityLanding(business)} />
       {/* Mints the scan-session cookie when the fidelity QR is opened via `?s=<key>`,
           so a dedicated fidelity QR still unlocks the wheel. */}
       <QrScanMint slug={business.slug} />

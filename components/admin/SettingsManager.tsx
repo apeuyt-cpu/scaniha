@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import SeoSettings from '@/components/admin/SeoSettings'
+import LogoUpload from '@/components/business/LogoUpload'
 import { createClient } from '@/lib/supabase/client'
 import { useLocale } from '@/lib/i18n/LocaleContext'
 import { useToast } from '@/components/admin/ui/Toast'
@@ -119,6 +120,15 @@ export default function SettingsManager({ business, onUpdate }: { business: Busi
         </div>
       </section>
 
+      {/* Logo & marque */}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h2 className="text-base font-bold text-zinc-900">Logo</h2>
+        <p className="mt-0.5 text-sm text-zinc-500">Il s&apos;affiche en haut de votre page (menu et fidélité).</p>
+        <div className="mt-4">
+          <LogoUpload businessId={business.id} currentLogoUrl={business.logo_url} onLogoUpdated={onUpdate} />
+        </div>
+      </section>
+
       {/* Lien du menu — account info */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5">
         <h2 className="text-base font-bold text-zinc-900">Lien du menu</h2>
@@ -131,7 +141,7 @@ export default function SettingsManager({ business, onUpdate }: { business: Busi
               {copied ? 'Copié ✓' : t('settings.copy')}
             </button>
           </div>
-          <p className="mt-1.5 text-xs text-zinc-400">Le logo, les réseaux et le style du menu se règlent dans « Design ».</p>
+          <p className="mt-1.5 text-xs text-zinc-400">Les réseaux et le style du menu se règlent dans « Design ».</p>
         </div>
       </section>
 

@@ -38,8 +38,8 @@ function readToken(slug: string): string | null { try { return localStorage.getI
 function clearToken(slug: string) { try { localStorage.removeItem(KEY(slug)) } catch {} }
 
 export default function FidelityHub({
-  slug, businessName, accent = '#F47B20', gradient = 'linear-gradient(135deg, #F47B20, #F5B82E)', hasMenu = false, defaultTab = 'carte',
-}: { slug: string; businessName: string; accent?: string; gradient?: string; hasMenu?: boolean; defaultTab?: Tab }) {
+  slug, businessName, logoUrl = null, accent = '#F47B20', gradient = 'linear-gradient(135deg, #F47B20, #F5B82E)', hasMenu = false, defaultTab = 'carte',
+}: { slug: string; businessName: string; logoUrl?: string | null; accent?: string; gradient?: string; hasMenu?: boolean; defaultTab?: Tab }) {
   // The loyalty hub is a Scaniha feature → fixed Scaniha-orange palette (matches
   // the approved redesign + DinerAuth + the game), NOT the café's menu brand
   // (which can be dark/low-contrast). Per-café brand theming is a later phase.
@@ -307,9 +307,13 @@ export default function FidelityHub({
     <div className="mx-auto min-h-[100svh] max-w-md pb-28" style={{ background: BG }}>
       {confetti && <Confetti accent={accent} />}
 
-      <header className="sticky top-0 z-10 flex items-center justify-between px-5 py-3.5" style={{ background: 'rgba(250,248,245,0.85)', backdropFilter: 'blur(8px)' }}>
-        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: FAINT }}>{businessName || 'Fidélité'}</span>
-        <span className="shrink-0 text-sm font-semibold" style={{ color: INK }}>{tabTitle}</span>
+      <header className="sticky top-0 z-10 flex items-center gap-2.5 px-5 py-3" style={{ background: 'rgba(250,248,245,0.85)', backdropFilter: 'blur(8px)' }}>
+        {logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt={businessName} className="h-9 w-9 shrink-0 rounded-xl bg-white object-contain ring-1 ring-black/5" />
+        )}
+        <span className="min-w-0 flex-1 truncate text-[15px] font-bold tracking-tight" style={{ color: INK }}>{businessName || 'Fidélité'}</span>
+        <span className="shrink-0 text-xs font-semibold" style={{ color: MUT }}>{tabTitle}</span>
       </header>
 
       <div className="px-[18px] pt-1">

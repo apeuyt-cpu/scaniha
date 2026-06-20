@@ -51,8 +51,11 @@ storage_migration_results.json
 # Supabase CLI local state (project ref, pooler url, version marker) — local only
 supabase/.temp/
 
-# SQL files - kept locally only
+# SQL files - kept locally only, EXCEPT the versioned DB migrations
+# (schema / policies / triggers — no secrets) so a fresh clone / new DB is reproducible.
 *.sql
+!supabase/*.sql
+!supabase/**/*.sql
 
 # Documentation files - kept locally only
 *.md

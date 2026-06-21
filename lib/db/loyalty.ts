@@ -21,7 +21,7 @@ export interface LoyaltyConfig {
   accent: string
   gradient: string
   pointsPerTnd: number
-  rewards: { id: string; label: string; points_cost: number }[]
+  rewards: { id: string; label: string; points_cost: number; image_url?: string | null }[]
   summary: CustomerSummary | null
 }
 
@@ -52,7 +52,7 @@ export async function loadLoyalty(slug: string, phoneRaw?: string | null): Promi
 
     const { data: rewards } = await supabase
       .from('loyalty_rewards')
-      .select('id, label, points_cost')
+      .select('id, label, points_cost, image_url')
       .eq('business_id', business.id)
       .eq('active', true)
       .order('points_cost', { ascending: true })

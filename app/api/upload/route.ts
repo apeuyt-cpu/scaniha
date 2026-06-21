@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Constrain the storage namespace to known prefixes — no arbitrary paths.
-    const ALLOWED_FOLDERS = ['logos', 'items', 'categories', 'covers', 'receipts', 'uploads']
+    const ALLOWED_FOLDERS = ['logos', 'items', 'categories', 'covers', 'receipts', 'rewards', 'uploads']
     const folderStr = typeof folder === 'string' ? folder : 'uploads'
     const prefix = folderStr.split('/')[0].toLowerCase()
     const safeFolder = ALLOWED_FOLDERS.includes(prefix) ? folderStr : 'uploads'

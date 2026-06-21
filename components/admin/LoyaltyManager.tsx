@@ -7,6 +7,7 @@ import Button from '@/components/admin/ui/Button'
 import Field, { inputClass } from '@/components/admin/ui/Field'
 import SetupCard from '@/components/admin/game/SetupCard'
 import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
+import { uploadImage, deleteImage } from '@/lib/storage'
 
 interface Program {
   business_id: string
@@ -21,6 +22,7 @@ interface Reward {
   label: string
   points_cost: number
   active: boolean
+  image_url?: string | null
 }
 
 /**
@@ -38,6 +40,7 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rewardToDelete, setRewardToDelete] = useState<string | null>(null)
+  const [uploadingId, setUploadingId] = useState<string | null>(null)
   // Reward NAME persists on a short debounce (not only on blur) so a typed name
   // is never lost if the owner switches tab or navigates before the input blurs.
   const labelTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
@@ -130,6 +133,29 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
   function saveLabelDebounced(id: string, label: string) {
     clearTimeout(labelTimers.current[id])
     labelTimers.current[id] = setTimeout(() => updateReward(id, { label }), 600)
+  }
+
+  async function uploadRewardImage(id: string, file: File) {
+    if (!file.type.startsWith('image/')) { setError('Choisissez un fichier image.'); return }
+    if (file.size > 5 * 1024 * 1024) { setError('Image trop lourde (max 5 Mo).'); return }
+    setError(null)
+    setUploadingId(id)
+    const prev = rewards.find((r) => r.id === id)?.image_url || null
+    try {
+      const url = await uploadImage(file, `rewards/${id}`)
+      await updateReward(id, { image_url: url })
+      if (prev && prev !== url) { try { await deleteImage(prev) } catch {} }
+    } catch (e: any) {
+      setError(e.message || 'Échec du téléversement de l’image.')
+    } finally {
+      setUploadingId(null)
+    }
+  }
+
+  async function removeRewardImage(id: string) {
+    const prev = rewards.find((r) => r.id === id)?.image_url || null
+    await updateReward(id, { image_url: null })
+    if (prev) { try { await deleteImage(prev) } catch {} }
   }
 
   async function addReward() {
@@ -226,6 +252,26 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
         <div className="mt-4 space-y-2">
           {rewards.map((r) => (
             <div key={r.id} className={`flex flex-wrap items-center gap-2 rounded-xl border border-zinc-100 bg-zinc-50/60 p-2.5 ${r.active ? '' : 'opacity-60'}`}>
+              <div className="relative shrink-0">
+                <label className="flex h-12 w-12 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-zinc-200 bg-white text-zinc-300 transition hover:border-orange-300" title="Image de la récompense">
+                  <input type="file" accept="image/*" className="hidden" disabled={uploadingId === r.id}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadRewardImage(r.id, f); e.currentTarget.value = '' }} />
+                  {uploadingId === r.id ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-orange-500" />
+                  ) : r.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.image_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                  )}
+                </label>
+                {r.image_url && uploadingId !== r.id && (
+                  <button type="button" onClick={() => removeRewardImage(r.id)} aria-label="Retirer l’image"
+                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-white shadow transition hover:bg-red-600">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                  </button>
+                )}
+              </div>
               <input
                 value={r.label}
                 onChange={(e) => { const v = e.target.value; setRewards((cur) => cur.map((x) => (x.id === r.id ? { ...x, label: v } : x))); saveLabelDebounced(r.id, v) }}

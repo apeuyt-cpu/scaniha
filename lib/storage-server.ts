@@ -44,6 +44,7 @@ const PROFILES: Record<string, Profile> = {
   categories: { max: 1080, webp: 74, avif: null },
   covers:     { max: 1500, webp: 74, avif: null }, // wide hero / cover
   receipts:   { max: 1500, webp: 72, avif: null }, // legibility over beauty
+  rewards:    { max: 800,  webp: 76, avif: null }, // loyalty boutique items (small cards)
   uploads:    { max: 1200, webp: 74, avif: null }, // default bucket
 }
 const DEFAULT_PROFILE: Profile = PROFILES.uploads

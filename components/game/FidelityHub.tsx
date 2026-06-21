@@ -20,7 +20,7 @@ type Phase = 'loading' | 'inactive' | 'auth' | 'ready' | 'spinning' | 'won' | 'b
 type Tab = 'carte' | 'roue' | 'boutique'
 
 interface SpinResult { prizeIndex: number; prizeLabel: string; code: string; expiresAt: string; pointsEarned?: number; balance?: number; nextPlayAt?: string | null }
-interface Reward { id: string; label: string; points_cost: number }
+interface Reward { id: string; label: string; points_cost: number; image_url?: string | null }
 
 const EMPTY: CustomerSummary = { balance: 0, recent: [], activeWins: [], activeRedemptions: [] }
 const REASON: Record<string, string> = { purchase: 'Achat', play: 'Roue de la chance', welcome: 'Bienvenue', redeem: 'Récompense échangée', adjust: 'Ajustement' }
@@ -567,7 +567,14 @@ function BoutiqueTab(props: { session: DinerSession | null; businessName: string
           const pct = r.points_cost > 0 ? Math.min(100, Math.round((balance / r.points_cost) * 100)) : 100
           return (
             <div key={r.id} className="flex flex-col rounded-[18px] bg-white p-4" style={{ boxShadow: SOFT, border: affordable ? `1.5px solid ${accent}` : '1.5px solid transparent' }}>
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${accent}14`, color: accent }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8" /><rect x="2" y="7" width="20" height="5" rx="1" /><path d="M12 21V7" /></svg></span>
+              {r.image_url ? (
+                <div className="-mx-1 -mt-1 mb-1 aspect-[4/3] overflow-hidden rounded-[14px]" style={{ background: '#FAF8F5' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={r.image_url} alt={r.label} loading="lazy" className="h-full w-full object-cover" />
+                </div>
+              ) : (
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${accent}14`, color: accent }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8" /><rect x="2" y="7" width="20" height="5" rx="1" /><path d="M12 21V7" /></svg></span>
+              )}
               <p className="mt-2.5 line-clamp-2 min-h-[2.4em] text-[13px] font-semibold leading-snug" style={{ color: INK }}>{r.label}</p>
               <p className="mt-0.5 text-xs font-bold" style={{ color: affordable ? accent : FAINT }}>{r.points_cost} pts</p>
               {affordable || !session ? (

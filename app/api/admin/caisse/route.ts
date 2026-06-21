@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/auth'
 import { getActiveBusiness } from '@/lib/db/business'
-import { validateCode, awardPoints, customerSummary, normPhone, pendingRedemptions, declineRedemption } from '@/lib/db/loyalty'
+import { validateCode, awardPoints, customerSummary, normPhone, pendingRedemptions, declineRedemption, listActiveRewards, redeemAtCounter } from '@/lib/db/loyalty'
 import { businessHasStaffPins, verifyStaffPin } from '@/lib/db/staff-pins'
 import { checkRateLimit } from '@/lib/api/rate-limit'
 
@@ -39,6 +39,8 @@ function takeRecentAward(key: string): any | null {
  *   { action: 'lookup', phone }            → balance + history + active codes
  *   { action: 'pending' }                  → list still-pending reward requests
  *   { action: 'decline', code }            → reject a pending request + refund points
+ *   { action: 'rewards' }                  → active rewards + whether a staff PIN is required
+ *   { action: 'counterRedeem', phone, reward_id, pin? } → redeem a reward at the counter
  *
  * requireOwner gates it; the owner's own business id is the only one ever
  * passed to the RPCs, so an owner can never touch another business.
@@ -114,6 +116,47 @@ export async function POST(request: Request) {
       if (!phone) return NextResponse.json({ error: 'Numéro invalide.' }, { status: 400 })
       const summary = await customerSummary(business.id, phone)
       return NextResponse.json({ phone, ...summary })
+    }
+
+    if (action === 'rewards') {
+      // The active rewards (for the counter "échanger" picker) + whether the
+      // café gates staff actions behind a PIN (so the UI can show the field).
+      const [rewards, pinRequired] = await Promise.all([
+        listActiveRewards(business.id),
+        businessHasStaffPins(business.id),
+      ])
+      return NextResponse.json({ rewards, pinRequired })
+    }
+
+    if (action === 'counterRedeem') {
+      const phone = normPhone(body.phone)
+      const rewardId = typeof body.reward_id === 'string' ? body.reward_id : ''
+      if (!phone) return NextResponse.json({ error: 'Numéro invalide.' }, { status: 400 })
+      if (!rewardId) return NextResponse.json({ error: 'Récompense invalide.' }, { status: 400 })
+      // Same opt-in staff-PIN gate as 'award' — redeeming gives value away too.
+      const pin = typeof body.pin === 'string' ? body.pin.trim() : ''
+      const pinsRequired = await businessHasStaffPins(business.id)
+      if (pinsRequired) {
+        if (!pin) return NextResponse.json({ error: 'Code PIN requis.', code: 'PIN_REQUIRED' }, { status: 401 })
+        const rlPin = checkRateLimit(`caisse:redeem:pin:${business.id}`)
+        if (!rlPin.ok) {
+          return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
+            { status: 429, headers: { 'Retry-After': String(rlPin.retryAfter) } })
+        }
+        const okPin = await verifyStaffPin(business.id, pin)
+        if (!okPin) return NextResponse.json({ error: 'Code PIN incorrect.', code: 'PIN_INVALID' }, { status: 401 })
+      }
+      const result = await redeemAtCounter(business.id, phone, rewardId)
+      if (!result.ok) {
+        if (result.error === 'insufficient') {
+          return NextResponse.json({ error: `Points insuffisants — il manque ${result.missing}.`, missing: result.missing }, { status: 400 })
+        }
+        const msg = result.error === 'no_program' ? 'Activez d’abord le programme de fidélité.'
+          : result.error === 'no_reward' ? 'Récompense introuvable ou inactive.'
+            : 'Échange momentanément indisponible.'
+        return NextResponse.json({ error: msg }, { status: result.error === 'no_program' ? 409 : 500 })
+      }
+      return NextResponse.json(result)
     }
 
     if (action === 'pending') {

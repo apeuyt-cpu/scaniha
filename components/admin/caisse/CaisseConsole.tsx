@@ -17,6 +17,8 @@ interface Pending {
   expires_at: string
 }
 
+interface Reward { id: string; label: string; points_cost: number; image_url: string | null }
+
 const REASON_LABELS: Record<string, string> = {
   purchase: 'Achat',
   play: 'Roue de la chance',
@@ -39,14 +41,250 @@ async function caisse(action: string, payload: Record<string, unknown>) {
   return { ok: res.ok, json }
 }
 
-/** The owner's day-to-day console: validate a code, credit a purchase, look up a customer. */
+/** The owner's day-to-day console: a customer-centric card (always open) for
+ *  crediting purchases + redeeming rewards, plus the pending-requests and
+ *  code-validation workflows. */
 export default function CaisseConsole() {
   return (
     <div className="space-y-5">
+      <CustomerConsole />
       <PendingRequestsCard />
       <ValidateCard />
-      <AwardCard />
-      <LookupCard />
+    </div>
+  )
+}
+
+/* ── Customer console — identify, credit, redeem (the merged main card) ─── */
+function CustomerConsole() {
+  const [phone, setPhone] = useState('')
+  const [data, setData] = useState<(CustomerSummary & { phone: string }) | null>(null)
+  const [loadingCust, setLoadingCust] = useState(false)
+  const [custErr, setCustErr] = useState<string | null>(null)
+
+  const [rewards, setRewards] = useState<Reward[]>([])
+  const [pinRequired, setPinRequired] = useState(false)
+
+  const [amount, setAmount] = useState('')
+  const [pin, setPin] = useState('')
+  const [creditBusy, setCreditBusy] = useState(false)
+  const [redeemBusyId, setRedeemBusyId] = useState<string | null>(null)
+  const [redeemConfirmId, setRedeemConfirmId] = useState<string | null>(null)
+  const [msg, setMsg] = useState<{ tone: 'green' | 'red'; text: string } | null>(null)
+
+  // Active rewards + PIN requirement, once.
+  useEffect(() => {
+    caisse('rewards', {}).then(({ ok, json }) => {
+      if (!ok) return
+      setRewards(Array.isArray(json.rewards) ? json.rewards : [])
+      setPinRequired(Boolean(json.pinRequired))
+    })
+  }, [])
+
+  async function loadCustomer(p?: string) {
+    const ph = (p ?? phone).trim()
+    if (!ph) return
+    setLoadingCust(true); setCustErr(null); setMsg(null); setRedeemConfirmId(null)
+    const { ok, json } = await caisse('lookup', { phone: ph })
+    setLoadingCust(false)
+    if (!ok) { setCustErr(json.error || 'Numéro invalide.'); setData(null); return }
+    setData(json); setPhone(json.phone || ph)
+  }
+
+  function onScan(p: string) { setPhone(p); loadCustomer(p) }
+
+  function clearCustomer() {
+    setData(null); setPhone(''); setAmount(''); setPin(''); setMsg(null); setCustErr(null); setRedeemConfirmId(null)
+  }
+
+  async function credit() {
+    if (!data) return
+    const amt = Number(amount)
+    if (!amt || amt <= 0) { setMsg({ tone: 'red', text: 'Saisissez un montant valide.' }); return }
+    setCreditBusy(true); setMsg(null)
+    const { ok, json } = await caisse('award', { phone: data.phone, amount: amt, pin })
+    setCreditBusy(false)
+    if (!ok || !json.ok) { setMsg({ tone: 'red', text: json.error || 'Erreur.' }); return }
+    const welcome = json.welcomeAdded ? ` (+${json.welcomeAdded} bienvenue)` : ''
+    setMsg({ tone: 'green', text: `✓ +${json.pointsAdded} points${welcome} · nouveau solde ${json.balance}` })
+    setAmount('')
+    loadCustomer(data.phone)
+  }
+
+  async function redeem(r: Reward) {
+    if (!data) return
+    setRedeemBusyId(r.id); setRedeemConfirmId(null); setMsg(null)
+    const { ok, json } = await caisse('counterRedeem', { phone: data.phone, reward_id: r.id, pin })
+    setRedeemBusyId(null)
+    if (!ok || !json.ok) { setMsg({ tone: 'red', text: json.error || 'Erreur.' }); return }
+    setMsg({ tone: 'green', text: `✓ « ${json.rewardLabel} » remis · −${json.pointsCost} pts · solde ${json.balance}` })
+    loadCustomer(data.phone)
+  }
+
+  const balance = data?.balance ?? 0
+
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+      <h2 className="font-bold text-zinc-900">Client</h2>
+      <p className="mt-0.5 text-sm text-zinc-500">Scannez la carte du client ou saisissez son numéro — sa carte de fidélité s’ouvre ici.</p>
+
+      {/* Identify bar — always visible */}
+      <div className="mt-4 flex gap-2">
+        <input
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && loadCustomer()}
+          placeholder="+216 …"
+          inputMode="tel"
+          autoComplete="off"
+          className={`${inputClass} flex-1`}
+        />
+        <QrScanButton onScan={onScan} />
+        <Button variant="primary" onClick={() => loadCustomer()} disabled={loadingCust || !phone.trim()} className="shrink-0">
+          {loadingCust ? '…' : 'Ouvrir'}
+        </Button>
+      </div>
+      {custErr && <p className="mt-3 text-sm text-red-600">{custErr}</p>}
+
+      {/* Customer card — always-on area */}
+      <div className="mt-4">
+        {loadingCust ? (
+          <div className="space-y-3">
+            <div className="h-16 animate-pulse rounded-xl bg-zinc-100" />
+            <div className="h-24 animate-pulse rounded-xl bg-zinc-100" />
+          </div>
+        ) : !data ? (
+          <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/60 px-4 py-10 text-center">
+            <p className="text-sm text-zinc-400">Scannez ou saisissez un numéro pour afficher la carte du client.</p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {/* Balance header */}
+            <div className="flex items-center justify-between rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 px-4 py-3.5 text-white">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">Solde de points</p>
+                <p className="mt-0.5 text-3xl font-bold leading-none tabular-nums">{balance}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-medium text-white/90" dir="ltr">{data.phone}</p>
+                <button type="button" onClick={clearCustomer} className="mt-1 text-xs font-semibold text-white/80 underline-offset-2 hover:underline">Changer de client</button>
+              </div>
+            </div>
+
+            {msg && <p className={`text-sm font-medium ${msg.tone === 'green' ? 'text-green-600' : 'text-red-600'}`}>{msg.text}</p>}
+
+            {/* Action: credit a purchase */}
+            <div className="rounded-xl border border-zinc-100 bg-zinc-50/60 p-4">
+              <h3 className="text-sm font-bold text-zinc-900">Créditer un achat</h3>
+              <p className="mt-0.5 text-xs text-zinc-500">1 dinar dépensé = 1 point.</p>
+              <div className="mt-3 flex items-end gap-2">
+                <Field label="Addition (TND)">
+                  <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && credit()} placeholder="25" inputMode="decimal" className={inputClass} />
+                </Field>
+                <Button variant="success" onClick={credit} disabled={creditBusy || !amount} className="shrink-0">
+                  {creditBusy ? '…' : '+ Créditer'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Action: redeem a reward at the counter */}
+            {rewards.length > 0 && (
+              <div className="rounded-xl border border-zinc-100 bg-zinc-50/60 p-4">
+                <h3 className="text-sm font-bold text-zinc-900">Échanger une récompense</h3>
+                <p className="mt-0.5 text-xs text-zinc-500">Le client échange ses points contre une récompense, remise tout de suite.</p>
+                <div className="mt-3 space-y-2">
+                  {rewards.map((r) => {
+                    const affordable = balance >= r.points_cost
+                    const busy = redeemBusyId === r.id
+                    const confirming = redeemConfirmId === r.id
+                    return (
+                      <div key={r.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-zinc-100 bg-white p-2.5">
+                        {r.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={r.image_url} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                        ) : (
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-500" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8" /><rect x="2" y="7" width="20" height="5" rx="1" /><path d="M12 21V7" /></svg>
+                          </span>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-zinc-900">{r.label}</p>
+                          <p className={`text-xs font-bold ${affordable ? 'text-orange-600' : 'text-zinc-400'}`}>{r.points_cost} pts{!affordable ? ` · il manque ${r.points_cost - balance}` : ''}</p>
+                        </div>
+                        {confirming ? (
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <span className="text-xs font-medium text-zinc-500">−{r.points_cost} pts&nbsp;?</span>
+                            <button type="button" onClick={() => redeem(r)} disabled={busy} className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50">{busy ? '…' : 'Confirmer'}</button>
+                            <button type="button" onClick={() => setRedeemConfirmId(null)} className="rounded-lg px-2 py-2 text-sm font-semibold text-zinc-500 hover:text-zinc-800">Annuler</button>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => setRedeemConfirmId(r.id)} disabled={!affordable || busy} className="shrink-0 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400">
+                            Échanger
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Shared PIN, only when the café gates staff actions */}
+            {pinRequired && (
+              <div className="sm:max-w-[12rem]">
+                <Field label="Code PIN du personnel">
+                  <input type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} placeholder="••••" autoComplete="off" className={inputClass} />
+                </Field>
+              </div>
+            )}
+
+            {/* Codes à remettre */}
+            {(data.activeWins.length > 0 || data.activeRedemptions.length > 0) && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Codes à remettre</h3>
+                <div className="mt-2 space-y-1.5">
+                  {[...data.activeWins.map((c) => ({ ...c, kind: 'Lot' })), ...data.activeRedemptions.map((c) => ({ ...c, kind: 'Récompense' }))].map((c) => (
+                    <div key={c.code} className="flex items-center justify-between gap-2 rounded-xl border border-zinc-100 px-3 py-2 text-sm">
+                      <span>
+                        <span className="rounded bg-zinc-100 px-2 py-0.5 font-mono font-bold tracking-wider text-zinc-900">{c.code}</span>
+                        <span className="ml-2 font-medium text-zinc-700">{c.label}</span>
+                        <span className="ml-1.5 text-xs text-zinc-400">· {c.kind}</span>
+                      </span>
+                      <span className="shrink-0 text-xs text-zinc-400">exp. {fmt(c.expires_at)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Historique */}
+            {data.recent.length > 0 ? (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Historique</h3>
+                <div className="mt-2 space-y-1">
+                  {data.recent.map((t, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-lg px-1 py-1.5 text-sm">
+                      <span className="text-zinc-600">
+                        {REASON_LABELS[t.reason] || t.reason}
+                        {t.note ? ` · ${t.note}` : ''}
+                        <span className="ml-1.5 text-xs text-zinc-300">{fmt(t.created_at)}</span>
+                      </span>
+                      <span className={`font-semibold ${t.delta >= 0 ? 'text-green-600' : 'text-red-500'}`}>{t.delta >= 0 ? `+${t.delta}` : t.delta}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : balance === 0 ? (
+              <p className="text-sm text-zinc-400">Aucune activité pour ce numéro — créditez un premier achat ci-dessus.</p>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      <p className="mt-5 border-t border-zinc-100 pt-4 text-xs text-zinc-400">
+        Configurer les récompenses : <Link href="/admin/fidelite" className="font-semibold text-orange-600 hover:underline">Programme de fidélité →</Link>
+        <span className="mx-1.5">·</span>
+        <Link href="/admin/caisse/codes" className="font-semibold text-orange-600 hover:underline">Codes PIN du personnel →</Link>
+      </p>
     </div>
   )
 }
@@ -95,7 +333,7 @@ function PendingRequestsCard() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-bold text-zinc-900">Demandes en attente{count > 0 ? ` (${count})` : ''}</h2>
-          <p className="mt-0.5 text-sm text-zinc-500">Récompenses échangées par vos clients — approuvez pour les remettre, ou refusez pour rembourser les points.</p>
+          <p className="mt-0.5 text-sm text-zinc-500">Récompenses échangées par vos clients depuis l’app — approuvez pour les remettre, ou refusez pour rembourser les points.</p>
         </div>
         <button type="button" onClick={() => { setList(null); load() }} className="shrink-0 text-sm font-semibold text-orange-600 hover:text-orange-700">Actualiser</button>
       </div>
@@ -196,7 +434,7 @@ function ValidateCard() {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-6">
       <h2 className="font-bold text-zinc-900">Valider un code</h2>
-      <p className="mt-0.5 text-sm text-zinc-500">Le client montre son code — vérifiez-le, puis marquez-le comme récupéré.</p>
+      <p className="mt-0.5 text-sm text-zinc-500">Le client montre un code (lot de la roue ou récompense) — vérifiez-le, puis marquez-le comme récupéré.</p>
       <div className="mt-4 flex gap-2">
         <input
           value={code}
@@ -255,172 +493,6 @@ function ValidateResultView({ result, collecting, onCollect, onReset }: { result
     return <Banner tone="amber" title="Déjà utilisé" text={`${kind} « ${result.label} » déjà remis${result.redeemedAt ? ` le ${fmt(result.redeemedAt)}` : ''}${who}.`} />
   if (result.status === 'expired') return <Banner tone="amber" title="Code expiré" text={`${kind} « ${result.label} » — ce code n’est plus valable${who}.`} />
   return <Banner tone="amber" title="Code annulé" text={`${kind} « ${result.label} »${who}.`} />
-}
-
-/* ── Credit a purchase ───────────────────────────────────────────── */
-function AwardCard() {
-  const [phone, setPhone] = useState('')
-  const [amount, setAmount] = useState('')
-  const [pin, setPin] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<{ tone: 'green' | 'red'; text: string } | null>(null)
-
-  async function submit() {
-    setBusy(true)
-    setMsg(null)
-    // pin is harmless when the café has no PINs (the route ignores it). On a 401
-    // PIN error (PIN_REQUIRED / PIN_INVALID) we surface json.error identically
-    // and KEEP the pin so the cashier can correct it.
-    const { ok, json } = await caisse('award', { phone, amount: Number(amount), pin })
-    setBusy(false)
-    if (!ok || !json.ok) {
-      setMsg({ tone: 'red', text: json.error || 'Erreur.' })
-      return
-    }
-    const welcome = json.welcomeAdded ? ` (+${json.welcomeAdded} bienvenue)` : ''
-    setMsg({ tone: 'green', text: `✓ +${json.pointsAdded} points${welcome} · solde ${json.balance}` })
-    setAmount('')
-    setPin('')
-  }
-
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-      <h2 className="font-bold text-zinc-900">Créditer un achat</h2>
-      <p className="mt-0.5 text-sm text-zinc-500">Le client donne son numéro — saisissez le montant de l’addition.</p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_8rem_auto] sm:items-end">
-        <Field label="Téléphone">
-          <div className="flex gap-2">
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+216 …" inputMode="tel" className={inputClass} />
-            <QrScanButton onScan={setPhone} />
-          </div>
-        </Field>
-        <Field label="Addition (TND)">
-          <input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25" inputMode="decimal" className={inputClass} />
-        </Field>
-        <Button variant="primary" onClick={submit} disabled={busy || !phone || !amount} className="sm:mb-0">
-          {busy ? '…' : 'Créditer'}
-        </Button>
-      </div>
-      <div className="mt-3 sm:max-w-[12rem]">
-        <Field label="Code PIN (si demandé)">
-          <input
-            type="password"
-            inputMode="numeric"
-            maxLength={6}
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-            placeholder="••••"
-            autoComplete="off"
-            className={inputClass}
-          />
-        </Field>
-      </div>
-      {msg && <p className={`mt-3 text-sm font-medium ${msg.tone === 'green' ? 'text-green-600' : 'text-red-600'}`}>{msg.text}</p>}
-    </div>
-  )
-}
-
-/* ── Look up a customer ──────────────────────────────────────────── */
-function LookupCard() {
-  const [phone, setPhone] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [data, setData] = useState<(CustomerSummary & { phone: string }) | null>(null)
-  const [err, setErr] = useState<string | null>(null)
-
-  async function submit() {
-    setBusy(true)
-    setErr(null)
-    setData(null)
-    const { ok, json } = await caisse('lookup', { phone })
-    setBusy(false)
-    if (!ok) {
-      setErr(json.error || 'Erreur.')
-      return
-    }
-    setData(json)
-  }
-
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-      <h2 className="font-bold text-zinc-900">Rechercher un client</h2>
-      <p className="mt-0.5 text-sm text-zinc-500">Voir le solde de points, l’historique et les codes encore valables.</p>
-      <div className="mt-4 flex gap-2">
-        <input
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && submit()}
-          placeholder="+216 …"
-          inputMode="tel"
-          className={inputClass}
-        />
-        <QrScanButton onScan={setPhone} />
-        <Button variant="neutral" onClick={submit} disabled={busy || !phone} className="shrink-0">
-          {busy ? '…' : 'Chercher'}
-        </Button>
-      </div>
-      {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
-
-      {data && (
-        <div className="mt-4 space-y-4">
-          <div className="flex items-baseline justify-between rounded-xl bg-zinc-50 px-4 py-3">
-            <span className="text-sm text-zinc-500">{data.phone}</span>
-            <span className="text-lg font-bold text-zinc-900">
-              {data.balance} <span className="text-sm font-medium text-zinc-400">points</span>
-            </span>
-          </div>
-
-          {(data.activeWins.length > 0 || data.activeRedemptions.length > 0) && (
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Codes à remettre</h3>
-              <div className="mt-2 space-y-1.5">
-                {[...data.activeWins.map((c) => ({ ...c, kind: 'Lot' })), ...data.activeRedemptions.map((c) => ({ ...c, kind: 'Récompense' }))].map((c) => (
-                  <div key={c.code} className="flex items-center justify-between gap-2 rounded-xl border border-zinc-100 px-3 py-2 text-sm">
-                    <span>
-                      <span className="rounded bg-zinc-100 px-2 py-0.5 font-mono font-bold tracking-wider text-zinc-900">{c.code}</span>
-                      <span className="ml-2 font-medium text-zinc-700">{c.label}</span>
-                      <span className="ml-1.5 text-xs text-zinc-400">· {c.kind}</span>
-                    </span>
-                    <span className="shrink-0 text-xs text-zinc-400">exp. {fmt(c.expires_at)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {data.recent.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Historique</h3>
-              <div className="mt-2 space-y-1">
-                {data.recent.map((t, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-lg px-1 py-1.5 text-sm">
-                    <span className="text-zinc-600">
-                      {REASON_LABELS[t.reason] || t.reason}
-                      {t.note ? ` · ${t.note}` : ''}
-                      <span className="ml-1.5 text-xs text-zinc-300">{fmt(t.created_at)}</span>
-                    </span>
-                    <span className={`font-semibold ${t.delta >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                      {t.delta >= 0 ? `+${t.delta}` : t.delta}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {data.balance === 0 && data.recent.length === 0 && (
-            <p className="text-sm text-zinc-400">Aucune activité pour ce numéro.</p>
-          )}
-        </div>
-      )}
-
-      <p className="mt-4 text-xs text-zinc-400">
-        Configurer les lots et récompenses : <Link href="/admin/fidelite" className="font-semibold text-orange-600 hover:underline">Programme de fidélité →</Link>
-      </p>
-      <p className="mt-2 text-xs text-zinc-400">
-        <Link href="/admin/caisse/codes" className="font-semibold text-orange-600 hover:underline">Gérer les codes PIN du personnel →</Link>
-      </p>
-    </div>
-  )
 }
 
 /* ── shared status banner ────────────────────────────────────────── */

@@ -190,3 +190,49 @@ export async function declineRedemption(businessId: string, code: string): Promi
     return { ok: false, error: 'server' }
   }
 }
+
+export interface CaisseReward {
+  id: string
+  label: string
+  points_cost: number
+  image_url: string | null
+}
+
+/** Active rewards for the caisse "échanger au comptoir" picker. */
+export async function listActiveRewards(businessId: string): Promise<CaisseReward[]> {
+  try {
+    const supabase: any = await createServiceRoleClient()
+    const { data, error } = await supabase
+      .from('loyalty_rewards')
+      .select('id, label, points_cost, image_url')
+      .eq('business_id', businessId)
+      .eq('active', true)
+      .order('points_cost', { ascending: true })
+    if (error || !data) return []
+    return data as CaisseReward[]
+  } catch {
+    return []
+  }
+}
+
+export type CounterRedeemResult =
+  | { ok: true; rewardLabel: string; pointsCost: number; balance: number }
+  | { ok: false; error: string; missing?: number; balance?: number }
+
+/** Redeem a reward for a present customer at the counter — atomic balance-check
+ *  + debit, no pending code (handed over on the spot). */
+export async function redeemAtCounter(businessId: string, phone: string, rewardId: string): Promise<CounterRedeemResult> {
+  try {
+    const supabase: any = await createServiceRoleClient()
+    const { data, error } = await supabase.rpc('redeem_at_counter', { p_business: businessId, p_phone: phone, p_reward_id: rewardId })
+    if (error) {
+      if (isMissingRpc(error)) return { ok: false, error: 'setup' }
+      console.error('redeem_at_counter rpc:', error.message)
+      return { ok: false, error: 'server' }
+    }
+    return (data as CounterRedeemResult) ?? { ok: false, error: 'server' }
+  } catch (e: any) {
+    console.error('redeemAtCounter:', e?.message)
+    return { ok: false, error: 'server' }
+  }
+}

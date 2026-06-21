@@ -122,6 +122,9 @@ begin
     begin
       select * into v_business from public.businesses where slug = p_slug and status = 'active' limit 1;
       if v_business.id is not null then
+        -- Serialize per (business, phone) — same lock award_points/play_game take — so a
+        -- signup racing a first caisse award can't double-grant the welcome bonus.
+        perform pg_advisory_xact_lock(hashtext(v_business.id::text || '|' || p_phone));
         select coalesce(lp.welcome_points, 0) into v_welcome
           from public.loyalty_programs lp where lp.business_id = v_business.id and lp.active = true;
         if coalesce(v_welcome, 0) > 0

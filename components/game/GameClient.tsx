@@ -698,21 +698,16 @@ function WinModal({
 }
 
 /* ── Next-spin countdown — counts to the server's nextPlayAt (rolling cooldown).
-   Falls back to the local midnight guess only when the server didn't send one
-   (e.g. the play_game RPC hasn't been updated yet). ── */
-function msUntilTunisReset(): number {
-  const now = new Date()
-  const tunisNow = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Tunis' }))
-  const mid = new Date(tunisNow)
-  mid.setHours(24, 0, 0, 0)
-  return Math.max(0, mid.getTime() - tunisNow.getTime())
-}
-function msUntilNext(until?: string | null): number {
+   When the server didn't send one (e.g. the play_game RPC hasn't been updated
+   yet) there's no precise time to count to: the cooldown is a ROLLING window,
+   never a calendar-midnight reset, so we show a generic "come back later"
+   message instead of a misleading midnight countdown. ── */
+function msUntilNext(until?: string | null): number | null {
   if (until) {
     const t = new Date(until).getTime()
     if (Number.isFinite(t)) return Math.max(0, t - Date.now())
   }
-  return msUntilTunisReset()
+  return null
 }
 function fmtCountdown(ms: number): string {
   const s = Math.floor(ms / 1000)
@@ -724,13 +719,25 @@ function fmtCountdown(ms: number): string {
   return `${sec}s`
 }
 function NextSpinCountdown({ accent, until = null, compact = false }: { accent: string; until?: string | null; compact?: boolean }) {
-  const [ms, setMs] = useState<number | null>(null)
+  // undefined → not yet computed (hide); null → no precise time (rolling
+  // cooldown, server sent nothing) → show a generic message, no countdown.
+  const [ms, setMs] = useState<number | null | undefined>(undefined)
   useEffect(() => {
     setMs(msUntilNext(until))
     const id = setInterval(() => setMs(msUntilNext(until)), 1000)
     return () => clearInterval(id)
   }, [until])
-  if (ms === null) return null
+  if (ms === undefined) return null
+  if (ms === null) {
+    if (compact) {
+      return <p className="mt-3 text-center text-xs text-[#8A8178]">Revenez plus tard pour rejouer&nbsp;!</p>
+    }
+    return (
+      <div className="mt-5 rounded-2xl border bg-white px-4 py-4 text-center" style={{ borderColor: '#ECE7DF', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+        <p className="text-sm font-medium text-[#1B1714]">Revenez plus tard pour rejouer&nbsp;!</p>
+      </div>
+    )
+  }
   if (compact) {
     return (
       <p className="mt-3 text-center text-xs text-[#8A8178]">

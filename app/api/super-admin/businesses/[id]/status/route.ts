@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { requireSuperAdmin } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { businessCacheTag } from '@/lib/db/business'
 
 /**
  * Suspend or reactivate a business WITHOUT touching its expiry.
@@ -45,6 +47,11 @@ export async function PATCH(
     if (!data) {
       return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }
+
+    // The public menu is cached by slug — bust it so pause/reactivate shows live.
+    try {
+      revalidateTag(businessCacheTag(data.slug), 'max')
+    } catch {}
 
     return NextResponse.json({ data })
   } catch (error: any) {

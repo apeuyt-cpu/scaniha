@@ -592,19 +592,26 @@ function BoutiqueTab(props: { session: DinerSession | null; businessName: string
 
 /* ── Cooldown (blocked state) ────────────────────────────────────────────────── */
 function Cooldown({ accent, until }: { accent: string; until: string | null }) {
-  const [ms, setMs] = useState<number | null>(null)
+  // undefined → not computed yet (hide); null → no precise time → generic message.
+  const [ms, setMs] = useState<number | null | undefined>(undefined)
   useEffect(() => { setMs(msUntilNext(until)); const id = setInterval(() => setMs(msUntilNext(until)), 1000); return () => clearInterval(id) }, [until])
-  if (ms === null) return null
+  if (ms === undefined) return null
   return (
     <div className="w-full rounded-[20px] bg-white p-6 text-center" style={{ boxShadow: SOFT }}>
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}1a`, color: accent }} aria-hidden="true">
         <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
       </div>
       <h2 className="mt-3 text-lg font-bold" style={{ color: INK }}>Vous avez déjà joué</h2>
-      <p className="mx-auto mt-1 max-w-[16rem] text-sm leading-relaxed" style={{ color: MUT }}>Revenez après le compte à rebours pour retenter votre chance.</p>
+      <p className="mx-auto mt-1 max-w-[16rem] text-sm leading-relaxed" style={{ color: MUT }}>Revenez plus tard pour retenter votre chance.</p>
       <div className="mt-4 rounded-2xl px-4 py-3.5" style={{ background: '#FAF8F5' }}>
-        <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: MUT }}>Prochaine partie dans</p>
-        <p className="mt-0.5 text-[32px] font-bold leading-none tabular-nums" style={{ color: accent }}>{fmtCountdown(ms)}</p>
+        {ms === null ? (
+          <p className="text-sm font-medium" style={{ color: INK }}>Revenez plus tard&nbsp;!</p>
+        ) : (
+          <>
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: MUT }}>Prochaine partie dans</p>
+            <p className="mt-0.5 text-[32px] font-bold leading-none tabular-nums" style={{ color: accent }}>{fmtCountdown(ms)}</p>
+          </>
+        )}
       </div>
     </div>
   )
@@ -636,14 +643,22 @@ function WinModal({ result, accent, gradient, copied, onCopy, onClose, onSeeCard
   )
 }
 
-/* ── Countdown ───────────────────────────────────────────────────────────────── */
-function msUntilTunisReset(): number { const now = new Date(); const tunisNow = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Tunis' })); const mid = new Date(tunisNow); mid.setHours(24, 0, 0, 0); return Math.max(0, mid.getTime() - tunisNow.getTime()) }
-function msUntilNext(until?: string | null): number { if (until) { const t = new Date(until).getTime(); if (Number.isFinite(t)) return Math.max(0, t - Date.now()) } return msUntilTunisReset() }
+/* ── Countdown — counts to the server's rolling nextPlayAt. No `until` means no
+   precise time (the cooldown is a ROLLING window, never a calendar-midnight
+   reset), so show a generic "come back later" instead of a misleading midnight
+   countdown. ── */
+function msUntilNext(until?: string | null): number | null { if (until) { const t = new Date(until).getTime(); if (Number.isFinite(t)) return Math.max(0, t - Date.now()) } return null }
 function fmtCountdown(ms: number): string { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60; if (h > 0) return `${h}h ${m.toString().padStart(2, '0')}m`; if (m > 0) return `${m}m ${sec.toString().padStart(2, '0')}s`; return `${sec}s` }
 function NextSpinCountdown({ accent, until = null }: { accent: string; until?: string | null }) {
-  const [ms, setMs] = useState<number | null>(null)
+  // undefined → not computed yet (hide); null → no precise time → generic message.
+  const [ms, setMs] = useState<number | null | undefined>(undefined)
   useEffect(() => { setMs(msUntilNext(until)); const id = setInterval(() => setMs(msUntilNext(until)), 1000); return () => clearInterval(id) }, [until])
-  if (ms === null) return null
+  if (ms === undefined) return null
+  if (ms === null) return (
+    <div className="mt-5 rounded-[18px] bg-white px-4 py-4 text-center" style={{ boxShadow: SOFT }}>
+      <p className="text-sm font-medium" style={{ color: INK }}>Revenez plus tard pour rejouer&nbsp;!</p>
+    </div>
+  )
   return (
     <div className="mt-5 rounded-[18px] bg-white px-4 py-4 text-center" style={{ boxShadow: SOFT }}>
       <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: MUT }}>Prochaine partie dans</p>

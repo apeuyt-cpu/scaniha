@@ -65,9 +65,18 @@ export default function RouletteWheel({
     const center = targetIndex * seg + seg / 2
     const turns = 6 * 360
     const jitter = (Math.random() - 0.5) * seg * 0.4
+    // Resting angle the wheel must end on for this target (0..360).
+    const rest = (((360 - center + jitter) % 360) + 360) % 360
     setTimeout(() => {
       setLanded(false)
-      setRotation(turns + (360 - center) + jitter)
+      // Accumulate FORWARD from the current rotation: keep state monotonic so a
+      // replay never animates backward (or barely moves, which would skip the
+      // transition and leave the phase stuck on "spinning"). forwardDelta lands
+      // on the same resting angle, then +turns guarantees ~6 forward turns.
+      setRotation((current) => {
+        const forwardDelta = (((rest - current) % 360) + 360) % 360
+        return current + forwardDelta + turns
+      })
     }, 30)
   }
   if (!spinning && spunRef.current) spunRef.current = false

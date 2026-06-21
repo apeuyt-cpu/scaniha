@@ -524,7 +524,19 @@ begin
       return jsonb_build_object('found', true, 'kind', 'win', 'status', 'valid',
         'label', v_win.prize_label, 'customerPhone', v_win.customer_phone, 'expiresAt', v_win.expires_at);
     else
-      update public.wins set status = 'redeemed', redeemed_at = now() where id = v_win.id;
+      update public.wins set status = 'redeemed', redeemed_at = now()
+        where id = v_win.id and status = 'pending';
+      if not found then
+        -- Lost the race (already collected / expired). Report the real status.
+        select * into v_win from public.wins where id = v_win.id;
+        if v_win.status = 'redeemed' then
+          return jsonb_build_object('found', true, 'kind', 'win', 'status', 'already',
+            'label', v_win.prize_label, 'customerPhone', v_win.customer_phone, 'redeemedAt', v_win.redeemed_at);
+        else
+          return jsonb_build_object('found', true, 'kind', 'win', 'status', 'expired',
+            'label', v_win.prize_label, 'customerPhone', v_win.customer_phone);
+        end if;
+      end if;
       return jsonb_build_object('found', true, 'kind', 'win', 'status', 'redeemed',
         'label', v_win.prize_label, 'customerPhone', v_win.customer_phone);
     end if;
@@ -540,14 +552,41 @@ begin
       return jsonb_build_object('found', true, 'kind', 'reward', 'status', 'cancelled',
         'label', v_red.reward_label, 'customerPhone', v_red.customer_phone);
     elsif v_red.expires_at < now() then
-      if p_redeem then update public.loyalty_redemptions set status = 'expired' where id = v_red.id and status = 'pending'; end if;
+      if p_redeem then
+        -- Serialize per (business, phone) so the refund can't race a concurrent op.
+        perform pg_advisory_xact_lock(hashtext(p_business::text || '|' || coalesce(v_red.customer_phone, '')));
+        update public.loyalty_redemptions set status = 'expired' where id = v_red.id and status = 'pending';
+        if found then
+          -- Refund the points debited at redeem time (parity with decline_redemption).
+          insert into public.points_ledger (business_id, customer_phone, delta, reason, note)
+            values (p_business, v_red.customer_phone, v_red.points_cost, 'adjust', 'Récompense expirée — remboursement');
+        end if;
+      end if;
       return jsonb_build_object('found', true, 'kind', 'reward', 'status', 'expired',
         'label', v_red.reward_label, 'customerPhone', v_red.customer_phone);
     elsif not p_redeem then
       return jsonb_build_object('found', true, 'kind', 'reward', 'status', 'valid',
         'label', v_red.reward_label, 'customerPhone', v_red.customer_phone, 'pointsCost', v_red.points_cost, 'expiresAt', v_red.expires_at);
     else
-      update public.loyalty_redemptions set status = 'redeemed', redeemed_at = now() where id = v_red.id;
+      -- Serialize per (business, phone) so collect can't double-fire or race an approve-vs-decline.
+      perform pg_advisory_xact_lock(hashtext(p_business::text || '|' || coalesce(v_red.customer_phone, '')));
+      update public.loyalty_redemptions set status = 'redeemed', redeemed_at = now()
+        where id = v_red.id and status = 'pending';
+      if not found then
+        -- Lost the race (already collected / cancelled+refunded / expired). Re-read the
+        -- real status and report it instead of falsely claiming a fresh redemption.
+        select * into v_red from public.loyalty_redemptions where id = v_red.id;
+        if v_red.status = 'redeemed' then
+          return jsonb_build_object('found', true, 'kind', 'reward', 'status', 'already',
+            'label', v_red.reward_label, 'customerPhone', v_red.customer_phone, 'redeemedAt', v_red.redeemed_at, 'pointsCost', v_red.points_cost);
+        elsif v_red.status = 'cancelled' then
+          return jsonb_build_object('found', true, 'kind', 'reward', 'status', 'cancelled',
+            'label', v_red.reward_label, 'customerPhone', v_red.customer_phone, 'pointsCost', v_red.points_cost);
+        else
+          return jsonb_build_object('found', true, 'kind', 'reward', 'status', 'expired',
+            'label', v_red.reward_label, 'customerPhone', v_red.customer_phone, 'pointsCost', v_red.points_cost);
+        end if;
+      end if;
       return jsonb_build_object('found', true, 'kind', 'reward', 'status', 'redeemed',
         'label', v_red.reward_label, 'customerPhone', v_red.customer_phone, 'pointsCost', v_red.points_cost);
     end if;

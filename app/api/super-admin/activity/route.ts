@@ -110,6 +110,46 @@ export async function POST(request: NextRequest) {
       const table = String(body.table || '')
       const id = String(body.id || '')
       if (!DELETABLE.has(table) || !id) return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 })
+
+      // Raw-deleting a single points_ledger row unbalances a customer's balance
+      // (every credit/debit is meaningful). Refuse — use "Ajuster les points" to
+      // post a compensating entry instead, which keeps a full audit trail.
+      if (table === 'points_ledger') {
+        return NextResponse.json({
+          error: "Suppression d'une écriture de points interdite (elle déséquilibrerait le solde du client). Utilisez « Ajuster les points » pour publier une écriture compensatoire.",
+        }, { status: 400 })
+      }
+
+      // Deleting a loyalty_redemptions row leaves its paired points_ledger
+      // 'redeem' debit behind → the customer stays permanently short the
+      // points_cost. Before deleting, refund those points UNLESS the redemption
+      // was already refunded (decline_redemption marks such rows 'cancelled' and
+      // posts the +points_cost refund), so we'd double-credit.
+      if (table === 'loyalty_redemptions') {
+        const { data: red, error: redErr } = await sb
+          .from('loyalty_redemptions')
+          .select('business_id, customer_phone, points_cost, reward_label, status')
+          .eq('id', id)
+          .maybeSingle()
+        if (redErr) throw redErr
+        if (!red) return NextResponse.json({ error: 'Échange introuvable.' }, { status: 404 })
+
+        const cost = Number(red.points_cost)
+        // 'cancelled' (decline) AND 'expired' redemptions have ALREADY posted a
+        // +points_cost refund, so refunding again on delete would double-credit.
+        const alreadyRefunded = red.status === 'cancelled' || red.status === 'expired'
+        if (cost > 0 && !alreadyRefunded) {
+          const { error: refundErr } = await sb.from('points_ledger').insert({
+            business_id: red.business_id,
+            customer_phone: red.customer_phone,
+            delta: cost,
+            reason: 'adjust',
+            note: `Échange supprimé (super-admin) — remboursement : ${red.reward_label}`,
+          })
+          if (refundErr) throw refundErr
+        }
+      }
+
       const { error } = await sb.from(table).delete().eq('id', id)
       if (error) throw error
       return NextResponse.json({ ok: true })

@@ -37,7 +37,7 @@ returns jsonb language sql stable security definer set search_path = public, ext
            else 0 end                                                            as balance,
       (select count(*)::int from public.wins w
         where w.business_id = b.id and w.customer_phone = p_phone
-          and w.status = 'active' and w.expires_at > now())                     as active_wins
+          and w.status = 'pending' and w.expires_at > now())                    as active_wins
     from public.businesses b
     where b.status = 'active'
       -- fidelity must be LIVE (mirror isFidelityLive in lib/design-settings.ts)

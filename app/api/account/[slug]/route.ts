@@ -35,6 +35,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     // Strict HTTP throttle (the 4-digit PIN space is tiny; middleware skips /api).
     const ipLimit = checkRateLimit('signup-ip:' + ip, { perMinute: 5, perDay: 50 })
     if (!ipLimit.ok) return tooMany(ipLimit.retryAfter)
+    // Per-phone cap too, so a rotating-IP actor can't spam-signup or squat a number
+    // (digit-keyed to dodge format tricks). Pairs with the per-(business,phone) DB controls.
+    const phoneKey = String(body.phone || '').replace(/[^\d]/g, '')
+    if (phoneKey) {
+      const phoneLimit = checkRateLimit('signup-phone:' + phoneKey, { perMinute: 3, perDay: 15 })
+      if (!phoneLimit.ok) return tooMany(phoneLimit.retryAfter)
+    }
     const r = await dinerSignup(String(body.phone || ''), String(body.password || ''), body.name ? String(body.name) : undefined, slug)
     return NextResponse.json(r, { status: r.ok ? 200 : 400 })
   }

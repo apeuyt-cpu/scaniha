@@ -66,7 +66,7 @@ export default function DevisGenerator({ businesses }: { businesses: Biz[] }) {
   const [devisNo, setDevisNo] = useState('')
   const [dateStr, setDateStr] = useState('')
   const [validityDays, setValidityDays] = useState(0)
-  // Items — default to the standard offer (À vie + 20 supports offerts)
+  // Items — default to the standard offer (À vie + 15 supports offerts)
   const [plan, setPlan] = useState<PlanId | ''>('lifetime')
   const [stands, setStands] = useState<Stand[]>([{ id: 'support-default', name: 'Présentoir QR de table', unit: 8, qty: 15, free: true, note: '' }])
   const [extraStandCost, setExtraStandCost] = useState(8)
@@ -110,7 +110,7 @@ export default function DevisGenerator({ businesses }: { businesses: Biz[] }) {
     setCustom((c) => c.map((x) => (x.id === id ? { ...x, ...patch } : x)))
   const removeCustom = (id: string) => setCustom((c) => c.filter((x) => x.id !== id))
 
-  // One-tap preset: the standard offer (lifetime + 20 free supports, 8 TND each
+  // One-tap preset: the standard offer (lifetime + 15 free supports, 8 TND each
   // beyond, payable in 2×). Leaves the client + header untouched so you just type
   // the name and print.
   const applyOffer = () => {
@@ -166,14 +166,14 @@ export default function DevisGenerator({ businesses }: { businesses: Biz[] }) {
       <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* ─────────── Controls (never printed) ─────────── */}
         <div className="no-print space-y-4">
-          {/* One-tap preset — the standard "à vie + 20 supports offerts" offer */}
+          {/* One-tap preset — the standard "à vie + 15 supports offerts" offer */}
           <button
             type="button"
             onClick={applyOffer}
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" /></svg>
-            Offre type — À vie + 20 supports offerts
+            Offre type — À vie + 15 supports offerts
           </button>
 
           {/* Client */}

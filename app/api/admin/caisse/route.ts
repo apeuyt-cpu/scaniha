@@ -86,20 +86,28 @@ export async function POST(request: Request) {
       const pinsRequired = await businessHasStaffPins(business.id)
       if (pinsRequired) {
         if (!pin) return NextResponse.json({ error: 'Code PIN requis.', code: 'PIN_REQUIRED' }, { status: 401 })
-        // Review fix #3.3 — throttle PIN guesses per café so a 4-6 digit PIN can't be
-        // brute-forced. Separate key from the check/validate limiter (do not share budget).
-        const rlPin = checkRateLimit(`caisse:award:pin:${business.id}`)
-        if (!rlPin.ok) {
-          return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
-            { status: 429, headers: { 'Retry-After': String(rlPin.retryAfter) } })
-        }
         const okPin = await verifyStaffPin(business.id, pin)
-        if (!okPin) return NextResponse.json({ error: 'Code PIN incorrect.', code: 'PIN_INVALID' }, { status: 401 })
+        if (!okPin) {
+          // Throttle WRONG guesses only: a correct PIN never consumes budget, so a
+          // busy café is never blocked, while a brute-forcer is locked after a few
+          // misses. Strict cap caps a 4-digit (10k) space at ~50 tries/day.
+          const rlPin = checkRateLimit(`caisse:award:pinfail:${business.id}`, { perMinute: 5, perDay: 50 })
+          if (!rlPin.ok) {
+            return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
+              { status: 429, headers: { 'Retry-After': String(rlPin.retryAfter) } })
+          }
+          return NextResponse.json({ error: 'Code PIN incorrect.', code: 'PIN_INVALID' }, { status: 401 })
+        }
       }
       const note = typeof body.note === 'string' ? body.note.slice(0, 120) : `Achat de ${amount} TND`
-      // Replay guard: a retried/double-submitted identical award (same café +
-      // phone + amount) replays the original success instead of crediting twice.
-      const dedupKey = `award:${business.id}:${phone}:${amount}`
+      // Replay guard: a network retry of the SAME submit (same per-click
+      // idemKey) replays the original success instead of crediting twice. A
+      // deliberate repeat purchase carries a FRESH idemKey, so an identical
+      // café+phone+amount within the window is still credited (the bug this
+      // fixes). If a legacy/missing key, fall back to the meaningful fields so
+      // the guard still collapses true retries.
+      const idemKey = typeof body.idemKey === 'string' && body.idemKey ? body.idemKey : `${phone}:${amount}`
+      const dedupKey = `award:${business.id}:${phone}:${amount}:${idemKey}`
       const replayed = takeRecentAward(dedupKey)
       if (replayed) return NextResponse.json(replayed)
       const result = await awardPoints(business.id, phone, amount, note)
@@ -138,13 +146,17 @@ export async function POST(request: Request) {
       const pinsRequired = await businessHasStaffPins(business.id)
       if (pinsRequired) {
         if (!pin) return NextResponse.json({ error: 'Code PIN requis.', code: 'PIN_REQUIRED' }, { status: 401 })
-        const rlPin = checkRateLimit(`caisse:redeem:pin:${business.id}`)
-        if (!rlPin.ok) {
-          return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
-            { status: 429, headers: { 'Retry-After': String(rlPin.retryAfter) } })
-        }
         const okPin = await verifyStaffPin(business.id, pin)
-        if (!okPin) return NextResponse.json({ error: 'Code PIN incorrect.', code: 'PIN_INVALID' }, { status: 401 })
+        if (!okPin) {
+          // Throttle WRONG guesses only (same design as 'award') — busy cafés are
+          // never blocked, brute-force is capped at ~50/day per café.
+          const rlPin = checkRateLimit(`caisse:redeem:pinfail:${business.id}`, { perMinute: 5, perDay: 50 })
+          if (!rlPin.ok) {
+            return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
+              { status: 429, headers: { 'Retry-After': String(rlPin.retryAfter) } })
+          }
+          return NextResponse.json({ error: 'Code PIN incorrect.', code: 'PIN_INVALID' }, { status: 401 })
+        }
       }
       const result = await redeemAtCounter(business.id, phone, rewardId)
       if (!result.ok) {

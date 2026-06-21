@@ -116,7 +116,13 @@ export async function POST(request: Request) {
         if (error) throw error
         prizes = await fetchPrizes()
       }
-      const since = new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
+      // "Aujourd'hui" = Tunis day (UTC+1, no DST), not the server/UTC day.
+      // Shift now by +1h into Tunis local, floor to that local midnight via the
+      // UTC date parts, then shift the boundary back by 1h to get the UTC instant.
+      const nowMs = Date.now()
+      const tunis = new Date(nowMs + 60 * 60 * 1000)
+      const tunisMidnightUtcMs = Date.UTC(tunis.getUTCFullYear(), tunis.getUTCMonth(), tunis.getUTCDate()) - 60 * 60 * 1000
+      const since = new Date(tunisMidnightUtcMs).toISOString()
       const [pending, claimedToday] = await Promise.all([
         supabase.from('admin_roulette_wins').select('id', { count: 'exact', head: true }).eq('business_id', business.id).eq('status', 'pending'),
         supabase.from('admin_roulette_wins').select('id', { count: 'exact', head: true }).eq('business_id', business.id).eq('status', 'claimed').gte('claimed_at', since),
@@ -210,13 +216,23 @@ export async function POST(request: Request) {
       }
       const { data: win } = await supabase
         .from('admin_roulette_wins')
-        .select('id, business_id')
+        .select('id, business_id, status')
         .eq('id', String(body.winId || ''))
         .maybeSingle()
       if (!win || win.business_id !== business.id) return NextResponse.json({ error: 'Gain introuvable.' }, { status: 404 })
+      // Re-confirming an already-claimed win is a no-op: don't restamp claimed_at,
+      // which would double-count it in claimedToday. Only stamp claimed_at on the
+      // transition INTO claimed from a non-claimed status; leave it untouched when
+      // staying claimed, and clear it when moving away from claimed.
+      const patch: Record<string, any> =
+        status === 'claimed'
+          ? win.status === 'claimed'
+            ? { status }
+            : { status, claimed_at: new Date().toISOString() }
+          : { status, claimed_at: null }
       const { error } = await supabase
         .from('admin_roulette_wins')
-        .update({ status, claimed_at: status === 'claimed' ? new Date().toISOString() : null })
+        .update(patch)
         .eq('id', body.winId)
       if (error) throw error
       return NextResponse.json({ ok: true })

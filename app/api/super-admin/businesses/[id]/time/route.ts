@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { requireSuperAdmin } from '@/lib/auth'
 import { createServiceRoleClient, createServerClient } from '@/lib/supabase/server'
+import { businessCacheTag } from '@/lib/db/business'
 
 /**
  * Update a business's subscription expiry — NEVER destroys paid time.
@@ -105,6 +107,11 @@ export async function PATCH(
         { status: 500 }
       )
     }
+
+    // The public menu is cached by slug — bust it so extend/expiry shows live.
+    try {
+      revalidateTag(businessCacheTag(data.slug), 'max')
+    } catch {}
 
     return NextResponse.json({ data })
   } catch (error: any) {

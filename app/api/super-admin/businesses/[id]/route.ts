@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { requireSuperAdmin } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { businessCacheTag } from '@/lib/db/business'
 
 export async function DELETE(
   request: NextRequest,
@@ -27,7 +29,7 @@ export async function DELETE(
     // Fetch the business to verify it exists and to validate the typed name.
     const { data: business, error: fetchError } = await (supabase
       .from('businesses') as any)
-      .select('id, name, logo_url, owner_id')
+      .select('id, name, slug, logo_url, owner_id')
       .eq('id', id)
       .single()
 
@@ -89,6 +91,11 @@ export async function DELETE(
         { status: 500 }
       )
     }
+
+    // The public menu is cached by slug — bust it so the deleted café drops live.
+    try {
+      revalidateTag(businessCacheTag(business.slug), 'max')
+    } catch {}
 
     return NextResponse.json({
       success: true,

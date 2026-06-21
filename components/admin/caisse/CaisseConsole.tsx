@@ -101,7 +101,12 @@ function CustomerConsole() {
     const amt = Number(amount)
     if (!amt || amt <= 0) { setMsg({ tone: 'red', text: 'Saisissez un montant valide.' }); return }
     setCreditBusy(true); setMsg(null)
-    const { ok, json } = await caisse('award', { phone: data.phone, amount: amt, pin })
+    // Fresh per-click key: a network retry of THIS submit reuses it (server
+    // collapses the replay, no double credit); a deliberate repeat purchase is
+    // a new click → new key → credited again. crypto.randomUUID is available in
+    // every browser this admin runs in (secure-context only, which /admin is).
+    const idemKey = crypto.randomUUID()
+    const { ok, json } = await caisse('award', { phone: data.phone, amount: amt, pin, idemKey })
     setCreditBusy(false)
     if (!ok || !json.ok) { setMsg({ tone: 'red', text: json.error || 'Erreur.' }); return }
     const welcome = json.welcomeAdded ? ` (+${json.welcomeAdded} bienvenue)` : ''

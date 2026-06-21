@@ -158,7 +158,7 @@ export default function LoyaltyClient({ slug }: { slug: string }) {
       const res = await fetch(`/api/loyalty/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, rewardId: reward.id }),
+        body: JSON.stringify({ phone, rewardId: reward.id, token: token ?? readToken(slug) }),
       })
       const j = await res.json()
       if (!res.ok || !j.success) throw new Error(j.error || 'Échange impossible')

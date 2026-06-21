@@ -34,13 +34,33 @@ export async function GET() {
       return c || 0
     }
 
+    // Customers = DISTINCT customer_phone across this café's activity tables. Under
+    // global identity, diner_accounts.business_id is only the ORIGIN café and
+    // caisse-credited phones may have no account row, so counting accounts
+    // miscounts. Union the phones from points_ledger / wins / plays instead.
+    const distinctPhones = async (sinceIso?: string) => {
+      const phones = new Set<string>()
+      const tables = ['points_ledger', 'wins', 'plays']
+      await Promise.all(
+        tables.map(async (table) => {
+          let q = sb.from(table).select('customer_phone').eq('business_id', bid)
+          if (sinceIso) q = q.gte('created_at', sinceIso)
+          const { data } = await q
+          ;(data || []).forEach((row: any) => {
+            if (row.customer_phone) phones.add(row.customer_phone)
+          })
+        })
+      )
+      return phones.size
+    }
+
     const [playsToday, playsWeek, winsPending, redemptionsPending, dinersTotal, dinersWeek, purchasesWeek] = await Promise.all([
       count('plays', (q: any) => q.gte('created_at', dayAgo)),
       count('plays', (q: any) => q.gte('created_at', weekAgo)),
       count('wins', (q: any) => q.eq('status', 'pending')),
       count('loyalty_redemptions', (q: any) => q.eq('status', 'pending')),
-      count('diner_accounts'),
-      count('diner_accounts', (q: any) => q.gte('created_at', weekAgo)),
+      distinctPhones(),
+      distinctPhones(weekAgo),
       count('points_ledger', (q: any) => q.eq('reason', 'purchase').gte('created_at', weekAgo)),
     ])
 

@@ -16,6 +16,16 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export const STORAGE_BUCKET = 'menu-images'
 
+// Decompression-bomb guard: cap the decoded pixel surface sharp will accept
+// (~24MP ≈ a 6000×4000 photo). A small file can decode into gigabytes of raw
+// pixels; this bounds the CPU/RAM cost regardless of the on-disk byte size.
+const MAX_INPUT_PIXELS = 24_000_000
+
+// Raster formats we trust to decode + re-encode. The real format comes from
+// sharp metadata, NOT the client-supplied MIME, so a forged Content-Type can't
+// smuggle an unsupported/animated payload past us.
+const ALLOWED_RASTER_FORMATS = new Set(['jpeg', 'png', 'webp', 'avif'])
+
 /**
  * Per-folder optimization profiles. `max` is the long-edge cap in px — the
  * single biggest lever on file size; `webp`/`avif` are encoder qualities
@@ -58,22 +68,18 @@ interface Encoded {
 }
 
 /**
- * Re-encode to the smallest of AVIF / WebP (WebP only for animated GIFs and
- * profiles with avif:null). Rotates by EXIF, downscales to the folder profile's
- * max edge, strips metadata. High `effort` squeezes out extra bytes at no
- * quality cost — uploads are infrequent, so the slower encode is worth it.
+ * Re-encode to the smallest of AVIF / WebP (WebP only for profiles with
+ * avif:null). Rotates by EXIF, downscales to the folder profile's max edge,
+ * strips metadata. High `effort` squeezes out extra bytes at no quality cost —
+ * uploads are infrequent, so the slower encode is worth it. `limitInputPixels`
+ * caps the decoded surface to reject decompression bombs.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function encodeOptimized(input: Buffer, mime: string, folder: string): Promise<Encoded> {
   const { max, webp: webpQ, avif: avifQ } = profileFor(folder)
-  const animated = mime === 'image/gif'
-  const base = sharp(input, { animated, limitInputPixels: 64_000_000 })
+  const base = sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'truncated' })
     .rotate()
     .resize({ width: max, height: max, fit: 'inside', withoutEnlargement: true })
-
-  if (animated) {
-    const buf = await base.webp({ quality: 68, effort: 4 }).toBuffer()
-    return { buf, ext: 'webp', contentType: 'image/webp' }
-  }
 
   const webp = await base.clone().webp({ quality: webpQ, effort: 6, smartSubsample: true }).toBuffer()
   if (avifQ != null) {
@@ -98,7 +104,14 @@ export function sanitizeFolder(folder: unknown): string {
 
 export async function optimizeAndStore(input: Buffer, mime: string, folder: string): Promise<StoredImage> {
   const safeFolder = sanitizeFolder(folder)
-  const meta = await sharp(input, { limitInputPixels: 64_000_000 }).metadata()
+  // Reading metadata under the pixel budget both rejects decompression bombs
+  // (sharp throws past limitInputPixels) and reveals the REAL format — we trust
+  // sharp's detection, not the client-supplied MIME, and reject anything that
+  // isn't an allowed raster type before spending CPU on the re-encode.
+  const meta = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'truncated' }).metadata()
+  if (!meta.format || !ALLOWED_RASTER_FORMATS.has(meta.format)) {
+    throw new Error('Format d’image non supporté.')
+  }
   const { buf, ext, contentType } = await encodeOptimized(input, mime, safeFolder)
   const path = `${safeFolder}/${randomUUID()}.${ext}`
 

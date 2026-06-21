@@ -46,7 +46,9 @@ export default function RewardsStore({
     setError(null)
     setRescan(null)
     try {
-      const q = session?.phone ? `?phone=${encodeURIComponent(session.phone)}` : ''
+      // Token authorizes the private summary (balance) for this phone; without a
+      // session we fetch the public rewards list only.
+      const q = session?.phone ? `?phone=${encodeURIComponent(session.phone)}&token=${encodeURIComponent(session.token)}` : ''
       const res = await fetch(`/api/loyalty/${slug}${q}`)
       const cfg = await res.json()
       setRewards(cfg?.active ? cfg.rewards || [] : [])
@@ -56,7 +58,7 @@ export default function RewardsStore({
     } finally {
       setLoading(false)
     }
-  }, [slug, session?.phone])
+  }, [slug, session?.phone, session?.token])
 
   useEffect(() => { load() }, [load])
 

@@ -7,16 +7,7 @@ export async function POST(request: NextRequest) {
     await requireSuperAdmin()
     
     const supabase = await createServiceRoleClient()
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    
-    if (!serviceRoleKey || !supabaseUrl) {
-      return NextResponse.json(
-        { error: 'Configuration du serveur incomplète.' },
-        { status: 500 }
-      )
-    }
-    
+
     // Get all businesses to find owner IDs
     const { data: businesses, error: businessesError } = await (supabase
       .from('businesses') as any)
@@ -58,37 +49,39 @@ export async function POST(request: NextRequest) {
     let synced = 0
     const errors: string[] = []
     
-    // Use REST API directly to fetch users
+    // Fetch users via the SDK admin client (key stays inside the client,
+    // never placed in a header we also stringify into an error).
     try {
-      // Use the Management API endpoint
-      const authUrl = `${supabaseUrl}/auth/v1/admin/users`
-      
-      // Fetch all users using REST API
-      const response = await fetch(authUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${serviceRoleKey}`,
-          'apikey': serviceRoleKey,
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Auth API error: ${response.status} - ${errorText}`)
-      }
-      
-      const usersData = await response.json()
-      const users = usersData.users || []
-      
-      console.log(`✅ Fetched ${users.length} users via REST API`)
-      
-      // Create a map of user IDs to user data
+      // Create a map of user IDs to user data, paginating through all users.
       const userMap = new Map()
-      users.forEach((user: any) => {
-        userMap.set(user.id, user)
-      })
-      
+      const perPage = 1000
+      let page = 1
+      // Hard cap on pages to avoid an unbounded loop.
+      for (let i = 0; i < 1000; i++) {
+        const { data: usersData, error: listError } = await supabase.auth.admin.listUsers({
+          page,
+          perPage,
+        })
+
+        if (listError) {
+          // Surface only the message, never headers or the raw response body.
+          throw new Error(listError.message)
+        }
+
+        const users = usersData?.users || []
+        users.forEach((user: any) => {
+          userMap.set(user.id, user)
+        })
+
+        // listUsers returns fewer than perPage on the last page.
+        if (users.length < perPage) {
+          break
+        }
+        page++
+      }
+
+      console.log(`✅ Fetched ${userMap.size} users via admin client`)
+
       // Process each owner ID
       for (const ownerId of ownerIds) {
         try {

@@ -110,7 +110,11 @@ export default function LoyaltyClient({ slug }: { slug: string }) {
   }, [slug])
 
   async function loadSummary(p: string) {
-    const res = await fetch(`/api/loyalty/${slug}?phone=${encodeURIComponent(p)}`)
+    // The session token authorizes returning the private summary for this phone
+    // (during mount, state may not have flushed yet → fall back to storage).
+    const t = token ?? readToken(slug)
+    const q = t ? `&token=${encodeURIComponent(t)}` : ''
+    const res = await fetch(`/api/loyalty/${slug}?phone=${encodeURIComponent(p)}${q}`)
     const j = await res.json()
     if (!j.active) throw new Error('Programme indisponible')
     setSummary(j.summary || { balance: 0, recent: [], activeWins: [], activeRedemptions: [] })

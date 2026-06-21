@@ -39,24 +39,41 @@ export async function PATCH(
     // Reviewer audit fields — written defensively. The columns (reviewed_by /
     // reviewed_at) may not exist yet; if the update rejects them we retry without.
     const reviewAudit = { reviewed_by: user.id, reviewed_at: new Date().toISOString() }
-    const updateRequest = async (extra: Record<string, any>) => {
-      const payload: Record<string, any> = { ...extra, ...reviewAudit }
-      let { error } = await (supabase.from('payment_requests') as any).update(payload).eq('id', id)
+    // Atomic compare-and-swap: only the request that is still `pending` flips to
+    // the target status, and we read back the affected ids. A concurrent or
+    // replayed call sees zero claimed rows (`claimed === false`) and must abort
+    // WITHOUT touching the business, so subscription time is never double-granted.
+    const claimRequest = async (
+      status: 'approved' | 'rejected',
+      extra: Record<string, any> = {}
+    ): Promise<{ claimed: boolean; error: string | null }> => {
+      const payload: Record<string, any> = { status, ...extra, ...reviewAudit }
+      let { data, error } = await (supabase.from('payment_requests') as any)
+        .update(payload)
+        .eq('id', id)
+        .eq('status', 'pending')
+        .select('id')
       if (error && /reviewed_by|reviewed_at|amount_override_reason|column/i.test(error.message || '')) {
         // Retry without the audit columns if the schema doesn't have them. The
-        // override reason rides in `extra`, so drop it here too.
+        // override reason rides in `extra`, so drop it here too. The status guard
+        // is kept so the claim stays atomic.
         const { amount_override_reason: _omit, ...extraSafe } = extra
-        const { error: error2 } = await (supabase.from('payment_requests') as any)
-          .update(extraSafe)
+        ;({ data, error } = await (supabase.from('payment_requests') as any)
+          .update({ status, ...extraSafe })
           .eq('id', id)
-        error = error2
+          .eq('status', 'pending')
+          .select('id'))
       }
-      return error
+      if (error) return { claimed: false, error: error.message }
+      return { claimed: Array.isArray(data) && data.length > 0, error: null }
     }
 
     if (action === 'reject') {
-      const error = await updateRequest({ status: 'rejected' })
-      if (error) throw new Error(error.message)
+      const { claimed, error } = await claimRequest('rejected')
+      if (error) throw new Error(error)
+      if (!claimed) {
+        return NextResponse.json({ error: 'Demande déjà traitée.' }, { status: 409 })
+      }
       return NextResponse.json({ success: true, status: 'rejected' })
     }
 
@@ -103,7 +120,19 @@ export async function PATCH(
       )
     }
 
-    // Activate the business and EXTEND its subscription by the plan duration.
+    // CLAIM the request FIRST (atomic compare-and-swap on status). If another
+    // concurrent/replayed approval already flipped it, we claim nothing and bail
+    // out BEFORE touching the business — otherwise we'd double-grant time.
+    const { claimed, error: claimErr } = await claimRequest('approved', {
+      ...(amountMismatch && overrideMismatch ? { amount_override_reason: overrideReason } : {}),
+    })
+    if (claimErr) throw new Error(claimErr)
+    if (!claimed) {
+      return NextResponse.json({ error: 'Demande déjà traitée.' }, { status: 409 })
+    }
+
+    // Only now (we own the claim) activate the business and EXTEND its
+    // subscription by the plan duration.
     const days = planDef.grantsDays
     let expires_at: string | null = null
     if (days !== null) {
@@ -123,12 +152,6 @@ export async function PATCH(
       .update({ status: 'active', expires_at })
       .eq('id', req.business_id)
     if (bizErr) throw new Error(bizErr.message)
-
-    const updErr = await updateRequest({
-      status: 'approved',
-      ...(amountMismatch && overrideMismatch ? { amount_override_reason: overrideReason } : {}),
-    })
-    if (updErr) throw new Error(updErr.message)
 
     if (amountMismatch && overrideMismatch) {
       console.warn(

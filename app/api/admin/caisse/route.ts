@@ -9,6 +9,29 @@ import { checkRateLimit } from '@/lib/api/rate-limit'
 const MAX_AWARD_TND = 5000
 
 /**
+ * Best-effort, in-process replay guard for the non-idempotent 'award' action.
+ * A retried/double-submitted POST (same café + phone + amount) would otherwise
+ * credit the points twice. We remember the result of an award keyed by its
+ * meaningful fields for a short window and, on a duplicate within that window,
+ * replay the SAME success response without re-crediting. Same constraints as
+ * lib/api/rate-limit.ts: per-PROCESS, ephemeral (resets on cold start, not
+ * shared across instances) — it collapses rapid retries, it is not a hard
+ * cross-instance guarantee. The complete fix (client idempotency-key + DB
+ * unique constraint) is deferred. checkRateLimit can't enforce 1/min (its
+ * window is fixed at 60/min), so we use a tiny dedicated map here.
+ */
+const AWARD_DEDUP_MS = 60_000
+const awardDedup = new Map<string, { at: number; result: any }>()
+function takeRecentAward(key: string): any | null {
+  const now = Date.now()
+  // Opportunistic prune so the map can't grow unbounded. (forEach, not for-of:
+  // the es5 target can't iterate a Map directly — TS2802.)
+  awardDedup.forEach((v, k) => { if (now - v.at >= AWARD_DEDUP_MS) awardDedup.delete(k) })
+  const hit = awardDedup.get(key)
+  return hit && now - hit.at < AWARD_DEDUP_MS ? hit.result : null
+}
+
+/**
  * Owner "caisse" console — one endpoint, three actions:
  *   { action: 'check', code }              → PEEK a code (no redeem) — show it first
  *   { action: 'validate', code }          → redeem/collect (= APPROVE) a win OR reward code
@@ -72,11 +95,17 @@ export async function POST(request: Request) {
         if (!okPin) return NextResponse.json({ error: 'Code PIN incorrect.', code: 'PIN_INVALID' }, { status: 401 })
       }
       const note = typeof body.note === 'string' ? body.note.slice(0, 120) : `Achat de ${amount} TND`
+      // Replay guard: a retried/double-submitted identical award (same café +
+      // phone + amount) replays the original success instead of crediting twice.
+      const dedupKey = `award:${business.id}:${phone}:${amount}`
+      const replayed = takeRecentAward(dedupKey)
+      if (replayed) return NextResponse.json(replayed)
       const result = await awardPoints(business.id, phone, amount, note)
       if (!result.ok) {
         const msg = result.error === 'no_program' ? 'Activez d’abord le programme de fidélité.' : 'Crédit momentanément indisponible.'
         return NextResponse.json({ error: msg }, { status: result.error === 'no_program' ? 409 : 500 })
       }
+      awardDedup.set(dedupKey, { at: Date.now(), result })
       return NextResponse.json(result)
     }
 

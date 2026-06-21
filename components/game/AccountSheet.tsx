@@ -76,7 +76,7 @@ export default function AccountSheet({
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/loyalty/${slug}?phone=${encodeURIComponent(session.phone)}`)
+      const res = await fetch(`/api/loyalty/${slug}?phone=${encodeURIComponent(session.phone)}&token=${encodeURIComponent(session.token)}`)
       const cfg: LoyaltyConfig = await res.json()
       setBusinessName(cfg.businessName || '')
       setLoyaltyActive(Boolean(cfg.active))
@@ -87,7 +87,7 @@ export default function AccountSheet({
     } finally {
       setLoading(false)
     }
-  }, [slug, session.phone])
+  }, [slug, session.phone, session.token])
 
   // Fetch on open + lock body scroll while the sheet is up.
   useEffect(() => {

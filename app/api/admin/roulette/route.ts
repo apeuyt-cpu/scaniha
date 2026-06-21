@@ -42,6 +42,27 @@ function pick(obj: any, fields: readonly string[]) {
   return out
 }
 
+/**
+ * Best-effort, in-process replay guard for the non-idempotent 'saveWin' action.
+ * A retried/double-submitted POST (same café + phone + prize) would otherwise
+ * mint a second prize code for the same walk-in. We remember the recorded win
+ * keyed by its meaningful fields for a short window and, on a duplicate within
+ * that window, replay the SAME win instead of inserting another row. Same
+ * constraints as lib/api/rate-limit.ts: per-PROCESS, ephemeral (resets on cold
+ * start, not shared across instances) — collapses rapid retries, not a hard
+ * cross-instance guarantee. The complete fix (client idempotency-key + DB
+ * unique constraint) is deferred.
+ */
+const SAVEWIN_DEDUP_MS = 60_000
+const saveWinDedup = new Map<string, { at: number; win: any }>()
+function takeRecentWin(key: string): any | null {
+  const now = Date.now()
+  // forEach, not for-of: the es5 target can't iterate a Map directly (TS2802).
+  saveWinDedup.forEach((v, k) => { if (now - v.at >= SAVEWIN_DEDUP_MS) saveWinDedup.delete(k) })
+  const hit = saveWinDedup.get(key)
+  return hit && now - hit.at < SAVEWIN_DEDUP_MS ? hit.win : null
+}
+
 /** Weighted draw → 0-based index. Falls back to uniform if all weights are 0. */
 function weightedIndex(weights: number[]): number {
   const total = weights.reduce((a, w) => a + Math.max(0, w), 0)
@@ -154,12 +175,18 @@ export async function POST(request: Request) {
       const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim().slice(0, 80) : null
       // Only keep a prize_id that genuinely belongs here; otherwise store null.
       const prizeId = body.prizeId && (await ownPrize(String(body.prizeId))) ? body.prizeId : null
+      // Replay guard: a retried/double-submitted identical saveWin (same café +
+      // phone + prize) replays the original win instead of minting a 2nd code.
+      const dedupKey = `savewin:${business.id}:${phone}:${prizeId || prizeLabel}`
+      const replayed = takeRecentWin(dedupKey)
+      if (replayed) return NextResponse.json({ ok: true, win: replayed })
       const { data, error } = await supabase
         .from('admin_roulette_wins')
         .insert({ business_id: business.id, prize_id: prizeId, prize_label: prizeLabel, customer_phone: phone, customer_name: name, code: generateWinCode(), status: 'pending' })
         .select('*')
         .single()
       if (error) throw error
+      saveWinDedup.set(dedupKey, { at: Date.now(), win: data })
       return NextResponse.json({ ok: true, win: data })
     }
 

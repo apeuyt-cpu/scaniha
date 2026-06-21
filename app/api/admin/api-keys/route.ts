@@ -49,13 +49,17 @@ export async function POST(request: Request) {
     }
     const body = await request.json().catch(() => ({}))
     const name = String(body.name || 'Clé API').slice(0, 60)
-    const created = await createApiKey(business.id, name)
+    // scopes are whitelisted inside createApiKey (sanitizeScopes) — an absent or
+    // bogus list yields ['loyalty:read'] (read-only, least privilege).
+    const scopes = Array.isArray(body.scopes) ? body.scopes : undefined
+    const created = await createApiKey(business.id, name, scopes)
     // raw shown ONCE — the caller must surface "copiez-la maintenant".
     return NextResponse.json({
       id: created.id,
       raw: created.raw,
       key_prefix: created.prefix,
       name: created.name,
+      scopes: created.scopes,
       created_at: created.createdAt,
     })
   } catch (error: any) {

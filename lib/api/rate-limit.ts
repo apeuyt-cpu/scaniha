@@ -24,12 +24,25 @@ const minuteHits = new Map<string, number[]>()
 /** Per-key daily counter + the window start it belongs to. */
 const dayHits = new Map<string, { count: number; windowStart: number }>()
 
-export function checkRateLimit(keyId: string): { ok: true } | { ok: false; retryAfter: number } {
+/**
+ * Optional per-call overrides. Defaults match the documented public-API policy
+ * (60/min, 5 000/day) so existing single-arg callers are unchanged. Stricter
+ * limits (e.g. diner login/signup) pass their own caps. Keys are namespaced by
+ * the caller (e.g. `login-ip:…`, `signup-ip:…`) so the windows don't collide.
+ */
+export type RateLimitOpts = { perMinute?: number; perDay?: number }
+
+export function checkRateLimit(
+  keyId: string,
+  opts?: RateLimitOpts
+): { ok: true } | { ok: false; retryAfter: number } {
   const now = Date.now()
+  const perMinute = opts?.perMinute ?? PER_MINUTE_LIMIT
+  const perDay = opts?.perDay ?? PER_DAY_LIMIT
 
   // ── Per-minute sliding window ──────────────────────────────────────────
   const recent = (minuteHits.get(keyId) || []).filter((t) => now - t < MINUTE_MS)
-  if (recent.length >= PER_MINUTE_LIMIT) {
+  if (recent.length >= perMinute) {
     minuteHits.set(keyId, recent)
     const oldest = recent[0]
     const retryAfter = Math.max(1, Math.ceil((MINUTE_MS - (now - oldest)) / 1000))
@@ -45,7 +58,7 @@ export function checkRateLimit(keyId: string): { ok: true } | { ok: false; retry
     minuteHits.set(keyId, recent)
     return { ok: true }
   }
-  if (day.count >= PER_DAY_LIMIT) {
+  if (day.count >= perDay) {
     const retryAfter = Math.max(1, Math.ceil((DAY_MS - (now - day.windowStart)) / 1000))
     return { ok: false, retryAfter }
   }

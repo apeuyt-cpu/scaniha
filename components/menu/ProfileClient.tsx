@@ -56,9 +56,11 @@ export default function ProfileClient({
     return () => { cancelled = true }
   }, [slug])
 
-  const loadAccount = useCallback(async (phone: string) => {
+  const loadAccount = useCallback(async (phone: string, token?: string) => {
     try {
-      const r = await fetch(`/api/loyalty/${slug}?phone=${encodeURIComponent(phone)}`)
+      // The session token authorizes returning the private summary for this phone.
+      const q = token ? `&token=${encodeURIComponent(token)}` : ''
+      const r = await fetch(`/api/loyalty/${slug}?phone=${encodeURIComponent(phone)}${q}`)
       const cfg = await r.json()
       setLoyaltyActive(Boolean(cfg.active))
       setRewards(cfg.active ? cfg.rewards || [] : [])
@@ -66,7 +68,7 @@ export default function ProfileClient({
     } catch {}
   }, [slug])
 
-  useEffect(() => { if (session) loadAccount(session.phone) }, [session, loadAccount])
+  useEffect(() => { if (session) loadAccount(session.phone, session.token) }, [session, loadAccount])
 
   function onAuthed(s: DinerSession) { setSession(s); setError(null); setPhase('ready') }
 
@@ -212,7 +214,7 @@ export default function ProfileClient({
           session={session}
           accent={accent}
           gradient={gradient}
-          onClose={() => { setStoreOpen(false); if (session) loadAccount(session.phone) }}
+          onClose={() => { setStoreOpen(false); if (session) loadAccount(session.phone, session.token) }}
           onRequireLogin={() => setStoreOpen(false)}
         />
       )}

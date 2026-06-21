@@ -11,7 +11,25 @@
  */
 import crypto from 'crypto'
 
-const SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY || 'dev-insecure-qr-secret'
+/**
+ * HMAC key source. Prefer a dedicated QR_SESSION_SECRET so the QR crypto is
+ * decoupled from the DB key; otherwise fall back to the service-role key (always
+ * present in prod) so existing cookies keep validating. The old guessable
+ * hardcoded constant ('dev-insecure-qr-secret') is gone — if NEITHER secret is
+ * set we fail closed rather than sign with a known value. Set QR_SESSION_SECRET
+ * to decouple QR crypto from the (rotatable) DB key. Server-only.
+ */
+function resolveSecret(): string {
+  const dedicated = process.env.QR_SESSION_SECRET
+  if (dedicated) return dedicated
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (serviceKey) return serviceKey
+  throw new Error(
+    'QR session secret missing: set QR_SESSION_SECRET (or SUPABASE_SERVICE_ROLE_KEY).'
+  )
+}
+
+const SECRET = resolveSecret()
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789' // no 0/O/1/I/l
 
 /** Per-business cookie name — café A's scan never unlocks café B. */

@@ -33,8 +33,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Ownership check: only delete an image actually referenced by the caller's
-    // own business (logo, a category/item image, or a design-settings image).
-    // Without this, any logged-in owner could delete another business's images.
+    // own business (logo, a category/item image, or an authoritative design
+    // image). Without this, any logged-in owner could delete another business's
+    // images. The allowlist is built ONLY from real image fields compared by
+    // strict equality — never a JSON.stringify(...).includes over design_settings,
+    // because owners control free-text SEO fields and could plant a victim's URL.
     const { data: biz } = await (admin.from('businesses') as any)
       .select('id, logo_url, design_settings')
       .eq('owner_id', user.id)
@@ -58,10 +61,16 @@ export async function POST(request: NextRequest) {
         .in('category_id', catIds)
       for (const it of (items || []) as any[]) if (it.image_url) owned.add(it.image_url)
     }
-    const inDesign = (() => {
-      try { return JSON.stringify(biz.design_settings || {}).includes(url) } catch { return false }
-    })()
-    if (!owned.has(url) && !inDesign) {
+    // Authoritative design_settings image keys ONLY (per-design coverImage +
+    // the SEO share image). Free-text fields (metaTitle, contact, …) are excluded.
+    const ds = (biz.design_settings || {}) as Record<string, any>
+    for (const designId of ['design1', 'design2', 'design3', 'design6', 'design11', 'design12']) {
+      const cover = ds[designId]?.coverImage
+      if (typeof cover === 'string' && cover) owned.add(cover)
+    }
+    const shareImage = ds.seo?.shareImage
+    if (typeof shareImage === 'string' && shareImage) owned.add(shareImage)
+    if (!owned.has(url)) {
       return NextResponse.json({ success: false, error: 'Image non autorisée.' }, { status: 403 })
     }
 

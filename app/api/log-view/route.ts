@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/api/rate-limit'
 
 export async function POST(req: NextRequest) {
   // Fire-and-forget analytics beacon: it must NEVER surface a 5xx to the
@@ -19,6 +20,17 @@ export async function POST(req: NextRequest) {
       if (elapsed < 30 * 60 * 1000) {
         return NextResponse.json({ skipped: true, reason: 'debounce' })
       }
+    }
+
+    // Server-side guard: the cookie debounce above is trivially bypassed by
+    // omitting the cookie, which would allow unbounded inserts + analytics
+    // inflation. Throttle per (IP, slug) so a client that drops the cookie can
+    // still only log a bounded number of views. Fails quietly (200) — this is a
+    // fire-and-forget beacon and must never error the menu page.
+    const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown'
+    const limit = checkRateLimit(`logview:${ip}:${slug}`)
+    if (!limit.ok) {
+      return NextResponse.json({ skipped: true, reason: 'rate_limited' })
     }
 
     const ua = req.headers.get('user-agent') || ''

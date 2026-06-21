@@ -47,6 +47,20 @@ export interface ApiKeyPublic {
 
 export type ApiScope = 'loyalty:read' | 'loyalty:write'
 
+/** The only scopes a key may hold. Anything else is dropped (least privilege). */
+export const ALLOWED_SCOPES: readonly ApiScope[] = ['loyalty:read', 'loyalty:write']
+
+/**
+ * Whitelist + de-dup an untrusted scopes list against ALLOWED_SCOPES. Returns
+ * `['loyalty:read']` (read-only, least privilege) when nothing valid is given —
+ * a key is never silently minted with no scopes.
+ */
+export function sanitizeScopes(input: unknown): ApiScope[] {
+  const arr = Array.isArray(input) ? input : []
+  const clean = ALLOWED_SCOPES.filter((s) => arr.includes(s))
+  return clean.length > 0 ? clean : ['loyalty:read']
+}
+
 export interface AuthedKey {
   businessId: string
   slug: string
@@ -56,26 +70,38 @@ export interface AuthedKey {
 
 /**
  * Create a key for a business. Returns the raw key ONCE — it cannot be
- * recovered afterwards. Inserts (key_hash, key_prefix, business_id, name); the
- * default scopes/created_at come from the table defaults.
+ * recovered afterwards. Scopes are first-class: the caller's request is
+ * whitelisted via sanitizeScopes (default ['loyalty:read'] — least privilege)
+ * and written EXPLICITLY so the key never inherits a broader table default.
+ * Inserts (key_hash, key_prefix, business_id, name, scopes); created_at comes
+ * from the table default.
  */
 export async function createApiKey(
   businessId: string,
-  name: string
-): Promise<{ id: string; raw: string; prefix: string; name: string; createdAt: string }> {
+  name: string,
+  scopes?: string[]
+): Promise<{ id: string; raw: string; prefix: string; name: string; scopes: ApiScope[]; createdAt: string }> {
   const { raw, prefix, hash } = generateApiKey()
   const cleanName = String(name || 'Clé API').slice(0, 60) || 'Clé API'
+  const cleanScopes = sanitizeScopes(scopes)
   const supabase: any = await createServiceRoleClient()
   const { data, error } = await supabase
     .from('api_keys')
-    .insert({ business_id: businessId, name: cleanName, key_prefix: prefix, key_hash: hash })
-    .select('id, name, created_at')
+    .insert({ business_id: businessId, name: cleanName, key_prefix: prefix, key_hash: hash, scopes: cleanScopes })
+    .select('id, name, scopes, created_at')
     .single()
   if (error || !data) {
     console.error('createApiKey:', error?.message)
     throw new Error('api_key_create_failed')
   }
-  return { id: data.id, raw, prefix, name: data.name, createdAt: data.created_at }
+  return {
+    id: data.id,
+    raw,
+    prefix,
+    name: data.name,
+    scopes: Array.isArray(data.scopes) ? data.scopes : cleanScopes,
+    createdAt: data.created_at,
+  }
 }
 
 /** List a business's keys (public fields only — never key_hash). */

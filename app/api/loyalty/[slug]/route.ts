@@ -3,6 +3,7 @@ import { loadLoyalty, redeemReward, normPhone } from '@/lib/db/loyalty'
 import { loadQrGate } from '@/lib/db/game'
 import { dinerSession } from '@/lib/db/account'
 import { scanCookieName, verifyScan } from '@/lib/qr-session'
+import { checkRateLimit } from '@/lib/api/rate-limit'
 
 /**
  * Public loyalty endpoints (by business slug).
@@ -20,7 +21,31 @@ const ERR: Record<string, { status: number; msg: string }> = {
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const cfg = await loadLoyalty(slug, req.nextUrl.searchParams.get('phone'))
+
+  // Per-IP throttle to blunt phone enumeration (best-effort, in-process — no new infra).
+  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown'
+  const rl = checkRateLimit('loyalty-get:' + ip)
+  if (!rl.ok) {
+    return NextResponse.json(
+      { active: false, error: 'Trop de requêtes. Réessayez dans un instant.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    )
+  }
+
+  // SECURITY (IDOR): the summary (balance + history + live claimable codes) is
+  // private. Only return it for ?phone= when a valid diner session (?token=)
+  // resolves to THAT phone. A missing/mismatched token isn't fatal: fall back to
+  // the public config (summary=null) so the rewards list still loads for
+  // logged-out browsing — but never leak a stranger's account by phone alone.
+  const phone = req.nextUrl.searchParams.get('phone')
+  const normedPhone = normPhone(phone)
+  let phoneForLoad: string | null = null
+  if (normedPhone) {
+    const session = await dinerSession(req.nextUrl.searchParams.get('token'))
+    if (session.ok && session.phone === normedPhone) phoneForLoad = normedPhone
+  }
+
+  const cfg = await loadLoyalty(slug, phoneForLoad)
   return NextResponse.json(cfg)
 }
 

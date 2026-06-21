@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { PAYMENT_PLANS, PAYMENT_METHODS, MAX_RECEIPTS, addonById } from '@/lib/payment-config'
 
+// Receipts must be Supabase-storage URLs we just uploaded, never arbitrary
+// external links (matches the design route's check).
+const STORAGE_URL = /\/storage\/v1\/object\/public\//
+
 export async function POST(req: NextRequest) {
   try {
     // Identify the logged-in user.
@@ -23,7 +27,7 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(receiptUrls) || receiptUrls.length < 1 || receiptUrls.length > MAX_RECEIPTS) {
       return NextResponse.json({ error: `Joignez entre 1 et ${MAX_RECEIPTS} reçus` }, { status: 400 })
     }
-    if (!receiptUrls.every((u) => typeof u === 'string' && u.startsWith('https://'))) {
+    if (!receiptUrls.every((u) => typeof u === 'string' && u.startsWith('https://') && STORAGE_URL.test(u))) {
       return NextResponse.json({ error: 'Reçus invalides' }, { status: 400 })
     }
 

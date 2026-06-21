@@ -85,9 +85,12 @@ export default function FidelityHub({
     try { if (gates.every((g) => localStorage.getItem(`scaniha_gate_${slug}_${g.id}`))) setGatesCleared(true) } catch {}
   }, [gates, slug])
 
-  const loadAccount = useCallback(async (phone: string) => {
+  const loadAccount = useCallback(async (phone: string, tokenOverride?: string) => {
     try {
-      const r = await fetch(`/api/loyalty/${slug}?phone=${encodeURIComponent(phone)}`)
+      // The session token authorizes returning the private summary for this phone.
+      const t = tokenOverride ?? readToken(slug)
+      const q = t ? `&token=${encodeURIComponent(t)}` : ''
+      const r = await fetch(`/api/loyalty/${slug}?phone=${encodeURIComponent(phone)}${q}`)
       const cfg = await r.json()
       setLoyaltyActive(Boolean(cfg.active)); setRewards(cfg.active ? cfg.rewards || [] : []); setSummary(cfg.summary || EMPTY)
     } catch {}
@@ -133,7 +136,7 @@ export default function FidelityHub({
         setTabState(qTab ?? landing)
 
         if (authed) {
-          setSession(authed); loadAccount(authed.phone)
+          setSession(authed); loadAccount(authed.phone, authed.token)
           try {
             const saved = localStorage.getItem(`scaniha_win_${slug}`)
             if (saved) { const w = JSON.parse(saved) as SpinResult; if (new Date(w.expiresAt) > new Date()) { setResult(w); setPhase('won'); return } localStorage.removeItem(`scaniha_win_${slug}`) }
@@ -146,7 +149,7 @@ export default function FidelityHub({
   }, [slug, loadAccount, loadPublicRewards, defaultTab])
 
   function onAuthed(s: DinerSession) {
-    setSession(s); setAuthMessage(null); setError(null); setPhase('ready'); loadAccount(s.phone)
+    setSession(s); setAuthMessage(null); setError(null); setPhase('ready'); loadAccount(s.phone, s.token)
     if (pendingSpin) { setPendingSpin(false); setTabState('roue'); spin(s.token) }
     // Fresh member at a roulette café → drop them on the wheel for their first spin.
     else if (hasRoulette) setTabState('roue')
@@ -187,7 +190,7 @@ export default function FidelityHub({
       const j = await res.json()
       if (res.status === 403 && j.rescanRequired) { setBoutiqueRescan(typeof j.error === 'string' ? j.error : ''); return }
       if (!res.ok || !j.success) throw new Error(j.error || 'Échange impossible.')
-      setRedeemed({ code: j.code, rewardLabel: j.rewardLabel }); await loadAccount(session.phone)
+      setRedeemed({ code: j.code, rewardLabel: j.rewardLabel }); await loadAccount(session.phone, session.token)
     } catch (e: any) { setBoutiqueError(e?.message || 'Échange impossible.') } finally { setBusyRewardId(null) }
   }
 
@@ -321,7 +324,7 @@ export default function FidelityHub({
           <CarteTab session={session} businessName={businessName} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} welcomePoints={welcomePoints} onPlay={() => requireLogin()} onLogout={logout} />
         )}
         {hasRoulette && tab === 'roue' && (
-          <RoueTab prizes={prizes} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} onSpin={() => spin()} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone) } }} onReview={() => setWinModalOpen(true)} />
+          <RoueTab prizes={prizes} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} onSpin={() => spin()} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
         )}
         {tab === 'boutique' && (
           <BoutiqueTab session={session} businessName={businessName} accent={accent} gradient={gradient} balance={balance} loyaltyActive={loyaltyActive} rewards={rewards} busyRewardId={busyRewardId} redeemed={redeemed} error={boutiqueError} rescan={boutiqueRescan} onRedeem={redeem} />

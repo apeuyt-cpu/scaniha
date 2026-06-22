@@ -6,10 +6,10 @@ import NoDownloadGuard from '@/components/NoDownloadGuard'
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://scaniha.com'),
   title: {
-    default: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
+    default: 'Scaniha | QR Menu for Restaurants (Tunisia)',
     template: '%s | Scaniha',
   },
-  description: 'Scaniha, l’application tunisienne de menu QR : créez un menu numérique élégant pour votre restaurant ou café en quelques minutes, sans application ni compétences techniques. Essai gratuit.',
+  description: 'Scaniha is the QR menu platform for restaurant menus in Tunisia — créez un menu QR numérique élégant pour votre restaurant ou café en quelques minutes, sans application ni compétences techniques. Essai gratuit.',
   keywords: [
     'Scaniha', 'scaniha', 'Scaniha Tunisie', 'scaniha menu', 'scaniha app', 'scaniha.com',
     'menu QR', 'créateur de menu QR', 'menu numérique restaurant',
@@ -44,15 +44,15 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'fr_FR',
     siteName: 'Scaniha',
-    title: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
-    description: 'Scaniha, l’application tunisienne de menu QR : créez un menu numérique élégant pour votre restaurant ou café en quelques minutes, sans application. Essai gratuit.',
+    title: 'Scaniha | QR Menu for Restaurants (Tunisia)',
+    description: 'Scaniha is the QR menu platform for restaurant menus in Tunisia — menu QR numérique pour restaurants et cafés, sans application. Essai gratuit.',
     url: 'https://scaniha.com',
-    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — Le menu QR numérique pour restaurants et cafés en Tunisie' }],
+    images: [{ url: '/og-scaniha.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Scaniha — the QR menu platform for restaurant menus in Tunisia' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Scaniha | Créateur de menu QR pour restaurants et cafés',
-    description: 'Scaniha, l’application tunisienne de menu QR : créez un menu numérique élégant pour votre restaurant ou café en quelques minutes. Essai gratuit.',
+    title: 'Scaniha | QR Menu for Restaurants (Tunisia)',
+    description: 'Scaniha is the QR menu platform for restaurant menus in Tunisia — menu QR numérique pour restaurants et cafés, sans application. Essai gratuit.',
     images: ['/og-scaniha.jpg'],
   },
   alternates: {

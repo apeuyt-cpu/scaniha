@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 import PageShell from '@/components/admin/ui/PageShell'
 import Card from '@/components/admin/ui/Card'
-import Toggle from '@/components/admin/ui/Toggle'
 import { resolveMode, type ProductMode, type FidelityLanding } from '@/lib/design-settings'
 import StaffAccessCard from '@/components/admin/StaffAccessCard'
 
@@ -29,10 +28,8 @@ export default function SharePage() {
   // Owner QR-destination settings (persisted to design_settings).
   const [bizId, setBizId] = useState<string | null>(null)
   const [landing, setLanding] = useState<FidelityLanding>('carte')
-  const [menuFid, setMenuFid] = useState(true)
   const [hasRoulette, setHasRoulette] = useState(false)
   const [savingLanding, setSavingLanding] = useState(false)
-  const [savingMenuFid, setSavingMenuFid] = useState(false)
   const [staffTarget, setStaffTarget] = useState('/admin/caisse')
   const [savingStaff, setSavingStaff] = useState(false)
 
@@ -65,7 +62,6 @@ export default function SharePage() {
           setBizId(b.id ?? null)
           const ds = (b.design_settings && typeof b.design_settings === 'object' ? b.design_settings : {}) as any
           setLanding(ds.fidelityLanding === 'boutique' || ds.fidelityLanding === 'roue' ? ds.fidelityLanding : 'carte')
-          setMenuFid(ds.menuShowsFidelity !== false)
           setStaffTarget(typeof ds.staffQrTarget === 'string' && ds.staffQrTarget.startsWith('/admin') ? ds.staffQrTarget : '/admin/caisse')
         }
         // Whether the roulette is on (so we only offer "La roue" as a landing).
@@ -103,33 +99,12 @@ export default function SharePage() {
     setSavingLanding(true)
     try { await patchSettings({ fidelityLanding: next }) } catch { setLanding(prev) } finally { setSavingLanding(false) }
   }
-  async function changeMenuFid(next: boolean) {
-    const prev = menuFid
-    setMenuFid(next)
-    setSavingMenuFid(true)
-    try { await patchSettings({ menuShowsFidelity: next }) } catch { setMenuFid(prev) } finally { setSavingMenuFid(false) }
-  }
   async function changeStaffTarget(next: string) {
     const prev = staffTarget
     setStaffTarget(next)
     setSavingStaff(true)
     try { await patchSettings({ staffQrTarget: next }) } catch { setStaffTarget(prev) } finally { setSavingStaff(false) }
   }
-
-  // "Works for both" toggle — only meaningful when the café runs both products.
-  const menuFooter = mode === 'both' ? (
-    <div className="mt-4 border-t border-zinc-100 pt-4">
-      <Toggle
-        checked={menuFid}
-        disabled={!bizId || savingMenuFid}
-        onChange={changeMenuFid}
-        label="Accès à la fidélité depuis le menu"
-        hint={menuFid
-          ? 'Ce QR ouvre le menu avec un onglet Fidélité en bas — un seul code pour les deux.'
-          : 'Ce QR ouvre uniquement le menu. La fidélité reste accessible via son propre QR.'}
-      />
-    </div>
-  ) : null
 
   // Landing-page picker for the fidelity QR (so the roulette isn't always the front door).
   const fidFooter = (
@@ -161,7 +136,7 @@ export default function SharePage() {
             <span className="font-semibold text-zinc-800">fidélité</span>. Imprimez celui qui correspond à chaque emplacement.
           </p>
         )}
-        {showMenu && <QrCard kind="menu" slug={slug} origin={origin} gated={gated} qrKey={qrKey} footer={menuFooter} />}
+        {showMenu && <QrCard kind="menu" slug={slug} origin={origin} gated={gated} qrKey={qrKey} />}
         {showFidelity && <QrCard kind="fidelity" slug={slug} origin={origin} gated={gated} qrKey={qrKey} footer={fidFooter} />}
         <StaffAccessCard origin={origin} target={staffTarget} onChange={changeStaffTarget} disabled={!bizId || savingStaff} />
       </div>

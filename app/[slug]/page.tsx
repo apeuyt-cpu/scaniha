@@ -5,10 +5,9 @@ import { getBusinessSeo } from '@/lib/seo/business-seo'
 import { getTheme } from '@/lib/themes'
 import PublicMenu from '@/components/menu/PublicMenu'
 import PoweredByScaniha from '@/components/menu/PoweredByScaniha'
-import BottomNav from '@/components/menu/BottomNav'
 import FidelityHub from '@/components/game/FidelityHub'
 import { businessAccent, businessGradient } from '@/lib/db/game'
-import { isFidelityLive, resolveMode, fidelityLanding, menuShowsFidelity } from '@/lib/design-settings'
+import { resolveMode, fidelityLanding } from '@/lib/design-settings'
 import LogView from '@/components/LogView'
 import QrScanMint from '@/components/game/QrScanMint'
 import type { Database } from '@/lib/supabase/database.types'
@@ -159,8 +158,9 @@ export default async function PublicMenuPage({
         categories={categories}
         theme={theme}
       />
-      {!isPaused && <PoweredByScaniha liftForNav={isFidelityLive(business) && menuShowsFidelity(business)} />}
-      {!isPaused && isFidelityLive(business) && menuShowsFidelity(business) && <BottomNav slug={business.slug} accent={businessAccent(business)} active="menu" />}
+      {/* Menu is a standalone product now — it never links to fidelity/roulette.
+          The loyalty hub + roulette live at /{slug}/fidelite (its own QR). */}
+      {!isPaused && <PoweredByScaniha />}
       <LogView businessId={business.id} slug={business.slug} />
       {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
       <QrScanMint slug={business.slug} />

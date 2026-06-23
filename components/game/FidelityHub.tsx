@@ -464,7 +464,10 @@ function CarteTab(props: {
       </div>
 
       {/* Mes bons */}
-      <h2 className="mb-2.5 mt-6 px-1 text-xs font-semibold" style={{ color: MUT }}>Mes bons</h2>
+      <div className="mb-2.5 mt-7 flex items-center justify-between px-1">
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: FAINT }}>Mes bons</h2>
+        {activeCodes.length > 0 && <span className="rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums" style={{ backgroundColor: `${accent}14`, color: accent }}>{activeCodes.length}</span>}
+      </div>
       {activeCodes.length > 0 ? (
         <div className="space-y-2.5">
           {activeCodes.map((c) => (
@@ -480,7 +483,7 @@ function CarteTab(props: {
       )}
 
       {/* Historique */}
-      <h2 className="mb-2.5 mt-6 px-1 text-xs font-semibold" style={{ color: MUT }}>Historique</h2>
+      <h2 className="mb-2.5 mt-7 px-1 text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: FAINT }}>Historique</h2>
       {recent.length > 0 ? (
         <div className="rounded-[18px] bg-white px-4" style={{ boxShadow: SOFT }}>
           {recent.map((t, i) => (

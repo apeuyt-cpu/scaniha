@@ -11,7 +11,6 @@
 import { useState } from 'react'
 import { SocialPopup, getSocials } from './SocialLinks'
 import { brandGradient } from './kit'
-import { isFidelityLive, menuShowsFidelity } from '@/lib/design-settings'
 
 export function MenuDock({
   business,
@@ -32,14 +31,11 @@ export function MenuDock({
   const socials = getSocials(business)
   if (socials.length === 0) return null
 
-  // Lift above the bottom nav only when it's ACTUALLY rendered (fidelity live AND
-  // the menu exposes it) — same condition as the BottomNav — so the dock never
-  // floats over an empty gap.
-  const lift = isFidelityLive(business) && menuShowsFidelity(business)
-
+  // The menu no longer carries a fidelity bottom-nav (menu + fidelity are fully
+  // separate now), so the social dock always sits at the bottom — never lifted.
   return (
     <>
-      <div className={`fixed ${lift ? 'bottom-[5.25rem]' : 'bottom-4'} right-4 z-50 flex flex-col items-end gap-2.5`} style={{ fontFamily: font }}>
+      <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2.5" style={{ fontFamily: font }}>
         <button
           type="button"
           aria-label="Réseaux sociaux"

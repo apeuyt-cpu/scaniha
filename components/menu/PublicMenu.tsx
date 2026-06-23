@@ -1,14 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import DynamicFavicon from '@/components/admin/DynamicFavicon'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Theme } from '@/lib/themes'
-import Design1 from '@/components/menu/designs/Design1'
-import Design2 from '@/components/menu/designs/Design2'
-import Design6 from '@/components/menu/designs/Design6'
-import Design11 from '@/components/menu/designs/Design11'
-import Design12 from '@/components/menu/designs/Design12'
+// Code-split each menu design into its own chunk so a diner only downloads the
+// one design that actually renders (ssr stays default true → SSR HTML unchanged).
+const Design1 = dynamic(() => import('@/components/menu/designs/Design1'))
+const Design2 = dynamic(() => import('@/components/menu/designs/Design2'))
+const Design6 = dynamic(() => import('@/components/menu/designs/Design6'))
+const Design11 = dynamic(() => import('@/components/menu/designs/Design11'))
+const Design12 = dynamic(() => import('@/components/menu/designs/Design12'))
 import { MenuDock } from '@/components/menu/designs/MenuDock'
 import RouletteButton from '@/components/menu/designs/RouletteButton'
 import { FoodIcon } from '@/components/menu/designs/icons'
@@ -35,16 +38,18 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
   const isDark = theme.id === 'dark'
   const isMinimal = theme.id === 'minimal'
 
-  const getVisibleCategories = () => {
-    return categories.filter(cat => {
-      // Filter out hidden categories
-      if (cat.available === false) return false
-      // Only show categories with at least one available item
-      return cat.items.some(item => item.available)
-    })
-  }
-
-  const visibleCategories = getVisibleCategories()
+  // Memoize so the array identity is stable across renders — otherwise the
+  // scroll-spy effect below re-subscribes its listener on every single render.
+  const visibleCategories = useMemo(
+    () =>
+      categories.filter(cat => {
+        // Filter out hidden categories
+        if (cat.available === false) return false
+        // Only show categories with at least one available item
+        return cat.items.some(item => item.available)
+      }),
+    [categories]
+  )
   const totalVisibleItems = visibleCategories.reduce(
     (acc, category) => acc + category.items.filter((item) => item.available).length,
     0
@@ -461,9 +466,11 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                       className={`relative h-44 overflow-hidden rounded-lg sm:h-56 ${isDark ? 'card-glow' : ''}`}
                       style={{ border: `1px solid ${theme.colors.border}` }}
                     >
-                      <img 
-                        src={category.image_url} 
+                      <img
+                        src={category.image_url}
                         alt={category.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                       <div 
@@ -527,9 +534,11 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                           {/* End left: Product image (no border, no rounded corners) */}
                           {item.image_url && (
                             <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg sm:h-24 sm:w-24">
-                              <img 
-                                src={item.image_url} 
+                              <img
+                                src={item.image_url}
                                 alt={item.name}
+                                loading="lazy"
+                                decoding="async"
                                 className="item-image w-full h-full object-cover"
                               />
                             </div>
@@ -889,9 +898,11 @@ function MinimalLayout({
                       {/* End left: Product image (no border, no rounded corners) */}
                       {item.image_url && (
                         <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 overflow-hidden">
-                          <img 
-                            src={item.image_url} 
+                          <img
+                            src={item.image_url}
                             alt={item.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover"
                           />
                         </div>

@@ -17,13 +17,19 @@ export async function GET() {
   const { data, error } = await (supabase as any).rpc('get_menu_view_stats')
 
   if (error) {
+    // Bound the fallback: the dashboard only shows today/week/month windows,
+    // so we never need rows older than 90 days. Without this filter the nested
+    // menu_views selection grows without bound as platform-wide scans accumulate.
+    const since90d = new Date(Date.now() - 90 * 86400000).toISOString()
     const { data: fallback, error: fallbackError } = await supabase
       .from('businesses')
       .select(`
         id, name, slug,
         menu_views ( viewed_at )
       `)
+      .gte('menu_views.viewed_at', since90d)
       .order('name')
+      .limit(50000, { foreignTable: 'menu_views' })
 
     if (fallbackError) {
       console.error('Super-admin analytics fallback error:', fallbackError)

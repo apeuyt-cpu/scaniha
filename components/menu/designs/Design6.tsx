@@ -224,7 +224,7 @@ export default function Design6({ business, categories }: { business: any; categ
                         {showThumbnails && (
                           it.image_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={it.image_url} alt="" className="mt-0.5 h-14 w-14 shrink-0 rounded-lg object-cover ring-1 ring-black/[0.06]" />
+                            <img src={it.image_url} alt="" loading="lazy" decoding="async" className="mt-0.5 h-14 w-14 shrink-0 rounded-lg object-cover ring-1 ring-black/[0.06]" />
                           ) : (
                             <span className="mt-0.5 flex h-14 w-14 shrink-0 items-center justify-center rounded-lg ring-1" style={{ backgroundColor: TILE, color: accent, borderColor: 'transparent', ['--tw-ring-color' as any]: `${accent}22` }} aria-hidden="true">
                               <FoodIcon hint={`${it.name} ${cat.name}`} className="h-[26px] w-[26px]" strokeWidth={1.4} />

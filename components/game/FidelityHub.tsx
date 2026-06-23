@@ -1,10 +1,18 @@
 'use client'
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { QRCodeSVG } from 'qrcode.react'
-import RouletteWheel from './RouletteWheel'
 import Confetti from './Confetti'
+
+// Client-only, tab-gated widgets — keep them out of the initial loyalty-page chunk.
+// The QR renders only on the 'carte' tab; the wheel only on the 'roue' tab. Named
+// to match the original imports so every <QRCodeSVG …/> / <RouletteWheel …/> call-site is unchanged.
+const RouletteWheel = dynamic(() => import('./RouletteWheel'), {
+  ssr: false,
+  loading: () => <div className="aspect-square w-full" aria-hidden="true" />,
+})
+const QRCodeSVG = dynamic(() => import('qrcode.react').then((m) => m.QRCodeSVG), { ssr: false })
 import DinerAuth, { type DinerSession } from './DinerAuth'
 import PlayGatesGate from './PlayGatesGate'
 import ScanGateNotice from './ScanGateNotice'

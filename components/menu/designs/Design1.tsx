@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import Showcase from './Showcase'
 import CoverBanner from './CoverBanner'
 import MenuFooter from './MenuFooter'
@@ -44,40 +44,56 @@ function priceParts(p: number | null) {
  * bar (shown when a game is live), and a clean centered detail modal.
  */
 export default function Design1({ business, categories }: { business: any; categories: any[] }) {
-  const settings = getDesignSettings(business, 'design1')
+  // Memoised so `settings` keeps a stable reference across renders driven only
+  // by typing (query state) — otherwise the showcase memos below would re-run
+  // (and re-shuffle) on every keystroke despite their photoItems input being unchanged.
+  const settings = useMemo(() => getDesignSettings(business, 'design1'), [business])
   const accent = resolveAccent(settings, 'design1')
   const gradient = resolveGradient(settings, 'design1')
   const compact = getExtra<string>(settings, 'design1', 'density') === 'compact'
 
-  const visibleCategories: Category[] = (Array.isArray(categories) ? categories : [])
-    .filter((cat) => cat && cat.available !== false)
-    .map((cat) => ({
-      ...cat,
-      items: (Array.isArray(cat.items) ? cat.items : []).filter(
-        (item: Item) => item && (settings.showSoldOut || item.available !== false)
-      ),
-    }))
-    .filter((cat) => cat.items.length > 0)
+  const visibleCategories: Category[] = useMemo(
+    () =>
+      (Array.isArray(categories) ? categories : [])
+        .filter((cat) => cat && cat.available !== false)
+        .map((cat) => ({
+          ...cat,
+          items: (Array.isArray(cat.items) ? cat.items : []).filter(
+            (item: Item) => item && (settings.showSoldOut || item.available !== false)
+          ),
+        }))
+        .filter((cat) => cat.items.length > 0),
+    [categories, settings.showSoldOut]
+  )
 
-  const allItems: Item[] = visibleCategories.flatMap((cat) => cat.items)
-  const availableItems = allItems.filter((it) => it.available !== false)
-  const photoItems = availableItems.filter((it) => it.image_url)
+  const allItems: Item[] = useMemo(() => visibleCategories.flatMap((cat) => cat.items), [visibleCategories])
+  const photoItems = useMemo(
+    () => allItems.filter((it) => it.available !== false && it.image_url),
+    [allItems]
+  )
 
   const [activeTab, setActiveTab] = useState<string | number | 'all'>('all')
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [query, setQuery] = useState('')
 
-  const heroItems = resolveShowcaseItems(settings, photoItems, { count: 6 })
-  const discoverItems = resolveShowcaseItems(settings, photoItems, { count: 6, seed: photoItems.length * 3 + 11 })
+  // Featured + "À découvrir" pools: derived from photoItems with a stable seed,
+  // so typing (which only changes `query`) never re-shuffles the whole menu.
+  const heroItems = useMemo(() => resolveShowcaseItems(settings, photoItems, { count: 6 }), [settings, photoItems])
+  const discoverItems = useMemo(
+    () => resolveShowcaseItems(settings, photoItems, { count: 6, seed: photoItems.length * 3 + 11 }),
+    [settings, photoItems]
+  )
 
-  const baseItems =
-    activeTab === 'all' ? allItems : visibleCategories.find((cat) => cat.id === activeTab)?.items ?? []
   const q = query.trim().toLowerCase()
-  const displayedItems = q
-    ? baseItems.filter(
-        (it) => it.name?.toLowerCase().includes(q) || (it.description ? it.description.toLowerCase().includes(q) : false)
-      )
-    : baseItems
+  const displayedItems = useMemo(() => {
+    const baseItems =
+      activeTab === 'all' ? allItems : visibleCategories.find((cat) => cat.id === activeTab)?.items ?? []
+    return q
+      ? baseItems.filter(
+          (it) => it.name?.toLowerCase().includes(q) || (it.description ? it.description.toLowerCase().includes(q) : false)
+        )
+      : baseItems
+  }, [activeTab, allItems, visibleCategories, q])
 
   const slot = compact ? 52 : 60
   const initial = (business?.name || 'S').trim().charAt(0).toUpperCase()
@@ -194,7 +210,7 @@ export default function Design1({ business, categories }: { business: any; categ
                   >
                     {item.image_url && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.image_url} alt={item.name} className="flex-shrink-0 rounded-2xl object-cover" style={{ width: slot, height: slot }} />
+                      <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" className="flex-shrink-0 rounded-2xl object-cover" style={{ width: slot, height: slot }} />
                     )}
 
                     <div className="min-w-0 flex-1 py-0.5">

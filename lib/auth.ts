@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createServerClient } from './supabase/server'
 import { redirect } from 'next/navigation'
 import type { Database } from './supabase/database.types'
@@ -182,24 +183,30 @@ export async function getCurrentUser() {
 
 /**
  * Get current user profile (non-blocking, returns null if not authenticated)
+ *
+ * Memoized per-request with React's cache(): the current user + profile read is
+ * resolved once per server request even if several server components ask for it,
+ * removing the redundant Supabase auth + profile round-trips. cache() scopes the
+ * memo to ONE request — no cross-request leakage. Return shape and behaviour are
+ * unchanged (still returns null on no session / error).
  */
-export async function getCurrentProfile() {
+export const getCurrentProfile = cache(async () => {
   try {
     const supabase = await createServerClient()
     const { data: { user } } = await supabase.auth.getUser()
-    
+
     if (!user) {
       return null
     }
-    
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', user.id)
       .maybeSingle()
-    
+
     return profile
   } catch {
     return null
   }
-}
+})

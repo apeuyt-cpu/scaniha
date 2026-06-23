@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadItemImage, uploadCategoryImage, deleteImage } from '@/lib/storage'
 import { revalidatePublicMenu } from '@/lib/revalidate-menu'
-import * as XLSX from 'xlsx'
 import type { Database } from '@/lib/supabase/database.types'
 import { useLocale } from '@/lib/i18n/LocaleContext'
 import { useCurrency } from '@/lib/i18n/CurrencyContext'
@@ -581,6 +580,7 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
     setError(null)
 
     try {
+      const XLSX = await import('xlsx')
       const data = await file.arrayBuffer()
       const workbook = XLSX.read(data, { type: 'array' })
       const sheetName = workbook.SheetNames[0]
@@ -688,7 +688,8 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
     }
   }
 
-  const downloadExcelTemplate = () => {
+  const downloadExcelTemplate = async () => {
+    const XLSX = await import('xlsx')
     const templateData = [
       [t('menu.builder.categoryName'), t('menu.builder.itemName'), t('menu.builder.description'), t('menu.builder.price')],
       ['Café', 'Espresso', 'Café italien corsé', '3.50'],

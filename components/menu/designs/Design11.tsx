@@ -240,7 +240,7 @@ export default function Design11({ business, categories }: { business: any; cate
                   className="relative h-44 w-[74%] shrink-0 snap-start overflow-hidden rounded-[24px] text-left ring-1 ring-black/5 shadow-[0_18px_44px_-26px_rgba(0,0,0,0.55)] transition active:scale-[0.98] lg:w-[44%]"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={it.image_url as string} alt={it.name} className="absolute inset-0 h-full w-full object-cover" />
+                  <img src={it.image_url as string} alt={it.name} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-4">
                     <h3 className="text-[16px] font-bold leading-tight text-white drop-shadow">{it.name}</h3>
@@ -308,7 +308,7 @@ export default function Design11({ business, categories }: { business: any; cate
                         </div>
                         {it.image_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={it.image_url} alt="" className="h-[86px] w-[86px] shrink-0 rounded-2xl object-cover ring-1 ring-black/5" />
+                          <img src={it.image_url} alt="" loading="lazy" decoding="async" className="h-[86px] w-[86px] shrink-0 rounded-2xl object-cover ring-1 ring-black/5" />
                         ) : (
                           <NoPhoto hint={`${it.name} ${cat.name}`} accent={accent} className="h-[86px] w-[86px] rounded-2xl ring-1 ring-black/5" />
                         )}

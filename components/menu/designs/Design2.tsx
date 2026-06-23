@@ -209,7 +209,7 @@ export default function Design2({
                   >
                     {cat.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={cat.image_url} alt={cat.name} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                      <img src={cat.image_url} alt={cat.name} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
                     ) : (
                       <span className="absolute inset-0 flex items-center justify-center" style={{ background: brandTint(accent) }} aria-hidden="true">
                         <FoodIcon hint={cat.name} className="h-10 w-10" style={{ color: `${accent}B3` }} strokeWidth={1.4} />
@@ -277,7 +277,7 @@ export default function Design2({
                         {item.image_url && (
                           <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+                            <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                           </div>
                         )}
                         <div className="min-w-0 flex-1">

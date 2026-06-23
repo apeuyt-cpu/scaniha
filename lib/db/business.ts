@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { createServerClient } from '../supabase/server'
 import { createServiceRoleClient, createPublicClient } from '../supabase/server'
@@ -176,7 +177,13 @@ export async function getBusinessByOwner(ownerId: string): Promise<Business | nu
  * It is the authorization boundary (the cookie is only honoured for a server-
  * verified super_admin), so callers no longer need an owner_id === user.id check.
  */
-export async function getActiveBusiness(): Promise<Business | null> {
+// Memoized per-request with React's cache(): the admin layout resolves the
+// active business in BOTH generateMetadata and the layout body (and every
+// /api/admin route hits it too), so deduping the auth + profile + business reads
+// within a single server request removes the redundant Supabase round-trips.
+// cache() scopes the memo to ONE request — no cross-request leakage. Signature,
+// return shape, and behaviour are unchanged.
+export const getActiveBusiness = cache(async (): Promise<Business | null> => {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -199,7 +206,7 @@ export async function getActiveBusiness(): Promise<Business | null> {
   if (profile?.role !== 'owner') return null
   const { data } = await (supabase.from('businesses') as any).select('*').eq('owner_id', user.id).maybeSingle()
   return (data as Business) || null
-}
+})
 
 export async function getBusinessWithCategoriesAndItems(businessId: string) {
   const supabase = await createServerClient()

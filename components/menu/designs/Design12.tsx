@@ -79,7 +79,7 @@ export default function Design12({ business, categories }: { business: any; cate
       {/* Circular media: photo, else a warm line-art tile so every card is balanced. */}
       {it.image_url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={it.image_url} alt="" className="h-[68px] w-[68px] shrink-0 rounded-full object-cover ring-1 ring-black/5 shadow-[0_6px_16px_-8px_rgba(42,33,24,0.6)]" style={{ outline: `3px solid ${CARD}`, outlineOffset: -3 }} />
+        <img src={it.image_url} alt="" loading="lazy" decoding="async" className="h-[68px] w-[68px] shrink-0 rounded-full object-cover ring-1 ring-black/5 shadow-[0_6px_16px_-8px_rgba(42,33,24,0.6)]" style={{ outline: `3px solid ${CARD}`, outlineOffset: -3 }} />
       ) : (
         <span
           className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-full ring-1 ring-black/5"
@@ -224,7 +224,7 @@ export default function Design12({ business, categories }: { business: any; cate
                     >
                       {cat.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={cat.image_url} alt="" className="h-full w-full object-cover" />
+                        <img src={cat.image_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                       ) : (
                         <span className="flex h-full w-full items-center justify-center" style={{ backgroundColor: `${accent}14`, color: accent }} aria-hidden="true">
                           <FoodIcon hint={cat.name} className="h-7 w-7" strokeWidth={1.5} />

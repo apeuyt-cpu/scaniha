@@ -6,7 +6,7 @@ import PaymentRequestModal from '@/components/admin/PaymentRequestModal'
 import SectionHeader from '@/components/admin/ui/SectionHeader'
 import Spinner from '@/components/admin/ui/Spinner'
 import OnboardingChecklist from '@/components/admin/OnboardingChecklist'
-import { getProductMode } from '@/lib/design-settings'
+import { getProductMode, isOrderingLive } from '@/lib/design-settings'
 import { useLocale } from '@/lib/i18n/LocaleContext'
 import { createClient } from '@/lib/supabase/client'
 
@@ -154,6 +154,7 @@ export default function AdminHome() {
   const products = getProductMode(business)
   const hasMenu = products !== 'fidelity'
   const hasFidelity = products !== 'menu'
+  const orderingLive = isOrderingLive(business)
 
   const isExpired = !!countdown && countdown.days === 0 && countdown.hours === 0 && countdown.minutes === 0 && countdown.seconds === 0
   const isUrgent = !!countdown && !isExpired && countdown.days <= 3
@@ -251,6 +252,9 @@ export default function AdminHome() {
           <SectionHeader title="Menu QR" hint="Votre carte numérique" />
           <div className="space-y-3">
             <TaskRow href="/admin/menu" primary title="Gérer le menu" subtitle="Catégories, plats et prix" icon={<IconMenu />} />
+            {orderingLive && (
+              <TaskRow href="/admin/commandes" title="Commandes" subtitle="Suivez les commandes à table" icon={<IconReceipt />} />
+            )}
             <TaskRow href="/admin/theme" title="Design & marque" subtitle="Logo, couleurs, style" icon={<IconBrush />} />
             <TaskRow href="/admin/share" title="Partage" subtitle="QR code et lien du menu" icon={<IconShare />} />
           </div>
@@ -328,5 +332,6 @@ const IconChart = () => <svg {...iconProps}><path d="M4 20V10M10 20V4M16 20v-7M2
 const IconWheel = () => <svg {...iconProps}><circle cx="12" cy="12" r="9" /><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" /><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" /></svg>
 const IconStaff = () => <svg {...iconProps}><circle cx="12" cy="8" r="3.5" /><path d="M5 21v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1" /></svg>
 const IconGift = () => <svg {...iconProps}><path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7S10.5 3 8.5 3 6 5 6 5s1 2 2.5 2M12 7s1.5-4 3.5-4S18 5 18 5s-1 2-2.5 2" /></svg>
+const IconReceipt = () => <svg {...iconProps}><path d="M5 3v18l2-1.2L9 21l2-1.2L13 21l2-1.2L17 21l2-1.2V3l-2 1.2L15 3l-2 1.2L11 3 9 4.2 7 3 5 4.2Z" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>
 const IconLogout = () => <svg {...iconProps} width={18} height={18}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
 const IconGear = () => <svg {...iconProps}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>

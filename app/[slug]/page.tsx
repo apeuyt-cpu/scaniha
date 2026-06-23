@@ -7,7 +7,8 @@ import PublicMenu from '@/components/menu/PublicMenu'
 import PoweredByScaniha from '@/components/menu/PoweredByScaniha'
 import FidelityHub from '@/components/game/FidelityHub'
 import { businessAccent, businessGradient } from '@/lib/db/game'
-import { resolveMode, fidelityLanding } from '@/lib/design-settings'
+import { resolveMode, fidelityLanding, isOrderingLive } from '@/lib/design-settings'
+import OrderSheet from '@/components/order/OrderSheet'
 import LogView from '@/components/LogView'
 import QrScanMint from '@/components/game/QrScanMint'
 import type { Database } from '@/lib/supabase/database.types'
@@ -161,6 +162,14 @@ export default async function PublicMenuPage({
       {/* Menu is a standalone product now — it never links to fidelity/roulette.
           The loyalty hub + roulette live at /{slug}/fidelite (its own QR). */}
       {!isPaused && <PoweredByScaniha />}
+      {!isPaused && isOrderingLive(business) && (
+        <OrderSheet
+          slug={business.slug}
+          businessName={business.name}
+          accent={business.primary_color || '#F47B20'}
+          categories={categories.map((c) => ({ id: c.id, name: c.name, items: c.items }))}
+        />
+      )}
       <LogView businessId={business.id} slug={business.slug} />
       {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
       <QrScanMint slug={business.slug} />

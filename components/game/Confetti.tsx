@@ -24,6 +24,8 @@ export default function Confetti({ accent = '#F47B20', count = 38 }: { accent?: 
     return () => clearTimeout(t)
   }, [])
 
+  const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+
   if (!show) return null
   return (
     <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden" aria-hidden="true">
@@ -39,7 +41,7 @@ export default function Confetti({ accent = '#F47B20', count = 38 }: { accent?: 
             height: p.size,
             background: p.color,
             borderRadius: p.round ? '9999px' : '2px',
-            animation: `confetti-fall ${p.dur}s ${p.delay}s cubic-bezier(0.2,0.6,0.4,1) forwards`,
+            animation: reduce ? 'none' : `confetti-fall ${p.dur}s ${p.delay}s cubic-bezier(0.2,0.6,0.4,1) forwards`,
           }}
         />
       ))}

@@ -28,7 +28,7 @@ interface WalletCafe {
 }
 
 const WALLET_KEY = 'scaniha_wallet'
-const BG = '#FAF8F5', INK = '#1A1410', MUT = '#8C8378', FAINT = '#B7AFA4'
+const BG = '#FAF8F5', INK = '#1A1410', MUT = '#71695F', FAINT = '#B7AFA4'
 const ORANGE = '#F47B20'
 const SOFT = '0 1px 2px rgba(0,0,0,0.04), 0 12px 30px -20px rgba(0,0,0,0.3)'
 

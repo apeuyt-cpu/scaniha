@@ -884,11 +884,13 @@ function MinimalLayout({
               {/* Items Grid */}
               <div className="space-y-3">
                 {activeItems.map((item, idx) => (
-                  <article
+                  <button
+                    type="button"
                     key={item.id}
                     onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
-                    className="minimal-item minimal-fade cursor-pointer rounded-xl p-4"
-                    style={{ 
+                    aria-expanded={expandedItem === item.id}
+                    className="minimal-item minimal-fade cursor-pointer rounded-xl p-4 w-full text-left"
+                    style={{
                       backgroundColor: theme.colors.secondary,
                       border: `1px solid ${expandedItem === item.id ? theme.colors.accent : theme.colors.border}`,
                       animationDelay: `${idx * 0.05}s`,
@@ -979,7 +981,7 @@ function MinimalLayout({
                         )}
                       </div>
                     </div>
-                  </article>
+                  </button>
                 ))}
               </div>
 

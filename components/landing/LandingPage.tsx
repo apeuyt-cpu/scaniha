@@ -225,6 +225,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
         )}
       </header>
 
+      <main id="main-content">
       {/* Hero Section */}
       <section ref={heroRef} onTouchStart={onHeroTouchStart} onTouchEnd={onHeroTouchEnd} className="relative overflow-hidden bg-gradient-to-b from-[#FEFEFE] via-[#FEFEFE] to-[#FEFEFE]">
         {/* Decorations are desktop-only — mobile keeps a perfectly white hero */}
@@ -258,9 +259,9 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
               onMouseEnter={() => setHeroPaused(true)}
               onMouseLeave={() => setHeroPaused(false)}
             >
-              <div className="grid">
+              <div className="grid" aria-live="polite">
                 {/* Slide 1 — Menu QR */}
-                <div className={`transition-all duration-700 ease-out [grid-area:1/1] ${heroSlide === 0 ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}`}>
+                <div aria-hidden={heroSlide !== 0} className={`transition-all duration-700 ease-out [grid-area:1/1] ${heroSlide === 0 ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}`}>
                   <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5">
                     <span aria-hidden="true">🍽️</span>
                     <span className="text-sm font-semibold text-orange-700">Menu QR</span>
@@ -275,15 +276,15 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
                 </div>
 
                 {/* Slide 2 — Programme de fidélité */}
-                <div className={`transition-all duration-700 ease-out [grid-area:1/1] ${heroSlide === 1 ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}>
+                <div aria-hidden={heroSlide !== 1} className={`transition-all duration-700 ease-out [grid-area:1/1] ${heroSlide === 1 ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}>
                   <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5">
                     <span aria-hidden="true">🎯</span>
                     <span className="text-sm font-semibold text-amber-700">Programme de fidélité</span>
                   </div>
-                  <h1 className="headline mt-6 text-4xl font-extrabold leading-[1.08] text-zinc-900 sm:text-5xl lg:text-6xl">
+                  <h2 className="headline mt-6 text-4xl font-extrabold leading-[1.08] text-zinc-900 sm:text-5xl lg:text-6xl">
                     Faites revenir<br />
                     <span className="text-orange-500">vos clients</span>
-                  </h1>
+                  </h2>
                   <p className="mx-auto mt-6 max-w-md text-lg leading-relaxed text-zinc-600">
                     Une carte de fidélité dans le téléphone : on s’inscrit en 10 secondes, on tourne la roue, on cumule des points et on les échange contre des récompenses.
                   </p>
@@ -640,6 +641,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
           </div>
         </div>
       </section>
+      </main>
 
       {/* Local-only internal catalog — renders only under `next dev` with the
           gitignored public/_local-products.json present. Invisible in prod. */}

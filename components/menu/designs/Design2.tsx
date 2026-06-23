@@ -160,6 +160,7 @@ export default function Design2({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Rechercher des plats..."
+                aria-label="Rechercher un plat"
                 className="w-full bg-transparent text-base text-white placeholder-white/50 outline-none"
               />
             </div>
@@ -293,7 +294,7 @@ export default function Design2({
                             </p>
                           ) : null}
                           {settings.showPrices && (
-                            <span className="mt-1 block text-sm font-bold" style={{ color: accent }}>
+                            <span className="mt-1 block text-sm font-bold text-slate-800">
                               {formatPrice(item.price) ?? '—'}
                             </span>
                           )}

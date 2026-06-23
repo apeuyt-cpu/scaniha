@@ -12,7 +12,7 @@ const phoneValid = (p: string) => p.replace(/[^\d]/g, '').length >= 8
 
 const ORANGE = '#F47B20'
 const GRAD = 'linear-gradient(135deg, #FB8B2A, #EF6311)'
-const INK = '#1A1410', MUT = '#8C8378', FAINT = '#B7AFA4', LINE = '#EFEAE3'
+const INK = '#1A1410', MUT = '#71695F', FAINT = '#B7AFA4', LINE = '#EFEAE3'
 const SOFT = '0 1px 2px rgba(0,0,0,0.04), 0 12px 30px -20px rgba(0,0,0,0.3)'
 
 /** A 4-digit PIN, shown as four cells over one hidden numeric input (one mobile
@@ -20,7 +20,7 @@ const SOFT = '0 1px 2px rgba(0,0,0,0.04), 0 12px 30px -20px rgba(0,0,0,0.3)'
  *  The ACTIVE cell is unmistakable: white fill, orange border + glow ring, a
  *  small lift, and a blinking caret. Filled cells show the digit on a warm tint;
  *  empty cells stay faint. */
-function PinField({ value, onChange, disabled, autoFocus }: { value: string; onChange: (v: string) => void; disabled?: boolean; autoFocus?: boolean }) {
+function PinField({ value, onChange, disabled, autoFocus, invalid, describedBy }: { value: string; onChange: (v: string) => void; disabled?: boolean; autoFocus?: boolean; invalid?: boolean; describedBy?: string }) {
   const ref = useRef<HTMLInputElement>(null)
   return (
     <div className="relative mx-auto w-fit" onClick={() => ref.current?.focus()}>
@@ -36,6 +36,8 @@ function PinField({ value, onChange, disabled, autoFocus }: { value: string; onC
         autoFocus={autoFocus}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 4))}
         aria-label="Code à 4 chiffres"
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         className="absolute inset-0 z-10 h-full w-full cursor-pointer text-transparent opacity-0"
       />
       <div className="flex justify-center gap-3">
@@ -54,7 +56,7 @@ function PinField({ value, onChange, disabled, autoFocus }: { value: string; onC
                 transform: active ? 'translateY(-2px)' : 'none',
               }}
             >
-              {value[i] ?? (active ? <span className="h-7 w-[2px] animate-pulse rounded-full" style={{ background: ORANGE }} /> : '')}
+              {value[i] ?? (active ? <span className="h-7 w-[2px] animate-pulse motion-reduce:animate-none rounded-full" style={{ background: ORANGE }} /> : '')}
             </div>
           )
         })}
@@ -135,7 +137,7 @@ export default function DinerAuth({
     setMode(m); setError(null); setPin(''); setForgot(false)
   }
 
-  const input = 'w-full rounded-2xl bg-[#FAF8F5] px-4 text-[15px] outline-none transition placeholder:text-[#B7AFA4] focus:bg-white focus:ring-2 disabled:opacity-60'
+  const input = 'w-full rounded-2xl bg-[#FAF8F5] px-4 text-[15px] outline-none transition placeholder:text-[#776E60] focus:bg-white focus:ring-2 disabled:opacity-60'
   const inputStyle = { height: 52, color: INK, border: `1px solid ${LINE}`, ['--tw-ring-color' as any]: `${ORANGE}55` }
 
   return (
@@ -176,15 +178,15 @@ export default function DinerAuth({
       <form onSubmit={submit} className="rounded-3xl bg-white p-5" style={{ boxShadow: SOFT }}>
         <div className="space-y-2.5">
           {mode === 'signup' && (
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Votre prénom (optionnel)" autoComplete="given-name" disabled={busy} className={input} style={inputStyle} />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Votre prénom (optionnel)" aria-label="Prénom (optionnel)" autoComplete="given-name" disabled={busy} className={input} style={inputStyle} />
           )}
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Numéro de téléphone" inputMode="tel" autoComplete="tel" disabled={busy} className={input} style={inputStyle} />
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Numéro de téléphone" aria-label="Numéro de téléphone" inputMode="tel" autoComplete="tel" disabled={busy} aria-invalid={!!error} aria-describedby={error ? 'auth-error' : undefined} className={input} style={inputStyle} />
         </div>
 
         <p className="mb-3 mt-5 text-center text-xs font-semibold uppercase tracking-wide" style={{ color: MUT }}>
           {mode === 'signup' ? 'Choisissez un code à 4 chiffres' : 'Entrez votre code à 4 chiffres'}
         </p>
-        <PinField value={pin} onChange={setPin} disabled={busy} />
+        <PinField value={pin} onChange={setPin} disabled={busy} invalid={!!error} describedBy={error ? 'auth-error' : undefined} />
 
         {mode === 'signup' && welcomePoints > 0 && (
           <div className="mt-5 flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: `${ORANGE}10`, border: `1.5px dashed ${ORANGE}66` }}>
@@ -196,7 +198,7 @@ export default function DinerAuth({
           </div>
         )}
 
-        {error && <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-center text-sm text-red-700">{error}</p>}
+        {error && <p id="auth-error" role="alert" aria-live="assertive" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-center text-sm text-red-700">{error}</p>}
 
         <button
           type="submit"

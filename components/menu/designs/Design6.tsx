@@ -89,6 +89,7 @@ export default function Design6({ business, categories }: { business: any; categ
   const [selected, setSelected] = useState<SheetItem | null>(null)
   const [activeCat, setActiveCat] = useState<string | number>(cats[0]?.id ?? '')
   const [query, setQuery] = useState('')
+  const [jumpMsg, setJumpMsg] = useState('')
 
   const q = query.trim()
   const shownCats = q
@@ -97,7 +98,15 @@ export default function Design6({ business, categories }: { business: any; categ
 
   const jump = (id: string | number) => {
     setActiveCat(id)
-    if (typeof document !== 'undefined') document.getElementById(`d6-cat-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const cat = cats.find((c) => c.id === id)
+    if (cat) setJumpMsg(`Section ${cat.name}`)
+    if (typeof document !== 'undefined') {
+      const target = document.getElementById(`d6-cat-${id}`)
+      const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      target?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' })
+      // Move keyboard focus to the section so screen readers land on the chosen content.
+      target?.focus({ preventScroll: true })
+    }
   }
 
   return (
@@ -106,7 +115,7 @@ export default function Design6({ business, categories }: { business: any; categ
       <header className="px-6 pt-12 text-center">
         {settings.showLogo && business?.logo_url && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={business.logo_url} alt="" className="mx-auto mb-5 h-16 w-auto max-w-[170px] object-contain" />
+          <img src={business.logo_url} alt={business?.name || ''} className="mx-auto mb-5 h-16 w-auto max-w-[170px] object-contain" />
         )}
         <p className="text-[10px] uppercase tracking-[0.45em]" style={{ color: FAINT, fontFamily: SANS }}>La Carte</p>
         <h1 className="mx-auto mt-3 max-w-[18ch] text-balance text-[32px] font-bold leading-[1.1] tracking-tight">{business?.name || 'Notre Maison'}</h1>
@@ -124,7 +133,7 @@ export default function Design6({ business, categories }: { business: any; categ
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={FAINT} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un plat…" aria-label="Rechercher un plat" className="w-full bg-transparent text-base outline-none placeholder:text-[#A9A095]" style={{ color: INK, fontFamily: SANS }} />
               {q && (
-                <button type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche" className="shrink-0 text-[#B5ADA1] transition hover:text-[#7A7166]">
+                <button type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche" className="flex h-9 w-9 shrink-0 items-center justify-center -mr-1.5 rounded-full text-[#B5ADA1] transition hover:text-[#7A7166]">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
                 </button>
               )}
@@ -144,6 +153,7 @@ export default function Design6({ business, categories }: { business: any; categ
       {/* Sticky category jump-bar */}
       {!q && cats.length > 1 && (
         <nav className="sticky top-0 z-20 mt-7 border-b backdrop-blur-md" style={{ backgroundColor: `${PAGE}f2`, borderColor: DIVIDER }}>
+          <span className="sr-only" role="status" aria-live="polite">{jumpMsg}</span>
           <div className="no-scrollbar flex justify-start gap-6 overflow-x-auto px-6 py-3.5 lg:justify-center">
             {cats.map((cat) => {
               const active = activeCat === cat.id
@@ -152,6 +162,7 @@ export default function Design6({ business, categories }: { business: any; categ
                   key={cat.id}
                   type="button"
                   onClick={() => jump(cat.id)}
+                  aria-current={active ? 'true' : undefined}
                   className="relative shrink-0 whitespace-nowrap pb-1 text-[12px] uppercase tracking-[0.16em] transition-colors"
                   style={{ color: active ? INK : MUTED, fontFamily: SANS, fontWeight: active ? 600 : 500 }}
                 >
@@ -200,7 +211,7 @@ export default function Design6({ business, categories }: { business: any; categ
         ) : (
           <div className="space-y-12">
             {shownCats.map((cat) => (
-              <section key={cat.id} id={`d6-cat-${cat.id}`} className="scroll-mt-24">
+              <section key={cat.id} id={`d6-cat-${cat.id}`} tabIndex={-1} className="scroll-mt-24 outline-none">
                 {/* Section head */}
                 <div className="text-center">
                   <h2 className="text-[20px] font-bold tracking-tight" style={{ color: INK }}>{cat.name}</h2>
@@ -237,11 +248,11 @@ export default function Design6({ business, categories }: { business: any; categ
                             <span className={`text-[17px] font-semibold leading-snug ${it.available === false ? 'line-through' : ''}`}>{it.name}</span>
                             <span className="mx-0.5 mb-[3px] min-w-[1.5rem] flex-1 self-end border-b border-dotted" style={{ borderColor: LEADER }} aria-hidden="true" />
                             {settings.showPrices && (
-                              <span className="shrink-0 text-[16px] font-bold tabular-nums" style={{ color: accent, fontFamily: SANS }}>{fmt(it.price)}</span>
+                              <span className="shrink-0 text-[16px] font-bold tabular-nums" style={{ color: INK, fontFamily: SANS }}>{fmt(it.price)}</span>
                             )}
                           </div>
                           {it.available === false && (
-                            <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ backgroundColor: '#F2ECE2', color: FAINT, fontFamily: SANS }}>Épuisé</span>
+                            <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ backgroundColor: '#F2ECE2', color: '#6B6258', fontFamily: SANS }}>Épuisé</span>
                           )}
                           {settings.showDescriptions && it.description && (
                             <p className="mt-1.5 text-[13px] italic leading-relaxed" style={{ color: MUTED }}>{it.description}</p>

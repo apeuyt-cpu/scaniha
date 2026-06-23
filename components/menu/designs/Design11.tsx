@@ -178,8 +178,10 @@ export default function Design11({ business, categories }: { business: any; cate
               style={{ color: INK }}
             />
             {query && (
-              <button type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition active:scale-90" style={{ backgroundColor: HAIR, color: MUTED }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+              <button type="button" onClick={() => setQuery('')} aria-label="Effacer la recherche" className="-m-1.5 flex shrink-0 items-center justify-center p-1.5 transition active:scale-90">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full" style={{ backgroundColor: HAIR, color: MUTED }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </span>
               </button>
             )}
           </label>
@@ -293,14 +295,14 @@ export default function Design11({ business, categories }: { business: any; cate
                           <div className="flex items-center gap-2">
                             <h3 className={`truncate text-[16px] font-bold ${soldOut ? 'line-through' : ''}`}>{it.name}</h3>
                             {soldOut && (
-                              <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ backgroundColor: HAIR, color: MUTED }}>Épuisé</span>
+                              <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ backgroundColor: HAIR, color: '#5F574E' }}>Épuisé</span>
                             )}
                           </div>
                           {settings.showDescriptions && it.description && (
                             <p className="mt-1 line-clamp-2 text-[13px] leading-snug" style={{ color: MUTED }}>{it.description}</p>
                           )}
                           {settings.showPrices && (
-                            <p className="mt-2 text-[15.5px] font-extrabold tabular-nums" style={{ color: ok ? accent : MUTED }}>
+                            <p className="mt-2 text-[15.5px] font-extrabold tabular-nums" style={{ color: ok ? INK : MUTED }}>
                               {num}
                               {ok && <span className="ml-1 text-[11px] font-bold" style={{ color: MUTED }}>TND</span>}
                             </p>

@@ -10,7 +10,7 @@ import { DEMO_MENU } from '@/lib/demo-menu-seed'
 const ORANGE = '#F47B20'
 const GRAD = 'linear-gradient(135deg, #FB8B2A, #EF6311)'
 const INK = '#1A1410'
-const MUT = '#7A736B'
+const MUT = '#767065'
 
 const VIBES: Record<string, string> = { design1: 'Épuré', design6: 'Élégant', design11: 'Immersif', design12: 'Terroir' }
 

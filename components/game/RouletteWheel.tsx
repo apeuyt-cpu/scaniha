@@ -39,6 +39,10 @@ export default function RouletteWheel({
   const [rotation, setRotation] = useState(0)
   const [landed, setLanded] = useState(false)
   const spunRef = useRef(false)
+  // When the OS asks to reduce motion, we skip the whirl (a known vestibular /
+  // migraine trigger) and jump straight to the result. Suppresses the spin
+  // transition on the wheel + labels too.
+  const reducedMotionRef = useRef(false)
 
   // Alternating orange / white segments → calm, legible wheel.
   const gradient = useMemo(() => {
@@ -67,17 +71,33 @@ export default function RouletteWheel({
     const jitter = (Math.random() - 0.5) * seg * 0.4
     // Resting angle the wheel must end on for this target (0..360).
     const rest = (((360 - center + jitter) % 360) + 360) % 360
-    setTimeout(() => {
-      setLanded(false)
-      // Accumulate FORWARD from the current rotation: keep state monotonic so a
-      // replay never animates backward (or barely moves, which would skip the
-      // transition and leave the phase stuck on "spinning"). forwardDelta lands
-      // on the same resting angle, then +turns guarantees ~6 forward turns.
-      setRotation((current) => {
-        const forwardDelta = (((rest - current) % 360) + 360) % 360
-        return current + forwardDelta + turns
-      })
-    }, 30)
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    reducedMotionRef.current = prefersReducedMotion
+    if (prefersReducedMotion) {
+      // Reduced motion: no whirl. Snap straight to the resting angle (no turns,
+      // no transition) so the outcome still resolves, then resolve manually —
+      // with no transition the onTransitionEnd handler won't fire.
+      setTimeout(() => {
+        setRotation(rest)
+        setLanded(true)
+        onSpinEnd()
+      }, 30)
+    } else {
+      setTimeout(() => {
+        setLanded(false)
+        // Accumulate FORWARD from the current rotation: keep state monotonic so a
+        // replay never animates backward (or barely moves, which would skip the
+        // transition and leave the phase stuck on "spinning"). forwardDelta lands
+        // on the same resting angle, then +turns guarantees ~6 forward turns.
+        setRotation((current) => {
+          const forwardDelta = (((rest - current) % 360) + 360) % 360
+          return current + forwardDelta + turns
+        })
+      }, 30)
+    }
   }
   if (!spinning && spunRef.current) spunRef.current = false
 
@@ -114,7 +134,7 @@ export default function RouletteWheel({
         style={{
           background: gradient,
           transform: `rotate(${rotation}deg)`,
-          transition: rotation ? SPIN_TRANSITION : undefined,
+          transition: rotation && !reducedMotionRef.current ? SPIN_TRANSITION : undefined,
           boxShadow: `inset 0 0 0 1px ${HAIRLINE}`,
         }}
         onTransitionEnd={(e) => {
@@ -147,7 +167,7 @@ export default function RouletteWheel({
                 top: `${y}%`,
                 color: onOrange ? '#FFFFFF' : INK,
                 transform: `translate(-50%, -50%) rotate(${-rotation}deg)`,
-                transition: rotation ? SPIN_TRANSITION : undefined,
+                transition: rotation && !reducedMotionRef.current ? SPIN_TRANSITION : undefined,
               }}
             >
               {label}

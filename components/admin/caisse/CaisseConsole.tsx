@@ -139,6 +139,7 @@ function CustomerConsole() {
           onChange={(e) => setPhone(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && loadCustomer()}
           placeholder="+216 …"
+          aria-label="Numéro de téléphone du client"
           inputMode="tel"
           autoComplete="off"
           className={`${inputClass} flex-1`}
@@ -148,7 +149,7 @@ function CustomerConsole() {
           {loadingCust ? '…' : 'Ouvrir'}
         </Button>
       </div>
-      {custErr && <p className="mt-3 text-sm text-red-600">{custErr}</p>}
+      {custErr && <p role="alert" className="mt-3 text-sm text-red-600">{custErr}</p>}
 
       {/* Customer card — always-on area */}
       <div className="mt-4">
@@ -175,7 +176,7 @@ function CustomerConsole() {
               </div>
             </div>
 
-            {msg && <p className={`text-sm font-medium ${msg.tone === 'green' ? 'text-green-600' : 'text-red-600'}`}>{msg.text}</p>}
+            {msg && <p role="status" aria-live="polite" className={`text-sm font-medium ${msg.tone === 'green' ? 'text-green-600' : 'text-red-600'}`}>{msg.text}</p>}
 
             {/* Action: credit a purchase */}
             <div className="rounded-xl border border-zinc-100 bg-zinc-50/60 p-4">
@@ -343,7 +344,7 @@ function PendingRequestsCard() {
         <button type="button" onClick={() => { setList(null); load() }} className="shrink-0 text-sm font-semibold text-orange-600 hover:text-orange-700">Actualiser</button>
       </div>
 
-      {msg && <p className={`mt-3 text-sm font-medium ${msg.tone === 'green' ? 'text-green-600' : 'text-red-600'}`}>{msg.text}</p>}
+      {msg && <p role="status" aria-live="polite" className={`mt-3 text-sm font-medium ${msg.tone === 'green' ? 'text-green-600' : 'text-red-600'}`}>{msg.text}</p>}
 
       <div className="mt-4">
         {list === null ? (
@@ -446,6 +447,7 @@ function ValidateCard() {
           onChange={(e) => { setCode(e.target.value.toUpperCase()); setResult(null) }}
           onKeyDown={(e) => e.key === 'Enter' && check()}
           placeholder="K7F-3QZ"
+          aria-label="Code à valider"
           autoCapitalize="characters"
           autoComplete="off"
           className={`${inputClass} font-mono text-base tracking-[0.2em]`}
@@ -454,7 +456,7 @@ function ValidateCard() {
           {busy ? '…' : 'Vérifier'}
         </Button>
       </div>
-      {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
+      {err && <p role="alert" className="mt-3 text-sm text-red-600">{err}</p>}
       {result && <ValidateResultView result={result} collecting={collecting} onCollect={collect} onReset={reset} />}
     </div>
   )
@@ -508,7 +510,7 @@ function Banner({ tone, title, text }: { tone: 'green' | 'amber' | 'red'; title:
     red: 'border-red-200 bg-red-50 text-red-700',
   }[tone]
   return (
-    <div className={`mt-3 rounded-xl border px-4 py-3 ${styles}`}>
+    <div role={tone === 'green' ? 'status' : 'alert'} className={`mt-3 rounded-xl border px-4 py-3 ${styles}`}>
       <p className="text-sm font-bold">{title}</p>
       <p className="mt-0.5 text-sm opacity-90">{text}</p>
     </div>

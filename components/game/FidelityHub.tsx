@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import Confetti from './Confetti'
@@ -35,7 +35,10 @@ const REASON: Record<string, string> = { purchase: 'Achat', play: 'Roue de la ch
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 // Modern palette
-const BG = '#FAF8F5', INK = '#1A1410', MUT = '#8C8378', FAINT = '#B7AFA4', LINE = '#EFEAE3'
+// MUT/FAINT_TEXT are darkened from the original #8C8378/#B7AFA4 so information-bearing
+// text meets WCAG 2.1 AA (4.5:1) on the cream/white surfaces; FAINT (#B7AFA4) is kept
+// ONLY for the decorative chevron stroke. Same warm hue, deeper gray — no layout change.
+const BG = '#FAF8F5', INK = '#1A1410', MUT = '#71695F', FAINT = '#B7AFA4', FAINT_TEXT = '#6E665C', LINE = '#EFEAE3'
 const SOFT = '0 1px 2px rgba(0,0,0,0.04), 0 12px 30px -20px rgba(0,0,0,0.3)'
 
 const KEY = (slug: string) => 'scaniha_diner_' + slug
@@ -359,15 +362,15 @@ export default function FidelityHub({
 
 /* ── Bottom navigation (pill active state) ───────────────────────────────────── */
 function FidelityNav({ tab, setTab, hasMenu, hasRoulette, slug, accent }: { tab: Tab; setTab: (t: Tab) => void; hasMenu: boolean; hasRoulette: boolean; slug: string; accent: string }) {
-  const pill = (active: boolean) => ({ background: active ? `${accent}1f` : 'transparent', color: active ? accent : FAINT })
-  const lbl = (active: boolean) => ({ color: active ? INK : FAINT })
+  const pill = (active: boolean) => ({ background: active ? `${accent}1f` : 'transparent', color: active ? accent : FAINT_TEXT })
+  const lbl = (active: boolean) => ({ color: active ? INK : FAINT_TEXT })
   return (
     <nav aria-label="Navigation fidélité" className="fixed inset-x-0 bottom-0 z-40 bg-white" style={{ borderTop: `1px solid ${LINE}`, paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="mx-auto flex max-w-md px-2.5 pb-3 pt-2">
         {hasMenu && (
           <Link href={`/${slug}`} className="flex flex-1 flex-col items-center gap-1">
-            <span className="flex h-[30px] w-11 items-center justify-center rounded-full" style={{ color: FAINT }}><svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg></span>
-            <span className="text-[11px] font-medium" style={{ color: FAINT }}>Menu</span>
+            <span className="flex h-[30px] w-11 items-center justify-center rounded-full" style={{ color: FAINT_TEXT }}><svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg></span>
+            <span className="text-[11px] font-medium" style={{ color: FAINT_TEXT }}>Menu</span>
           </Link>
         )}
         <NavItem active={tab === 'carte'} onClick={() => setTab('carte')} label="Ma carte" pill={pill} lbl={lbl}>
@@ -387,7 +390,7 @@ function FidelityNav({ tab, setTab, hasMenu, hasRoulette, slug, accent }: { tab:
 }
 function NavItem({ active, onClick, label, pill, lbl, children }: { active: boolean; onClick: () => void; label: string; pill: (a: boolean) => any; lbl: (a: boolean) => any; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} aria-current={active} className="flex flex-1 flex-col items-center gap-1">
+    <button type="button" onClick={onClick} aria-current={active ? 'page' : undefined} className="flex flex-1 flex-col items-center gap-1">
       <span className="flex h-[30px] w-11 items-center justify-center rounded-full transition-colors" style={pill(active)}>{children}</span>
       <span className="text-[11px] font-medium" style={lbl(active)}>{label}</span>
     </button>
@@ -426,7 +429,7 @@ function CarteTab(props: {
         </div>
 
         <button type="button" onClick={onPlay} className="mt-6 block w-full rounded-2xl py-4 text-base font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -16px ${accent}` }}>Commencer — c’est parti</button>
-        <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: FAINT }}>Juste votre numéro et un code à 4 chiffres. 10 secondes, sans e-mail.</p>
+        <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: FAINT_TEXT }}>Juste votre numéro et un code à 4 chiffres. 10 secondes, sans e-mail.</p>
       </div>
     )
   }
@@ -465,7 +468,7 @@ function CarteTab(props: {
         </button>
         {qrOpen && (
           <div className="mt-4 flex flex-col items-center border-t pt-4" style={{ borderColor: LINE }}>
-            <div className="rounded-2xl p-3" style={{ background: '#FAF7F3' }}><QRCodeSVG value={cardCode} size={172} fgColor={INK} bgColor="#FAF7F3" level="M" /></div>
+            <div className="rounded-2xl p-3" style={{ background: '#FAF7F3' }}><QRCodeSVG value={cardCode} size={172} fgColor={INK} bgColor="#FAF7F3" level="M" role="img" aria-label="Code QR de votre carte de fidélité — à présenter à la caisse" /></div>
             <p className="mt-3 text-[11px]" style={{ color: MUT }}>{greeting}</p>
           </div>
         )}
@@ -473,7 +476,7 @@ function CarteTab(props: {
 
       {/* Mes bons */}
       <div className="mb-2.5 mt-7 flex items-center justify-between px-1">
-        <h2 className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: FAINT }}>Mes bons</h2>
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: FAINT_TEXT }}>Mes bons</h2>
         {activeCodes.length > 0 && <span className="rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums" style={{ backgroundColor: `${accent}14`, color: accent }}>{activeCodes.length}</span>}
       </div>
       {activeCodes.length > 0 ? (
@@ -491,12 +494,12 @@ function CarteTab(props: {
       )}
 
       {/* Historique */}
-      <h2 className="mb-2.5 mt-7 px-1 text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: FAINT }}>Historique</h2>
+      <h2 className="mb-2.5 mt-7 px-1 text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: FAINT_TEXT }}>Historique</h2>
       {recent.length > 0 ? (
         <div className="rounded-[18px] bg-white px-4" style={{ boxShadow: SOFT }}>
           {recent.map((t, i) => (
             <div key={i} className="flex items-center justify-between gap-3 py-3" style={i > 0 ? { borderTop: `1px solid ${LINE}` } : undefined}>
-              <div className="min-w-0"><p className="truncate text-sm" style={{ color: INK }}>{REASON[t.reason] || t.reason}{t.note ? ` · ${t.note}` : ''}</p><p className="text-[11px]" style={{ color: FAINT }}>{fmtDate(t.created_at)}</p></div>
+              <div className="min-w-0"><p className="truncate text-sm" style={{ color: INK }}>{REASON[t.reason] || t.reason}{t.note ? ` · ${t.note}` : ''}</p><p className="text-[11px]" style={{ color: FAINT_TEXT }}>{fmtDate(t.created_at)}</p></div>
               <span className="shrink-0 text-sm font-semibold" style={{ color: t.delta >= 0 ? '#15803d' : '#ef4444' }}>{t.delta >= 0 ? `+${t.delta}` : t.delta}</span>
             </div>
           ))}
@@ -505,7 +508,7 @@ function CarteTab(props: {
         <p className="rounded-[18px] bg-white px-4 py-6 text-center text-sm" style={{ color: MUT, boxShadow: SOFT }}>Aucune activité pour le moment.</p>
       )}
 
-      <div className="pt-6 text-center"><button type="button" onClick={onLogout} className="text-xs font-medium underline-offset-2 hover:underline" style={{ color: FAINT }}>Se déconnecter</button></div>
+      <div className="pt-6 text-center"><button type="button" onClick={onLogout} className="text-xs font-medium underline-offset-2 hover:underline" style={{ color: FAINT_TEXT }}>Se déconnecter</button></div>
     </div>
   )
 }
@@ -525,8 +528,8 @@ function RoueTab(props: { prizes: string[]; accent: string; gradient: string; ph
           <Cooldown accent={accent} until={nextPlayAt} />
         ) : !played ? (
           <>
-            <button type="button" onClick={onSpin} disabled={phase === 'spinning'} className="block w-full rounded-[18px] py-[17px] text-base font-semibold text-white transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -14px ${accent}` }}>{phase === 'spinning' ? 'La roue tourne…' : 'Tourner la roue'}</button>
-            {rescan !== null ? <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour jouer" /> : error ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p> : <p className="mt-3.5 text-center text-[11px] leading-relaxed" style={{ color: FAINT }}>Vos gains et vos points sont gardés sur votre compte.</p>}
+            <button type="button" onClick={onSpin} disabled={phase === 'spinning'} aria-busy={phase === 'spinning'} className="block w-full rounded-[18px] py-[17px] text-base font-semibold text-white transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -14px ${accent}` }}>{phase === 'spinning' ? 'La roue tourne…' : 'Tourner la roue'}</button>
+            {rescan !== null ? <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour jouer" /> : error ? <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p> : <p className="mt-3.5 text-center text-[11px] leading-relaxed" style={{ color: FAINT_TEXT }}>Vos gains et vos points sont gardés sur votre compte.</p>}
           </>
         ) : (
           <div className="space-y-2.5">
@@ -557,7 +560,7 @@ function BoutiqueTab(props: { session: DinerSession | null; businessName: string
         </div>
       </div>
 
-      {rescan !== null ? <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour échanger" className="mt-3" /> : error ? <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p> : null}
+      {rescan !== null ? <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour échanger" className="mt-3" /> : error ? <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p> : null}
 
       {redeemed && (
         <div className="mt-3 rounded-[20px] bg-white p-5 text-center" style={{ boxShadow: SOFT }}>
@@ -587,7 +590,7 @@ function BoutiqueTab(props: { session: DinerSession | null; businessName: string
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${accent}14`, color: accent }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8" /><rect x="2" y="7" width="20" height="5" rx="1" /><path d="M12 21V7" /></svg></span>
               )}
               <p className="mt-2.5 line-clamp-2 min-h-[2.4em] text-[13px] font-semibold leading-snug" style={{ color: INK }}>{r.label}</p>
-              <p className="mt-0.5 text-xs font-bold" style={{ color: affordable ? accent : FAINT }}>{r.points_cost} pts</p>
+              <p className="mt-0.5 text-xs font-bold" style={{ color: affordable ? accent : FAINT_TEXT }}>{r.points_cost} pts</p>
               {affordable || !session ? (
                 <button type="button" onClick={() => onRedeem(r)} disabled={busy} className="mt-3 w-full rounded-xl py-2.5 text-xs font-bold text-white transition active:scale-[0.97] disabled:opacity-60" style={{ backgroundColor: accent }}>{busy ? '…' : 'Échanger'}</button>
               ) : (
@@ -608,7 +611,7 @@ function Cooldown({ accent, until }: { accent: string; until: string | null }) {
   useEffect(() => { setMs(msUntilNext(until)); const id = setInterval(() => setMs(msUntilNext(until)), 1000); return () => clearInterval(id) }, [until])
   if (ms === undefined) return null
   return (
-    <div className="w-full rounded-[20px] bg-white p-6 text-center" style={{ boxShadow: SOFT }}>
+    <div role="status" aria-live="polite" aria-atomic="false" className="w-full rounded-[20px] bg-white p-6 text-center" style={{ boxShadow: SOFT }}>
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl" style={{ backgroundColor: `${accent}1a`, color: accent }} aria-hidden="true">
         <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
       </div>
@@ -619,8 +622,8 @@ function Cooldown({ accent, until }: { accent: string; until: string | null }) {
           <p className="text-sm font-medium" style={{ color: INK }}>Revenez plus tard&nbsp;!</p>
         ) : (
           <>
-            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: MUT }}>Prochaine partie dans</p>
-            <p className="mt-0.5 text-[32px] font-bold leading-none tabular-nums" style={{ color: accent }}>{fmtCountdown(ms)}</p>
+            <p aria-hidden="true" className="text-[11px] font-medium uppercase tracking-wide" style={{ color: MUT }}>Prochaine partie dans</p>
+            <p aria-hidden="true" className="mt-0.5 text-[32px] font-bold leading-none tabular-nums" style={{ color: accent }}>{fmtCountdown(ms)}</p>
           </>
         )}
       </div>
@@ -630,16 +633,21 @@ function Cooldown({ accent, until }: { accent: string; until: string | null }) {
 
 /* ── Win popup ───────────────────────────────────────────────────────────────── */
 function WinModal({ result, accent, gradient, copied, onCopy, onClose, onSeeCard }: { result: SpinResult; accent: string; gradient: string; copied: boolean; onCopy: () => void; onClose: () => void; onSeeCard: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    const prevFocused = document.activeElement as HTMLElement | null
     const prev = document.body.style.overflow; document.body.style.overflow = 'hidden'
+    // Move focus into the dialog so the win details (its accessible name) are
+    // announced to screen readers and keyboard users land inside the popup.
+    dialogRef.current?.focus()
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
-    return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey) }
+    return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey); prevFocused?.focus?.() }
   }, [onClose])
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <Confetti accent={accent} />
-      <div role="dialog" aria-modal="true" aria-label="Vous avez gagné" className="relative w-full max-w-[22rem] overflow-hidden rounded-[26px] bg-white px-6 pb-7 pt-8 text-center animate-[fhwin_.3s_cubic-bezier(0.16,0.84,0.3,1)]" style={{ boxShadow: '0 30px 60px -24px rgba(0,0,0,0.5)' }}>
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`Vous avez gagné ${result.prizeLabel}, code ${result.code}`} className="relative w-full max-w-[22rem] overflow-hidden rounded-[26px] bg-white px-6 pb-7 pt-8 text-center outline-none animate-[fhwin_.3s_cubic-bezier(0.16,0.84,0.3,1)]" style={{ boxShadow: '0 30px 60px -24px rgba(0,0,0,0.5)' }}>
         <button type="button" onClick={onClose} aria-label="Fermer" className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#FAF7F3]" style={{ color: MUT }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl" style={{ backgroundColor: `${accent}1a` }}>🎉</div>
         <h2 className="mt-3 text-2xl font-bold" style={{ color: INK }}>Vous avez gagné&nbsp;!</h2>
@@ -666,14 +674,14 @@ function NextSpinCountdown({ accent, until = null }: { accent: string; until?: s
   useEffect(() => { setMs(msUntilNext(until)); const id = setInterval(() => setMs(msUntilNext(until)), 1000); return () => clearInterval(id) }, [until])
   if (ms === undefined) return null
   if (ms === null) return (
-    <div className="mt-5 rounded-[18px] bg-white px-4 py-4 text-center" style={{ boxShadow: SOFT }}>
+    <div role="status" aria-live="polite" aria-atomic="false" className="mt-5 rounded-[18px] bg-white px-4 py-4 text-center" style={{ boxShadow: SOFT }}>
       <p className="text-sm font-medium" style={{ color: INK }}>Revenez plus tard pour rejouer&nbsp;!</p>
     </div>
   )
   return (
-    <div className="mt-5 rounded-[18px] bg-white px-4 py-4 text-center" style={{ boxShadow: SOFT }}>
-      <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: MUT }}>Prochaine partie dans</p>
-      <p className="mt-1 text-3xl font-medium tabular-nums" style={{ color: accent }}>{fmtCountdown(ms)}</p>
+    <div role="status" aria-live="polite" aria-atomic="false" className="mt-5 rounded-[18px] bg-white px-4 py-4 text-center" style={{ boxShadow: SOFT }}>
+      <p aria-hidden="true" className="text-[11px] font-medium uppercase tracking-wide" style={{ color: MUT }}>Prochaine partie dans</p>
+      <p aria-hidden="true" className="mt-1 text-3xl font-medium tabular-nums" style={{ color: accent }}>{fmtCountdown(ms)}</p>
       <p className="mt-1 text-[11px]" style={{ color: MUT }}>Revenez bientôt pour rejouer&nbsp;!</p>
     </div>
   )

@@ -132,15 +132,16 @@ export default function Design1({ business, categories }: { business: any; categ
         {/* Search + roulette entry */}
         <div className="mt-5 flex items-stretch gap-2.5">
           <label className="flex flex-1 items-center gap-2.5 rounded-2xl bg-white px-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1" style={{ ['--tw-ring-color' as string]: HAIR, height: 48 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
             <input
-              type="text"
+              type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher un plat…"
+              aria-label="Rechercher un plat"
               className="w-full bg-transparent text-base outline-none placeholder:text-[#a8a097]"
             />
           </label>
@@ -192,10 +193,18 @@ export default function Design1({ business, categories }: { business: any; categ
       {/* ===== Items ===== */}
       {/* min-height keeps short categories comfortably scrollable (hero can scroll away). */}
       <section className="min-h-[78vh] px-6 pt-3">
+        <h2 className="sr-only">Au menu</h2>
+        <p className="sr-only" aria-live="polite">
+          {visibleCategories.length === 0
+            ? ''
+            : displayedItems.length === 0
+            ? 'Aucun plat ne correspond à votre recherche'
+            : `${displayedItems.length} plat${displayedItems.length > 1 ? 's' : ''}`}
+        </p>
         {visibleCategories.length === 0 ? (
           <EmptyState gradient={gradient} />
         ) : displayedItems.length === 0 ? (
-          <p className="py-14 text-center text-sm" style={{ color: MUTED }}>Aucun plat ne correspond à votre recherche.</p>
+          <p role="status" className="py-14 text-center text-sm" style={{ color: MUTED }}>Aucun plat ne correspond à votre recherche.</p>
         ) : (
           <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-4 lg:gap-y-2.5 lg:space-y-0">
             {displayedItems.map((item, idx) => {
@@ -215,7 +224,7 @@ export default function Design1({ business, categories }: { business: any; categ
 
                     <div className="min-w-0 flex-1 py-0.5">
                       <div className="flex items-center gap-2">
-                        <h4 className="truncate text-[15px] font-semibold">{item.name}</h4>
+                        <h3 className="truncate text-[15px] font-semibold">{item.name}</h3>
                         {item.available === false && (
                           <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase" style={{ backgroundColor: HAIR, color: MUTED }}>Épuisé</span>
                         )}

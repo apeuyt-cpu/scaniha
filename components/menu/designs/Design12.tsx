@@ -94,14 +94,14 @@ export default function Design12({ business, categories }: { business: any; cate
         <div className="flex items-start gap-2">
           <h3 className="min-w-0 flex-1 truncate text-[18px] font-bold leading-snug" style={{ fontFamily: SERIF, color: INK }}>{it.name}</h3>
           {it.available === false && (
-            <span className="mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ backgroundColor: '#EDE5D7', color: MUTED }}>Épuisé</span>
+            <span className="mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ backgroundColor: '#EDE5D7', color: '#5F574E' }}>Épuisé</span>
           )}
         </div>
         {settings.showDescriptions && it.description && (
           <p className="mt-0.5 line-clamp-1 text-[12.5px] leading-snug" style={{ color: MUTED }}>{it.description}</p>
         )}
         {settings.showPrices && it.price != null && (
-          <p className="mt-1.5 text-[15px] font-extrabold tabular-nums" style={{ color: accent, fontFamily: SANS }}>{fmt(it.price)}</p>
+          <p className="mt-1.5 text-[15px] font-extrabold tabular-nums" style={{ color: INK, fontFamily: SANS }}>{fmt(it.price)}</p>
         )}
       </div>
     </button>
@@ -126,7 +126,7 @@ export default function Design12({ business, categories }: { business: any; cate
             </button>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[19px] font-bold leading-tight" style={{ fontFamily: SERIF, color: INK }}>{business?.name || 'Notre Maison'}</p>
+            <h1 className="truncate text-[19px] font-bold leading-tight" style={{ fontFamily: SERIF, color: INK }}>{business?.name || 'Notre Maison'}</h1>
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.28em]" style={{ color: accent }}>Notre carte</p>
           </div>
         </header>
@@ -167,6 +167,7 @@ export default function Design12({ business, categories }: { business: any; cate
         </div>
       )}
 
+      <main>
       {q ? (
         /* ===== Search results (across all categories) ===== */
         <section className="px-4 pt-6">
@@ -261,6 +262,7 @@ export default function Design12({ business, categories }: { business: any; cate
           )}
         </>
       )}
+      </main>
 
       {/* ===== Quiet on-brand social row (only when the business has socials) ===== */}
       {socials.length > 0 && (

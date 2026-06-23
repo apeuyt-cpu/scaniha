@@ -36,13 +36,22 @@ export async function GET() {
       return NextResponse.json({ error: 'Échec du chargement des statistiques.' }, { status: 500 })
     }
 
+    // "Total" is the ALL-TIME visit count — fetch it via a cheap embedded count
+    // aggregate (no row transfer) so the 90-day window bound above doesn't shrink
+    // the lifetime figure the column shows for cafés with views older than 90 days.
+    const totalById = new Map<string, number>()
+    const { data: totalsRows } = await supabase
+      .from('businesses')
+      .select('id, menu_views ( count )')
+    ;(totalsRows || []).forEach((b: any) => { totalById.set(b.id, b.menu_views?.[0]?.count ?? 0) })
+
     const stats = (fallback || []).map((b: any) => {
       const views = b.menu_views || []
       const now = new Date()
       const today = views.filter((v: any) => new Date(v.viewed_at) >= new Date(now.getTime() - 86400000)).length
       const week = views.filter((v: any) => new Date(v.viewed_at) >= new Date(now.getTime() - 7 * 86400000)).length
       const month = views.filter((v: any) => new Date(v.viewed_at) >= new Date(now.getTime() - 30 * 86400000)).length
-      return { name: b.name, slug: b.slug, today, week, month, total: views.length }
+      return { name: b.name, slug: b.slug, today, week, month, total: totalById.get(b.id) ?? views.length }
     })
 
     stats.sort((a: any, b: any) => b.month - a.month)

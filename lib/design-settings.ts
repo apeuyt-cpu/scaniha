@@ -335,6 +335,32 @@ export function menuShowsFidelity(business: any): boolean {
   return business?.design_settings?.menuShowsFidelity !== false
 }
 
+export interface OrderingConfig { enabled: boolean; qrKey: string; ttlMin: number; tables: number }
+
+/**
+ * Table-ordering config (business-wide sibling key in design_settings.ordering).
+ * Defaults OFF — opt-in. `qrKey` signs the per-table presence QR; `ttlMin` is how
+ * long after a scan a diner may order (default 120 min — a sitting); `tables` is
+ * how many numbered table QRs the owner wants to generate.
+ */
+export function orderingConfig(business: any): OrderingConfig {
+  const o = business?.design_settings?.ordering
+  const ttl = Number(o?.ttlMin)
+  const tables = Number(o?.tables)
+  return {
+    enabled: Boolean(o?.enabled),
+    qrKey: typeof o?.qrKey === 'string' ? o.qrKey : '',
+    ttlMin: Number.isFinite(ttl) && ttl > 0 ? Math.min(1440, Math.round(ttl)) : 120,
+    tables: Number.isFinite(tables) && tables > 0 ? Math.min(200, Math.round(tables)) : 0,
+  }
+}
+
+/** Whether table ordering is LIVE for customers (enabled AND a key exists). */
+export function isOrderingLive(business: any): boolean {
+  const o = orderingConfig(business)
+  return o.enabled && o.qrKey.length > 0
+}
+
 type AnyItem = { id: string | number; available?: boolean }
 
 /** Deterministic-ish shuffle seeded by a number (so SSR/CSR agree per render seed). */

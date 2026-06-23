@@ -37,6 +37,11 @@ export function scanCookieName(businessId: string): string {
   return `qrs_${businessId}`
 }
 
+/** Separate presence cookie for table ordering (its own key, distinct from play). */
+export function orderScanCookieName(businessId: string): string {
+  return `ord_${businessId}`
+}
+
 /** A fresh random key to embed in the QR (URL-safe, unambiguous, ~107 bits). */
 export function newQrKey(): string {
   const bytes = crypto.randomBytes(20)

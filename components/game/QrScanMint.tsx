@@ -16,11 +16,11 @@ export default function QrScanMint({ slug }: { slug: string }) {
     } catch {}
     if (!key) return
 
-    fetch(`/api/game/${slug}/scan`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key }),
-    }).catch(() => {})
+    // The QR key is either a play key or a table-ordering key — ping both mints;
+    // each only sets its cookie when the key matches its own purpose (no-op else).
+    const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) }
+    fetch(`/api/game/${slug}/scan`, opts).catch(() => {})
+    fetch(`/api/order/${slug}/scan`, opts).catch(() => {})
 
     try {
       const url = new URL(window.location.href)

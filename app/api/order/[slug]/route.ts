@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadOrderingGate, placeOrder, getOrderStatus } from '@/lib/db/ordering'
-import { scanCookieName, verifyScan } from '@/lib/qr-session'
+import { orderScanCookieName, verifyScan } from '@/lib/qr-session'
 import { sanitizeCart } from '@/lib/orders'
 import { checkRateLimit } from '@/lib/api/rate-limit'
 
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
 
   // Presence gate — must have scanned this café's QR recently.
-  const cookie = req.cookies.get(scanCookieName(gate.businessId))?.value
+  const cookie = req.cookies.get(orderScanCookieName(gate.businessId))?.value
   if (!verifyScan(cookie, gate.businessId, gate.qrKey, gate.ttlMin)) {
     return NextResponse.json({ ok: false, rescanRequired: true, error: 'Scannez le QR de votre table pour commander.' }, { status: 403 })
   }

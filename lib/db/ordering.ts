@@ -23,14 +23,15 @@ export async function loadOrderingGate(slug: string): Promise<{ businessId: stri
   }
 }
 
-/** Place an order atomically (server-priced via the place_order RPC). */
+/** Place an order atomically (server-priced via the place_order RPC). `idem`
+ *  makes retries safe — the same key returns the existing order, never a dup. */
 export async function placeOrder(
-  businessId: string, table: string, name: string | null, note: string | null, items: OrderItemInput[]
+  businessId: string, table: string, name: string | null, note: string | null, items: OrderItemInput[], idem?: string | null
 ): Promise<{ ok: boolean; orderId?: string; total?: number; error?: string }> {
   try {
     const supabase: any = await createServiceRoleClient()
     const { data, error } = await supabase.rpc('place_order', {
-      p_business: businessId, p_table: table, p_name: name, p_note: note, p_items: items,
+      p_business: businessId, p_table: table, p_name: name, p_note: note, p_items: items, p_idem: idem ?? null,
     })
     if (error) { console.error('place_order:', error.message); return { ok: false, error: 'server' } }
     return (data as any) || { ok: false, error: 'server' }
@@ -74,5 +75,67 @@ export async function updateOrderStatus(businessId: string, orderId: string, sta
   const supabase: any = await createServiceRoleClient()
   const { error } = await supabase.from('orders').update({ status }).eq('id', orderId).eq('business_id', businessId)
   if (error) console.error('updateOrderStatus:', error.message)
+  return !error
+}
+
+// ── Appel serveur (call waiter / ask for the bill) ──────────────────────────
+
+export type ServiceCallKind = 'service' | 'bill'
+export interface ServiceCall { id: string; table_number: string; kind: ServiceCallKind; created_at: string }
+
+/**
+ * Create a waiter call. Dedups: an open call for the same table+kind within the
+ * last 90s returns the existing one instead of stacking duplicates (anti-spam).
+ */
+export async function createServiceCall(businessId: string, table: string, kind: ServiceCallKind): Promise<{ ok: boolean; id?: string }> {
+  try {
+    const supabase: any = await createServiceRoleClient()
+    const since = new Date(Date.now() - 90_000).toISOString()
+    const { data: existing } = await supabase
+      .from('service_calls')
+      .select('id')
+      .eq('business_id', businessId).eq('table_number', table).eq('kind', kind).eq('status', 'open')
+      .gte('created_at', since)
+      .maybeSingle()
+    if (existing?.id) return { ok: true, id: existing.id }
+    const { data, error } = await supabase
+      .from('service_calls')
+      .insert({ business_id: businessId, table_number: table, kind })
+      .select('id')
+      .single()
+    if (error) {
+      // Unique-violation = a concurrent request already opened this exact call.
+      // The DB index (service_calls_one_open) is the real dedup guarantee.
+      if (error.code === '23505') return { ok: true }
+      console.error('createServiceCall:', error.message)
+      return { ok: false }
+    }
+    return { ok: true, id: data.id }
+  } catch (e: any) {
+    console.error('createServiceCall:', e?.message)
+    return { ok: false }
+  }
+}
+
+/** Admin: open calls for a business, newest first. */
+export async function listServiceCalls(businessId: string): Promise<ServiceCall[]> {
+  const supabase: any = await createServiceRoleClient()
+  const { data } = await supabase
+    .from('service_calls')
+    .select('id, table_number, kind, created_at')
+    .eq('business_id', businessId).eq('status', 'open')
+    .order('created_at', { ascending: false })
+    .limit(50)
+  return (data || []) as ServiceCall[]
+}
+
+/** Admin: mark a call done (scoped to the owner's business). */
+export async function resolveServiceCall(businessId: string, callId: string): Promise<boolean> {
+  const supabase: any = await createServiceRoleClient()
+  const { error } = await supabase
+    .from('service_calls')
+    .update({ status: 'done', resolved_at: new Date().toISOString() })
+    .eq('id', callId).eq('business_id', businessId)
+  if (error) console.error('resolveServiceCall:', error.message)
   return !error
 }

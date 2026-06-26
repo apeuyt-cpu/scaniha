@@ -26,7 +26,7 @@ export default function OnlineMenuForRestaurantsPage() {
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE]"><h2 className="text-xl font-bold text-zinc-900 mb-3">Un design soigné</h2><p className="text-zinc-600">Choisissez parmi des thèmes personnalisables qui correspondent à votre marque. Votre menu en ligne reste professionnel sur tous les appareils.</p></div>
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE]"><h2 className="text-xl font-bold text-zinc-900 mb-3">Connaissance client</h2><p className="text-zinc-600">Suivez les articles qui obtiennent le plus de vues, comprenez les préférences de vos clients et optimisez votre menu.</p></div>
         </div>
-        <div className="text-center"><Link href="/free-qr-menu" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">Essayer le menu QR gratuit →</Link><Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Créez votre menu en ligne</Link></div>
+        <div className="text-center"><Link href="/free-qr-menu" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">Essayer le menu QR gratuit →</Link><Link href="/business-request" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Créez votre menu en ligne</Link></div>
         <div className="mt-16 text-center"><Link href="/cafe-digital-menu" className="text-orange-600 font-semibold hover:text-orange-700">Menu numérique pour cafés →</Link></div>
       </div>
     </div>

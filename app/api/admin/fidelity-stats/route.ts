@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireOwner } from '@/lib/auth'
-import { getActiveBusiness } from '@/lib/db/business'
+import { withStaff } from '@/lib/access/withStaff'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { isFidelityLive } from '@/lib/design-settings'
 
@@ -12,13 +11,8 @@ export const dynamic = 'force-dynamic'
  * THIS café only. Counts only (no sums) to stay light on the free tier. Returns
  * { hasFidelity: false } for menu-only cafés so the UI hides the section.
  */
-export async function GET() {
+export const GET = withStaff('reports.view', async (_req, { business }) => {
   try {
-    const { user } = await requireOwner()
-    const business = await getActiveBusiness()
-    if (!business) {
-      return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
-    }
     if (!isFidelityLive(business)) return NextResponse.json({ hasFidelity: false })
 
     const sb: any = await createServiceRoleClient()
@@ -73,4 +67,4 @@ export async function GET() {
     console.error('admin/fidelity-stats:', e?.message)
     return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
   }
-}
+})

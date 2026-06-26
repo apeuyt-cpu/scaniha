@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/auth'
+import { withStaff, requireCap } from '@/lib/access/withStaff'
 import { getActiveBusiness } from '@/lib/db/business'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { generateSlug } from '@/lib/utils/slug'
@@ -47,44 +48,17 @@ async function currentPlan(business: any): Promise<string | null> {
   }
 }
 
-export async function GET() {
+// Dashboard reads the business + plan label — every signed-in staff needs it.
+export const GET = withStaff('page.dashboard', async (_req, { business }) => {
+  // Return business as-is (even if expired) + the current plan label.
+  const plan = await currentPlan(business)
+  return NextResponse.json({ ...business, plan })
+})
+
+export const PATCH = withStaff('settings.manage', async (request, { business }) => {
   try {
-    // requireOwner already ensures user is owner and redirects super_admin
-    await requireOwner()
-
-    // Owner → their own business; super_admin "Gérer comme" → the impersonated one.
-    const business = await getActiveBusiness()
-
-    if (!business) {
-      return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
-    }
-
-    // Don't auto-pause here - owners should always access their dashboard
-    // Return business as-is (even if expired) + the current plan label.
-    const plan = await currentPlan(business)
-    return NextResponse.json({ ...business, plan })
-  } catch (error: any) {
-    // Don't catch redirect errors - let them propagate
-    if (error?.digest?.startsWith('NEXT_REDIRECT')) {
-      throw error
-    }
-    console.error('[admin/business] GET error:', error?.message)
-    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
-  }
-}
-
-export async function PATCH(request: Request) {
-  try {
-    await requireOwner()
     const supabase = await createServerClient()
     const body = await request.json()
-
-    // Owner → own business (RLS owner policy); super_admin "Gérer comme" → the
-    // impersonated one (RLS super_admin policy). Write is filtered by id below.
-    const business = await getActiveBusiness()
-    if (!business) {
-      return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
-    }
 
     const allowedFields = ['name', 'primary_color']
     const updates: Record<string, any> = {}
@@ -118,7 +92,7 @@ export async function PATCH(request: Request) {
     console.error('[admin/business] PATCH error:', error?.message)
     return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
   }
-}
+})
 
 export async function POST(request: Request) {
   try {
@@ -128,6 +102,10 @@ export async function POST(request: Request) {
     if (profile.role === 'super_admin') {
       return NextResponse.json({ error: 'Action réservée au propriétaire.' }, { status: 403 })
     }
+    // Creating a business is an account-owner action — block non-owner staff
+    // (only the owner holds settings.manage when staff PINs are enabled).
+    const g = await requireCap('settings.manage')
+    if ('res' in g) return g.res
 
     const { businessName } = await request.json()
 

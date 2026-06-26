@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadImage } from '@/lib/storage'
 import { revalidatePublicMenu } from '@/lib/revalidate-menu'
-import { Skeleton } from '@/components/admin/ui/Skeleton'
+import { Skeleton } from '@/components/admin/kit/Skeleton'
 import {
   DESIGN_ACCENTS,
   DESIGN_EXTRAS,

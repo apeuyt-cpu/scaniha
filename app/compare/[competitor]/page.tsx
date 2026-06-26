@@ -101,7 +101,7 @@ export default async function ComparePage({ params }: { params: Promise<{ compet
         </section>
 
         <div className="text-center">
-          <Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Essayez Scaniha gratuitement</Link>
+          <Link href="/business-request" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Essayez Scaniha gratuitement</Link>
         </div>
       </div>
     </div>

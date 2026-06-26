@@ -32,6 +32,13 @@ create table if not exists public.order_items (
 create index if not exists orders_biz_status_time on public.orders (business_id, status, created_at desc);
 create index if not exists order_items_order on public.order_items (order_id);
 
+-- Idempotency key so a network drop / retry / double-submit never creates a
+-- duplicate order: place_order returns the existing order for the same key.
+alter table public.orders add column if not exists idem_key text;
+create unique index if not exists orders_business_idem on public.orders (business_id, idem_key) where idem_key is not null;
+-- Belt-and-suspenders: ensure total has its default (some legacy rows/columns lack it).
+alter table public.orders alter column total set default 0;
+
 -- updated_at maintenance (status changes).
 create or replace function public.orders_touch() returns trigger language plpgsql as $$
 begin new.updated_at := now(); return new; end; $$;
@@ -68,21 +75,39 @@ create policy order_items_super on public.order_items for all
 -- p_items = jsonb array of { itemId: uuid, qty: int }. Each item is validated to
 -- belong to THIS café (via category) and be available; price + total come from
 -- the DB, never the client. Returns { ok, orderId, total } or { ok:false, error }.
+drop function if exists public.place_order(uuid, text, text, text, jsonb);
 create or replace function public.place_order(
-  p_business uuid, p_table text, p_name text, p_note text, p_items jsonb
+  p_business uuid, p_table text, p_name text, p_note text, p_items jsonb, p_idem text default null
 ) returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   v_order_id uuid;
   v_total numeric(10,3) := 0;
+  v_idem text := nullif(btrim(coalesce(p_idem, '')), '');
+  v_existing_id uuid;
+  v_existing_total numeric(10,3);
   r record;
   v_item record;
 begin
   if p_table is null or length(btrim(p_table)) = 0 then return jsonb_build_object('ok', false, 'error', 'no_table'); end if;
   if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then return jsonb_build_object('ok', false, 'error', 'empty'); end if;
 
-  insert into public.orders (business_id, table_number, customer_name, note, status)
-    values (p_business, btrim(p_table), nullif(btrim(coalesce(p_name, '')), ''), nullif(btrim(coalesce(p_note, '')), ''), 'new')
-    returning id into v_order_id;
+  -- Idempotent replay: same (business, idem) returns the existing order, never a dup.
+  -- (Separate vars — a SELECT INTO with no match would NULL out v_total otherwise.)
+  if v_idem is not null then
+    select id, total into v_existing_id, v_existing_total from public.orders where business_id = p_business and idem_key = v_idem limit 1;
+    if v_existing_id is not null then return jsonb_build_object('ok', true, 'orderId', v_existing_id, 'total', coalesce(v_existing_total, 0)); end if;
+  end if;
+
+  begin
+    insert into public.orders (business_id, table_number, customer_name, note, status, total, idem_key)
+      values (p_business, btrim(p_table), nullif(btrim(coalesce(p_name, '')), ''), nullif(btrim(coalesce(p_note, '')), ''), 'new', 0, v_idem)
+      returning id into v_order_id;
+  exception when unique_violation then
+    -- A concurrent request with the same idem won the race — return its order.
+    select id, total into v_existing_id, v_existing_total from public.orders where business_id = p_business and idem_key = v_idem limit 1;
+    if v_existing_id is not null then return jsonb_build_object('ok', true, 'orderId', v_existing_id, 'total', coalesce(v_existing_total, 0)); end if;
+    return jsonb_build_object('ok', false, 'error', 'server');
+  end;
 
   for r in
     select (e->>'itemId')::uuid as item_id,
@@ -111,4 +136,4 @@ begin
   return jsonb_build_object('ok', true, 'orderId', v_order_id, 'total', v_total);
 end; $$;
 
-grant execute on function public.place_order(uuid, text, text, text, jsonb) to service_role;
+grant execute on function public.place_order(uuid, text, text, text, jsonb, text) to service_role;

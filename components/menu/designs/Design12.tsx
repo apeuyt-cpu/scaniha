@@ -14,6 +14,7 @@ import { MenuDock } from './MenuDock'
 import RouletteButton from './RouletteButton'
 import { getSocials } from './SocialLinks'
 import { FoodIcon } from './icons'
+import AddToCart from '@/components/order/AddToCart'
 
 const SERIF = "'Playfair Display', Georgia, 'Times New Roman', serif"
 const SANS = "'DM Sans', system-ui, -apple-system, sans-serif"
@@ -44,7 +45,7 @@ function SocialGlyph({ icon }: { icon: ReturnType<typeof getSocials>[number]['ic
   }
 }
 
-export default function Design12({ business, categories }: { business: any; categories: any[] }) {
+export default function Design12({ business, categories, ordering = false }: { business: any; categories: any[]; ordering?: boolean }) {
   const settings = getDesignSettings(business, 'design12')
   const accent = resolveAccent(settings, 'design12')
   const gradient = resolveGradient(settings, 'design12')
@@ -70,10 +71,12 @@ export default function Design12({ business, categories }: { business: any; cate
 
   // One shared item card — used for the active category AND search results.
   const ItemCard = ({ it, catName }: { it: KitItem; catName?: string }) => (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => setSelected(it)}
-      className={`relative flex w-full items-center gap-4 overflow-hidden rounded-3xl p-3 pr-4 text-left ring-1 transition hover:-translate-y-0.5 active:scale-[0.99] ${it.available === false ? 'opacity-60' : ''}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(it) } }}
+      className={`relative flex w-full cursor-pointer items-center gap-4 overflow-hidden rounded-3xl p-3 pr-4 text-left ring-1 transition hover:-translate-y-0.5 active:scale-[0.99] ${it.available === false ? 'opacity-60' : ''}`}
       style={{ minHeight: 92, backgroundColor: CARD, boxShadow: '0 12px 30px -22px rgba(42,33,24,0.55)', ['--tw-ring-color' as string]: LINE }}
     >
       {/* Circular media: photo, else a warm line-art tile so every card is balanced. */}
@@ -100,11 +103,18 @@ export default function Design12({ business, categories }: { business: any; cate
         {settings.showDescriptions && it.description && (
           <p className="mt-0.5 line-clamp-1 text-[12.5px] leading-snug" style={{ color: MUTED }}>{it.description}</p>
         )}
-        {settings.showPrices && it.price != null && (
-          <p className="mt-1.5 text-[15px] font-extrabold tabular-nums" style={{ color: INK, fontFamily: SANS }}>{fmt(it.price)}</p>
+        {(settings.showPrices || ordering) && (
+          <div className="mt-1.5 flex items-center gap-2">
+            {settings.showPrices && it.price != null && (
+              <p className="text-[15px] font-extrabold tabular-nums" style={{ color: INK, fontFamily: SANS }}>{fmt(it.price)}</p>
+            )}
+            {ordering && (
+              <AddToCart item={{ id: String(it.id), name: it.name, price: it.price, available: it.available }} accent={accent} size="sm" />
+            )}
+          </div>
         )}
       </div>
-    </button>
+    </div>
   )
 
   return (

@@ -1,6 +1,6 @@
 'use client'
 
-import Button from '@/components/admin/ui/Button'
+import Button from '@/components/admin/kit/Button'
 
 /**
  * Friendly empty-state shown before the game / loyalty feature is set up.

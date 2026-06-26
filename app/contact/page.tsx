@@ -65,7 +65,7 @@ export default function ContactPage() {
             </div>
           </div>
         </div>
-        <div className="text-center mt-12"><Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Commencer gratuitement</Link></div>
+        <div className="text-center mt-12"><Link href="/business-request" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Commencer gratuitement</Link></div>
       </div>
     </div>
   )

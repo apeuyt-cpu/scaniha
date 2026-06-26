@@ -9,6 +9,7 @@ import { InteractiveStyles, CenteredItemModal } from './interactive'
 import { MenuDock } from './MenuDock'
 import RouletteButton from './RouletteButton'
 import { FoodIcon } from './icons'
+import AddToCart from '@/components/order/AddToCart'
 
 type Item = {
   id: string | number
@@ -43,7 +44,7 @@ function priceParts(p: number | null) {
  * Featured + mid-list sliders, an inline roulette entry button beside the search
  * bar (shown when a game is live), and a clean centered detail modal.
  */
-export default function Design1({ business, categories }: { business: any; categories: any[] }) {
+export default function Design1({ business, categories, ordering = false }: { business: any; categories: any[]; ordering?: boolean }) {
   // Memoised so `settings` keeps a stable reference across renders driven only
   // by typing (query state) — otherwise the showcase memos below would re-run
   // (and re-shuffle) on every keystroke despite their photoItems input being unchanged.
@@ -211,10 +212,12 @@ export default function Design1({ business, categories }: { business: any; categ
               const { num, ok } = priceParts(item.price)
               return (
                 <Fragment key={item.id}>
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelectedItem(item)}
-                    className={`d1-item flex w-full items-center gap-3.5 rounded-[20px] bg-white p-2.5 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04),0_10px_30px_-22px_rgba(0,0,0,0.35)] transition hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(0,0,0,0.04),0_18px_40px_-24px_rgba(0,0,0,0.45)] active:scale-[0.98] ${item.available === false ? 'opacity-60' : ''}`}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedItem(item) } }}
+                    className={`d1-item flex w-full cursor-pointer items-center gap-3.5 rounded-[20px] bg-white p-2.5 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04),0_10px_30px_-22px_rgba(0,0,0,0.35)] transition hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(0,0,0,0.04),0_18px_40px_-24px_rgba(0,0,0,0.45)] active:scale-[0.98] ${item.available === false ? 'opacity-60' : ''}`}
                     style={{ animationDelay: `${Math.min(idx * 32, 260)}ms` }}
                   >
                     {item.image_url && (
@@ -234,18 +237,24 @@ export default function Design1({ business, categories }: { business: any; categ
                       )}
                     </div>
 
-                    {settings.showPrices && (
-                      <div className="flex shrink-0 items-center gap-1.5 pr-1">
-                        <span className="text-[15px] font-bold tabular-nums">
-                          {num}
-                          {ok && <span className="ml-0.5 text-[11px] font-semibold" style={{ color: MUTED }}>TND</span>}
-                        </span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#CDC6BB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M9 6l6 6-6 6" />
-                        </svg>
+                    {(settings.showPrices || ordering) && (
+                      <div className="flex shrink-0 items-center gap-2 pr-1">
+                        {settings.showPrices && (
+                          <span className="text-[15px] font-bold tabular-nums">
+                            {num}
+                            {ok && <span className="ml-0.5 text-[11px] font-semibold" style={{ color: MUTED }}>TND</span>}
+                          </span>
+                        )}
+                        {ordering ? (
+                          <AddToCart item={{ id: String(item.id), name: item.name, price: item.price, available: item.available }} accent={accent} size="sm" />
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#CDC6BB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M9 6l6 6-6 6" />
+                          </svg>
+                        )}
                       </div>
                     )}
-                  </button>
+                  </div>
 
                   {idx === midIndex && (
                     <div className="py-3 lg:col-span-2">

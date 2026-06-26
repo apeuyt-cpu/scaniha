@@ -7,6 +7,7 @@ import { getDesignSettings, resolveAccent, resolveGradient } from '@/lib/design-
 import { MenuDock } from './MenuDock'
 import RouletteButton from './RouletteButton'
 import { FoodIcon } from './icons'
+import AddToCart from '@/components/order/AddToCart'
 
 type Item = {
   id: string | number
@@ -36,9 +37,11 @@ const brandTint = (accent: string) => `linear-gradient(135deg, ${accent}1F, ${ac
 export default function Design2({
   business,
   categories,
+  ordering = false,
 }: {
   business: any
   categories: any[]
+  ordering?: boolean
 }) {
   const [query, setQuery] = useState('')
   const [activeCat, setActiveCat] = useState<string | number | 'all'>('all')
@@ -299,24 +302,28 @@ export default function Design2({
                             </span>
                           )}
                         </div>
-                        <span
-                          aria-hidden="true"
-                          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-white shadow-sm"
-                          style={{ backgroundImage: gradient }}
-                        >
-                          <svg
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                        {ordering ? (
+                          <AddToCart item={{ id: String(item.id), name: item.name, price: item.price, available: item.available }} accent={accent} size="sm" />
+                        ) : (
+                          <span
+                            aria-hidden="true"
+                            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-white shadow-sm"
+                            style={{ backgroundImage: gradient }}
                           >
-                            <path d="M9 6l6 6-6 6" />
-                          </svg>
-                        </span>
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M9 6l6 6-6 6" />
+                            </svg>
+                          </span>
+                        )}
                       </article>
                     </li>
                   ))}

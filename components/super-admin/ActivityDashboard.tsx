@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import StatTile from './StatTile'
-import { Skeleton, CardSkeleton } from '@/components/admin/ui/Skeleton'
+import { Skeleton, CardSkeleton } from '@/components/admin/kit/Skeleton'
 import { useToast } from '@/components/super-admin/Toast'
 
 type Ev = {

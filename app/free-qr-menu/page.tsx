@@ -25,7 +25,7 @@ export default function FreeQRMenuPage() {
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE]"><h2 className="text-xl font-bold text-zinc-900 mb-3">Essai complet</h2><p className="text-zinc-600">Profitez d'un nombre illimité d'articles, de catégories, de thèmes et de génération de QR codes. Découvrez tout ce que Scaniha propose.</p></div>
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE]"><h2 className="text-xl font-bold text-zinc-900 mb-3">Aucuns frais cachés</h2><p className="text-zinc-600">Une tarification transparente, sans surprise. Ne payez que lorsque vous êtes prêt à continuer après votre essai.</p></div>
         </div>
-        <div className="text-center"><Link href="/qr-menu-for-restaurants" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">En savoir plus sur les menus QR →</Link><Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Démarrer l'essai gratuit</Link></div>
+        <div className="text-center"><Link href="/qr-menu-for-restaurants" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">En savoir plus sur les menus QR →</Link><Link href="/business-request" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Démarrer l'essai gratuit</Link></div>
         <div className="mt-16 text-center"><Link href="/pricing" className="text-orange-600 font-semibold hover:text-orange-700">Voir les forfaits payants →</Link></div>
       </div>
     </div>

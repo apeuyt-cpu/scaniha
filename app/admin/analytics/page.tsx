@@ -1,17 +1,8 @@
-import MenuAnalytics from '@/components/admin/MenuAnalytics'
-import FidelityStats from '@/components/admin/FidelityStats'
-import PageShell from '@/components/admin/ui/PageShell'
+import { redirect } from 'next/navigation'
 
-export default function AnalyticsPage() {
-  return (
-    <PageShell
-      title="Statistiques"
-      subtitle="Suivez les consultations et l'activité de votre établissement."
-      width="5xl"
-    >
-      {/* Fidelity KPIs (self-hides for menu-only cafés), then menu/page views. */}
-      <FidelityStats />
-      <MenuAnalytics />
-    </PageShell>
-  )
+export const dynamic = 'force-dynamic'
+
+// Renamed to /admin/statistiques in the v2 remake. Shim keeps old links working.
+export default function AnalyticsRedirect() {
+  redirect('/admin/statistiques')
 }

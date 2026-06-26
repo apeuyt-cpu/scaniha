@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getActiveBusiness } from '@/lib/db/business'
+import { requireCap } from '@/lib/access/withStaff'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -42,6 +43,9 @@ export async function GET(req: Request) {
     if (!business) {
       return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }
+    // Staff must have reports.view (owner / PIN-off = allowed).
+    const g = await requireCap('reports.view')
+    if ('res' in g) return g.res
     businessId = business.id
   }
 

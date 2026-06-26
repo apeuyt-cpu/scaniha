@@ -10,6 +10,7 @@ import { InteractiveStyles, CenteredItemModal } from './interactive'
 import { getSocials } from './SocialLinks'
 import { MenuDock } from './MenuDock'
 import RouletteButton from './RouletteButton'
+import AddToCart from '@/components/order/AddToCart'
 
 const FONT = "'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif"
 const INK = '#171210'
@@ -41,7 +42,7 @@ function NoPhoto({ hint, accent, className }: { hint: string; accent: string; cl
  * category nav, large grouped cards, refined motion, plus an inline roulette
  * entry button beside the search (when a game is live) and a centered detail modal.
  */
-export default function Design11({ business, categories }: { business: any; categories: any[] }) {
+export default function Design11({ business, categories, ordering = false }: { business: any; categories: any[]; ordering?: boolean }) {
   const settings = getDesignSettings(business, 'design11')
   const accent = resolveAccent(settings, 'design11')
   const gradient = resolveGradient(settings, 'design11')
@@ -284,11 +285,13 @@ export default function Design11({ business, categories }: { business: any; cate
                     const { num, ok } = priceParts(it.price)
                     const soldOut = it.available === false
                     return (
-                      <button
+                      <div
                         key={it.id}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setSelected(it)}
-                        className={`d11-rise flex w-full items-center gap-3.5 rounded-[22px] bg-white p-3 text-left ring-1 ring-black/[0.04] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_14px_36px_-28px_rgba(0,0,0,0.45)] transition hover:-translate-y-0.5 active:scale-[0.99] ${soldOut ? 'opacity-60' : ''}`}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(it) } }}
+                        className={`d11-rise flex w-full cursor-pointer items-center gap-3.5 rounded-[22px] bg-white p-3 text-left ring-1 ring-black/[0.04] shadow-[0_1px_2px_rgba(0,0,0,0.03),0_14px_36px_-28px_rgba(0,0,0,0.45)] transition hover:-translate-y-0.5 active:scale-[0.99] ${soldOut ? 'opacity-60' : ''}`}
                         style={{ animationDelay: `${Math.min(i * 40, 240)}ms` }}
                       >
                         <div className="min-w-0 flex-1">
@@ -307,6 +310,11 @@ export default function Design11({ business, categories }: { business: any; cate
                               {ok && <span className="ml-1 text-[11px] font-bold" style={{ color: MUTED }}>TND</span>}
                             </p>
                           )}
+                          {ordering && (
+                            <div className="mt-2">
+                              <AddToCart item={{ id: String(it.id), name: it.name, price: it.price, available: it.available }} accent={accent} size="sm" />
+                            </div>
+                          )}
                         </div>
                         {it.image_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -314,7 +322,7 @@ export default function Design11({ business, categories }: { business: any; cate
                         ) : (
                           <NoPhoto hint={`${it.name} ${cat.name}`} accent={accent} className="h-[86px] w-[86px] rounded-2xl ring-1 ring-black/5" />
                         )}
-                      </button>
+                      </div>
                     )
                   })}
                 </div>
@@ -359,9 +367,11 @@ export default function Design11({ business, categories }: { business: any; cate
 }
 
 /** Small social glyphs (Instagram / Facebook / WhatsApp / X / Site web) for the footer row. */
-function SocialGlyph({ icon }: { icon: 'facebook' | 'instagram' | 'x' | 'whatsapp' | 'web' }) {
+function SocialGlyph({ icon }: { icon: 'facebook' | 'instagram' | 'x' | 'whatsapp' | 'web' | 'google' }) {
   const common = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'currentColor' as const, 'aria-hidden': true as const }
   switch (icon) {
+    case 'google':
+      return <svg {...common}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z" /></svg>
     case 'facebook':
       return <svg {...common}><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
     case 'instagram':

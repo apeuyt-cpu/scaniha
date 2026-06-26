@@ -4,6 +4,8 @@ import { getActiveBusiness } from '@/lib/db/business'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { normPhone } from '@/lib/db/loyalty'
 import { generateWinCode } from '@/lib/game'
+import { requireCap } from '@/lib/access/withStaff'
+import { logStaffAction } from '@/lib/db/staff'
 
 /**
  * Owner-operated "admin roulette" — a one-user wheel the owner spins at the
@@ -77,11 +79,15 @@ function weightedIndex(weights: number[]): number {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await requireOwner()
+    await requireOwner()
     const business = await getActiveBusiness()
     if (!business) {
       return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }
+    // Counter wheel = manager/owner tool (cashiers/servers lack page.comptoir).
+    const g = await requireCap('page.comptoir')
+    if ('res' in g) return g.res
+    const staff = g.staff
     const supabase: any = await createServiceRoleClient()
     const body = await request.json().catch(() => ({}))
     const action = body.action
@@ -193,6 +199,7 @@ export async function POST(request: Request) {
         .single()
       if (error) throw error
       saveWinDedup.set(dedupKey, { at: Date.now(), win: data })
+      await logStaffAction({ businessId: business.id, actorStaff: staff.staffId, actorLabel: staff.label, action: 'comptoir_win', targetTable: 'admin_roulette_wins', targetId: data?.id ?? null, detail: prizeLabel })
       return NextResponse.json({ ok: true, win: data })
     }
 

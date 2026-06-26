@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import RouletteWheel from '@/components/game/RouletteWheel'
-import Button from '@/components/admin/ui/Button'
-import { inputClass } from '@/components/admin/ui/Field'
-import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
-import { useToast } from '@/components/admin/ui/Toast'
-import { CardSkeleton } from '@/components/admin/ui/Skeleton'
+import Button from '@/components/admin/kit/Button'
+import { inputClass } from '@/components/admin/kit/Field'
+import ConfirmDialog from '@/components/admin/kit/ConfirmDialog'
+import { useToast } from '@/components/admin/kit/Toast'
+import { CardSkeleton } from '@/components/admin/kit/Skeleton'
 import { splitInt } from '@/lib/game'
 import RouletteSettings, { type RoulettePrize } from './RouletteSettings'
 

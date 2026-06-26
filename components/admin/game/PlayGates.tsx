@@ -2,8 +2,8 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { GATE_TYPES, type GatesConfig, type GameGate, type GateType } from '@/lib/game'
-import Toggle from '@/components/admin/ui/Toggle'
-import { inputClass } from '@/components/admin/ui/Field'
+import Toggle from '@/components/admin/kit/Toggle'
+import { inputClass } from '@/components/admin/kit/Field'
 
 const uid = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'g' + Math.random().toString(36).slice(2)

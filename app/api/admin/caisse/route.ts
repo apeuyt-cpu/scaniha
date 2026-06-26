@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { requireOwner } from '@/lib/auth'
 import { getActiveBusiness } from '@/lib/db/business'
+import { requireCap } from '@/lib/access/withStaff'
+import { logStaffAction } from '@/lib/db/staff'
 import { validateCode, awardPoints, customerSummary, normPhone, pendingRedemptions, declineRedemption, listActiveRewards, redeemAtCounter } from '@/lib/db/loyalty'
-import { businessHasStaffPins, verifyStaffPin } from '@/lib/db/staff-pins'
 import { checkRateLimit } from '@/lib/api/rate-limit'
 
 /** Per-transaction cap on a caisse credit — a typo can't mint a fortune. */
@@ -39,27 +40,34 @@ function takeRecentAward(key: string): any | null {
  *   { action: 'lookup', phone }            → balance + history + active codes
  *   { action: 'pending' }                  → list still-pending reward requests
  *   { action: 'decline', code }            → reject a pending request + refund points
- *   { action: 'rewards' }                  → active rewards + whether a staff PIN is required
- *   { action: 'counterRedeem', phone, reward_id, pin? } → redeem a reward at the counter
+ *   { action: 'rewards' }                  → active rewards (for the counter picker)
+ *   { action: 'counterRedeem', phone, reward_id } → redeem a reward at the counter
  *
- * requireOwner gates it; the owner's own business id is the only one ever
- * passed to the RPCs, so an owner can never touch another business.
+ * requireOwner gates the session; the unified staff model (getActiveStaff via
+ * requireCap) decides WHO may do WHAT — the lock screen already collected the
+ * staff PIN once at login, so privileged actions check capabilities, not a
+ * re-typed PIN. PIN off / no staff / owner → owner-level (no behaviour change).
  */
 export async function POST(request: Request) {
   try {
-    const { user } = await requireOwner()
+    await requireOwner()
     const business = await getActiveBusiness()
     if (!business) {
       return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
     }
+    // Base gate: must have caisse-page access (owner-level when PINs are off).
+    const gate = await requireCap('page.caisse')
+    if ('res' in gate) return gate.res
+    const staff = gate.staff
 
     const body = await request.json().catch(() => ({}))
     const action = body.action
 
     if (action === 'check' || action === 'validate') {
+      const cap = await requireCap('caisse.validate_code')
+      if ('res' in cap) return cap.res
       // Per-business, per-action rate limit (60/min, 5000/day): ample for human
       // counter use across all registers; throttles scripted code enumeration.
-      // requireOwner already gates the route → this is defense-in-depth.
       const rl = checkRateLimit(`caisse:${action}:${business.id}`)
       if (!rl.ok) {
         return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
@@ -69,35 +77,21 @@ export async function POST(request: Request) {
       if (code.length < 4) return NextResponse.json({ error: 'Code invalide.' }, { status: 400 })
       // 'check' peeks (no redeem); 'validate' collects (marks redeemed).
       const result = await validateCode(business.id, code, action === 'validate')
+      if (action === 'validate' && (result as any)?.ok !== false) {
+        await logStaffAction({ businessId: business.id, actorStaff: staff.staffId, actorLabel: staff.label, action: 'caisse_validate', detail: `code ${code}` })
+      }
       return NextResponse.json(result)
     }
 
     if (action === 'award') {
+      const cap = await requireCap('caisse.award')
+      if ('res' in cap) return cap.res
       const phone = normPhone(body.phone)
       const amount = Number(body.amount)
       if (!phone) return NextResponse.json({ error: 'Numéro invalide.' }, { status: 400 })
       if (!amount || amount <= 0) return NextResponse.json({ error: 'Montant invalide.' }, { status: 400 })
       if (amount > MAX_AWARD_TND) {
         return NextResponse.json({ error: `Montant trop élevé (max ${MAX_AWARD_TND} TND). Vérifiez le montant saisi.` }, { status: 400 })
-      }
-      // Opt-in staff PIN gate (only the 'award' action). Zero active pins →
-      // skipped entirely (backward-compatible). PIN is never logged.
-      const pin = typeof body.pin === 'string' ? body.pin.trim() : ''
-      const pinsRequired = await businessHasStaffPins(business.id)
-      if (pinsRequired) {
-        if (!pin) return NextResponse.json({ error: 'Code PIN requis.', code: 'PIN_REQUIRED' }, { status: 401 })
-        const okPin = await verifyStaffPin(business.id, pin)
-        if (!okPin) {
-          // Throttle WRONG guesses only: a correct PIN never consumes budget, so a
-          // busy café is never blocked, while a brute-forcer is locked after a few
-          // misses. Strict cap caps a 4-digit (10k) space at ~50 tries/day.
-          const rlPin = checkRateLimit(`caisse:award:pinfail:${business.id}`, { perMinute: 5, perDay: 50 })
-          if (!rlPin.ok) {
-            return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
-              { status: 429, headers: { 'Retry-After': String(rlPin.retryAfter) } })
-          }
-          return NextResponse.json({ error: 'Code PIN incorrect.', code: 'PIN_INVALID' }, { status: 401 })
-        }
       }
       const note = typeof body.note === 'string' ? body.note.slice(0, 120) : `Achat de ${amount} TND`
       // Replay guard: a network retry of the SAME submit (same per-click
@@ -116,6 +110,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: msg }, { status: result.error === 'no_program' ? 409 : 500 })
       }
       awardDedup.set(dedupKey, { at: Date.now(), result })
+      await logStaffAction({ businessId: business.id, actorStaff: staff.staffId, actorLabel: staff.label, action: 'caisse_award', amount, detail: `${phone} +${amount} TND` })
       return NextResponse.json(result)
     }
 
@@ -127,37 +122,19 @@ export async function POST(request: Request) {
     }
 
     if (action === 'rewards') {
-      // The active rewards (for the counter "échanger" picker) + whether the
-      // café gates staff actions behind a PIN (so the UI can show the field).
-      const [rewards, pinRequired] = await Promise.all([
-        listActiveRewards(business.id),
-        businessHasStaffPins(business.id),
-      ])
-      return NextResponse.json({ rewards, pinRequired })
+      // The active rewards for the counter "échanger" picker. (The per-action PIN
+      // field is gone — the lock screen handles staff identity now.)
+      const rewards = await listActiveRewards(business.id)
+      return NextResponse.json({ rewards, pinRequired: false })
     }
 
     if (action === 'counterRedeem') {
+      const cap = await requireCap('caisse.redeem')
+      if ('res' in cap) return cap.res
       const phone = normPhone(body.phone)
       const rewardId = typeof body.reward_id === 'string' ? body.reward_id : ''
       if (!phone) return NextResponse.json({ error: 'Numéro invalide.' }, { status: 400 })
       if (!rewardId) return NextResponse.json({ error: 'Récompense invalide.' }, { status: 400 })
-      // Same opt-in staff-PIN gate as 'award' — redeeming gives value away too.
-      const pin = typeof body.pin === 'string' ? body.pin.trim() : ''
-      const pinsRequired = await businessHasStaffPins(business.id)
-      if (pinsRequired) {
-        if (!pin) return NextResponse.json({ error: 'Code PIN requis.', code: 'PIN_REQUIRED' }, { status: 401 })
-        const okPin = await verifyStaffPin(business.id, pin)
-        if (!okPin) {
-          // Throttle WRONG guesses only (same design as 'award') — busy cafés are
-          // never blocked, brute-force is capped at ~50/day per café.
-          const rlPin = checkRateLimit(`caisse:redeem:pinfail:${business.id}`, { perMinute: 5, perDay: 50 })
-          if (!rlPin.ok) {
-            return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
-              { status: 429, headers: { 'Retry-After': String(rlPin.retryAfter) } })
-          }
-          return NextResponse.json({ error: 'Code PIN incorrect.', code: 'PIN_INVALID' }, { status: 401 })
-        }
-      }
       const result = await redeemAtCounter(business.id, phone, rewardId)
       if (!result.ok) {
         if (result.error === 'insufficient') {
@@ -168,6 +145,7 @@ export async function POST(request: Request) {
             : 'Échange momentanément indisponible.'
         return NextResponse.json({ error: msg }, { status: result.error === 'no_program' ? 409 : 500 })
       }
+      await logStaffAction({ businessId: business.id, actorStaff: staff.staffId, actorLabel: staff.label, action: 'caisse_redeem', detail: `${phone} · ${rewardId}` })
       return NextResponse.json(result)
     }
 
@@ -177,6 +155,8 @@ export async function POST(request: Request) {
     }
 
     if (action === 'decline') {
+      const cap = await requireCap('caisse.decline')
+      if ('res' in cap) return cap.res
       const rl = checkRateLimit(`caisse:decline:${business.id}`)
       if (!rl.ok) {
         return NextResponse.json({ error: 'Trop de tentatives. Réessayez dans un instant.' },
@@ -191,6 +171,7 @@ export async function POST(request: Request) {
             : 'Action momentanément indisponible.'
         return NextResponse.json({ error: msg }, { status: 409 })
       }
+      await logStaffAction({ businessId: business.id, actorStaff: staff.staffId, actorLabel: staff.label, action: 'caisse_decline', detail: `code ${code}` })
       return NextResponse.json(result)
     }
 

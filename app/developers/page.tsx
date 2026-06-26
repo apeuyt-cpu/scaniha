@@ -611,7 +611,7 @@ export default function DevelopersPage() {
                 Voir les tarifs
               </Link>
               <Link
-                href="/signup?plan=api_year"
+                href="/business-request?plan=api_year"
                 className="inline-block rounded-xl bg-gradient-to-r from-[#F47B20] to-[#F5B82E] px-6 py-3 font-extrabold text-white shadow-lg"
               >
                 Activer l&apos;API

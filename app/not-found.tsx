@@ -30,7 +30,7 @@ export default function NotFound() {
             Retour à l&apos;accueil
           </Link>
           <Link
-            href="/signup"
+            href="/business-request"
             className="w-full rounded-xl border border-zinc-300 bg-white px-7 py-3.5 text-center text-base font-semibold text-zinc-800 transition hover:border-orange-400 hover:text-orange-600 sm:w-auto"
           >
             Créer mon menu QR

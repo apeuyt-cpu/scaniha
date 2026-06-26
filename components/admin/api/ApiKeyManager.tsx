@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import Button from '@/components/admin/ui/Button'
-import Field, { inputClass } from '@/components/admin/ui/Field'
-import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
-import { useToast } from '@/components/admin/ui/Toast'
+import Button from '@/components/admin/kit/Button'
+import Field, { inputClass } from '@/components/admin/kit/Field'
+import ConfirmDialog from '@/components/admin/kit/ConfirmDialog'
+import { useToast } from '@/components/admin/kit/Toast'
 import type { ApiKeyPublic } from '@/lib/api/keys'
 
 /** A freshly-minted key, shown exactly once. */

@@ -10,6 +10,7 @@ import ClientsSection from '@/components/landing/ClientsSection'
 import AnimatedShapes from '@/components/landing/AnimatedShapes'
 import LocalProductsSection from '@/components/landing/LocalProductsSection'
 import FidelityShowcase from '@/components/landing/FidelityShowcase'
+import PosShowcase from '@/components/landing/PosShowcase'
 import logoIcon from '../../public/logo.png'
 import logoFull from '../../public/logo2.webp'
 import heroPhones from '../../public/hero/hero-phones.webp'
@@ -153,7 +154,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
                   {t('nav.login')}
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/business-request"
                   className="rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-700"
                 >
                   {t('nav.signup')}
@@ -214,7 +215,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
                     <Link href="/login" className="rounded-lg border border-zinc-300 px-4 py-2.5 text-center text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50" onClick={() => setMobileMenuOpen(false)}>
                       {t('nav.login')}
                     </Link>
-                    <Link href="/signup" className="rounded-lg bg-orange-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-orange-700" onClick={() => setMobileMenuOpen(false)}>
+                    <Link href="/business-request" className="rounded-lg bg-orange-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-orange-700" onClick={() => setMobileMenuOpen(false)}>
                       {t('nav.signup')}
                     </Link>
                   </>
@@ -317,7 +318,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
               ) : (
                 <>
                   <Link
-                    href="/signup"
+                    href="/business-request"
                     className="btn-shine rounded-xl bg-orange-500 px-7 py-3.5 text-center text-base font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
                   >
                     Commencer l&apos;essai gratuit
@@ -379,7 +380,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
               ) : (
                 <>
                   <Link
-                    href="/signup"
+                    href="/business-request"
                     className="btn-shine flex-1 rounded-xl bg-orange-500 px-4 py-3.5 text-center text-sm font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
                   >
                     Essai gratuit
@@ -436,7 +437,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
                 </li>
               </ul>
               <Link
-                href={dashboardUrl || '/signup'}
+                href={dashboardUrl || '/business-request'}
                 className="btn-shine mt-8 inline-block rounded-xl bg-orange-500 px-7 py-3.5 text-base font-bold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600"
               >
                 Équiper mes tables →
@@ -524,6 +525,9 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
         </div>
       </section>
 
+      {/* POS — the new standalone product */}
+      <PosShowcase />
+
       {/* Our Clients - Trusted by */}
       <ClientsSection />
 
@@ -583,7 +587,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
               ) : (
                 <>
                   <Link
-                    href="/signup"
+                    href="/business-request"
                     className="btn-shine w-full rounded-xl bg-[#FEFEFE] px-8 py-4 text-base font-extrabold text-orange-600 shadow-lg hover:bg-white sm:w-auto"
                   >
                     Démarrer l&apos;essai gratuit →
@@ -679,7 +683,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
             <div>
               <h3 className="text-white font-bold mb-3">Commencer</h3>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/signup" className="hover:text-white transition-colors">Créer un compte gratuit</Link></li>
+                <li><Link href="/business-request" className="hover:text-white transition-colors">Créer un compte gratuit</Link></li>
                 <li><Link href="/login" className="hover:text-white transition-colors">Connexion</Link></li>
                 <li><Link href="/contact" className="hover:text-white transition-colors">Nous contacter</Link></li>
               </ul>
@@ -720,7 +724,7 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
       {/* Sticky mobile CTA */}
       <div className={`sticky-cta lg:hidden fixed bottom-0 inset-x-0 z-50 p-3 bg-[#FEFEFE]/90 backdrop-blur-md border-t border-zinc-200 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] ${showStickyCta ? 'show' : ''}`}>
         <Link
-          href={dashboardUrl || '/signup'}
+          href={dashboardUrl || '/business-request'}
           className="btn-shine block w-full text-center px-6 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-lg shadow-lg shadow-orange-500/30"
         >
           {dashboardUrl ? 'Aller à mon espace' : "Commencer l'essai gratuit"}

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Button from '@/components/admin/ui/Button'
-import Field, { inputClass } from '@/components/admin/ui/Field'
+import Button from '@/components/admin/kit/Button'
+import Field, { inputClass } from '@/components/admin/kit/Field'
 import QrScanButton from './QrScanButton'
 import type { ValidateResult, CustomerSummary } from '@/lib/game'
 
@@ -62,21 +62,18 @@ function CustomerConsole() {
   const [custErr, setCustErr] = useState<string | null>(null)
 
   const [rewards, setRewards] = useState<Reward[]>([])
-  const [pinRequired, setPinRequired] = useState(false)
 
   const [amount, setAmount] = useState('')
-  const [pin, setPin] = useState('')
   const [creditBusy, setCreditBusy] = useState(false)
   const [redeemBusyId, setRedeemBusyId] = useState<string | null>(null)
   const [redeemConfirmId, setRedeemConfirmId] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ tone: 'green' | 'red'; text: string } | null>(null)
 
-  // Active rewards + PIN requirement, once.
+  // Active rewards, once.
   useEffect(() => {
     caisse('rewards', {}).then(({ ok, json }) => {
       if (!ok) return
       setRewards(Array.isArray(json.rewards) ? json.rewards : [])
-      setPinRequired(Boolean(json.pinRequired))
     })
   }, [])
 
@@ -93,7 +90,7 @@ function CustomerConsole() {
   function onScan(p: string) { setPhone(p); loadCustomer(p) }
 
   function clearCustomer() {
-    setData(null); setPhone(''); setAmount(''); setPin(''); setMsg(null); setCustErr(null); setRedeemConfirmId(null)
+    setData(null); setPhone(''); setAmount(''); setMsg(null); setCustErr(null); setRedeemConfirmId(null)
   }
 
   async function credit() {
@@ -106,7 +103,7 @@ function CustomerConsole() {
     // a new click → new key → credited again. crypto.randomUUID is available in
     // every browser this admin runs in (secure-context only, which /admin is).
     const idemKey = crypto.randomUUID()
-    const { ok, json } = await caisse('award', { phone: data.phone, amount: amt, pin, idemKey })
+    const { ok, json } = await caisse('award', { phone: data.phone, amount: amt, idemKey })
     setCreditBusy(false)
     if (!ok || !json.ok) { setMsg({ tone: 'red', text: json.error || 'Erreur.' }); return }
     const welcome = json.welcomeAdded ? ` (+${json.welcomeAdded} bienvenue)` : ''
@@ -118,7 +115,7 @@ function CustomerConsole() {
   async function redeem(r: Reward) {
     if (!data) return
     setRedeemBusyId(r.id); setRedeemConfirmId(null); setMsg(null)
-    const { ok, json } = await caisse('counterRedeem', { phone: data.phone, reward_id: r.id, pin })
+    const { ok, json } = await caisse('counterRedeem', { phone: data.phone, reward_id: r.id })
     setRedeemBusyId(null)
     if (!ok || !json.ok) { setMsg({ tone: 'red', text: json.error || 'Erreur.' }); return }
     setMsg({ tone: 'green', text: `✓ « ${json.rewardLabel} » remis · −${json.pointsCost} pts · solde ${json.balance}` })
@@ -234,15 +231,6 @@ function CustomerConsole() {
               </div>
             )}
 
-            {/* Shared PIN, only when the café gates staff actions */}
-            {pinRequired && (
-              <div className="sm:max-w-[12rem]">
-                <Field label="Code PIN du personnel">
-                  <input type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} placeholder="••••" autoComplete="off" className={inputClass} />
-                </Field>
-              </div>
-            )}
-
             {/* Codes à remettre */}
             {(data.activeWins.length > 0 || data.activeRedemptions.length > 0) && (
               <div>
@@ -289,7 +277,7 @@ function CustomerConsole() {
       <p className="mt-5 border-t border-zinc-100 pt-4 text-xs text-zinc-400">
         Configurer les récompenses : <Link href="/admin/fidelite" className="font-semibold text-orange-600 hover:underline">Programme de fidélité →</Link>
         <span className="mx-1.5">·</span>
-        <Link href="/admin/caisse/codes" className="font-semibold text-orange-600 hover:underline">Codes PIN du personnel →</Link>
+        <Link href="/admin/personnel" className="font-semibold text-orange-600 hover:underline">Gérer le personnel →</Link>
       </p>
     </div>
   )

@@ -29,8 +29,8 @@ const FEATURES_QR = [
 ]
 
 const qrPlans: Plan[] = [
-  { variant: 'popular', name: '1 an', price: '150', oldPrice: '250', discount: '−40%', period: 'par an', href: '/signup?plan=1year', badge: 'Le plus populaire' },
-  { variant: 'dark', name: 'À vie', price: '250', oldPrice: '600', discount: '−58%', period: 'accès à vie — sans abonnement', note: 'Réglez une seule fois, plus jamais d’abonnement.', href: '/signup?plan=lifetime', badge: 'Meilleure offre' },
+  { variant: 'popular', name: '1 an', price: '150', oldPrice: '250', discount: '−40%', period: 'par an', href: '/business-request?plan=1year', badge: 'Le plus populaire' },
+  { variant: 'dark', name: 'À vie', price: '250', oldPrice: '600', discount: '−58%', period: 'accès à vie — sans abonnement', note: 'Réglez une seule fois, plus jamais d’abonnement.', href: '/business-request?plan=lifetime', badge: 'Meilleure offre' },
 ]
 
 // ── Produit 2 : Programme de fidélité (séparé) ───────────────────────
@@ -44,9 +44,9 @@ const FEATURES_FIDELITY = [
 ]
 
 const fidelityPlans: Plan[] = [
-  { variant: 'light', name: 'Mensuel', price: '45', period: 'par mois', href: '/signup?plan=fidelity_month' },
-  { variant: 'popular', name: '3 mois', price: '90', period: 'pour 3 mois', href: '/signup?plan=fidelity_3months', badge: 'Le plus populaire' },
-  { variant: 'dark', name: '1 an', price: '150', period: 'par an', note: 'Renouvelable chaque année — aucun prélèvement automatique.', href: '/signup?plan=fidelity_year', badge: 'Meilleure offre', save: 'Économisez 390 TND' },
+  { variant: 'light', name: 'Mensuel', price: '45', period: 'par mois', href: '/business-request?plan=fidelity_month' },
+  { variant: 'popular', name: '3 mois', price: '90', period: 'pour 3 mois', href: '/business-request?plan=fidelity_3months', badge: 'Le plus populaire' },
+  { variant: 'dark', name: '1 an', price: '150', period: 'par an', note: 'Renouvelable chaque année — aucun prélèvement automatique.', href: '/business-request?plan=fidelity_year', badge: 'Meilleure offre', save: 'Économisez 390 TND' },
 ]
 
 function Check({ variant }: { variant: Variant }) {

@@ -15,6 +15,7 @@ const Design12 = dynamic(() => import('@/components/menu/designs/Design12'))
 import { MenuDock } from '@/components/menu/designs/MenuDock'
 import RouletteButton from '@/components/menu/designs/RouletteButton'
 import { FoodIcon } from '@/components/menu/designs/icons'
+import AddToCart from '@/components/order/AddToCart'
 
 type Business = Database['public']['Tables']['businesses']['Row']
 type Item = Database['public']['Tables']['items']['Row']
@@ -26,9 +27,11 @@ interface PublicMenuProps {
   business: Business
   categories: Category[]
   theme: Theme
+  /** When true, each item shows an inline add-to-cart control (table ordering). */
+  ordering?: boolean
 }
 
-export default function PublicMenu({ business, categories, theme }: PublicMenuProps) {
+export default function PublicMenu({ business, categories, theme, ordering = false }: PublicMenuProps) {
   const isPaused = business.status === 'paused'
   const [activeCategory, setActiveCategory] = useState<string | null>(
     categories.length > 0 ? categories[0].id : null
@@ -85,11 +88,11 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
   }, [visibleCategories, isMinimal])
 
   // New menu design templates
-  if (theme.id === 'design1') return <Design1 business={business} categories={visibleCategories} />
-  if (theme.id === 'design2') return <Design2 business={business} categories={visibleCategories} />
-  if (theme.id === 'design6') return <Design6 business={business} categories={visibleCategories} />
-  if (theme.id === 'design11') return <Design11 business={business} categories={visibleCategories} />
-  if (theme.id === 'design12') return <Design12 business={business} categories={visibleCategories} />
+  if (theme.id === 'design1') return <Design1 business={business} categories={visibleCategories} ordering={ordering} />
+  if (theme.id === 'design2') return <Design2 business={business} categories={visibleCategories} ordering={ordering} />
+  if (theme.id === 'design6') return <Design6 business={business} categories={visibleCategories} ordering={ordering} />
+  if (theme.id === 'design11') return <Design11 business={business} categories={visibleCategories} ordering={ordering} />
+  if (theme.id === 'design12') return <Design12 business={business} categories={visibleCategories} ordering={ordering} />
 
   // Minimal theme - unique layout
   if (isMinimal) {
@@ -98,6 +101,7 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
       categories={visibleCategories}
       theme={theme}
       isPaused={isPaused}
+      ordering={ordering}
       activeCategory={activeCategory}
       setActiveCategory={setActiveCategory}
       expandedItem={expandedItem}
@@ -572,19 +576,22 @@ export default function PublicMenu({ business, categories, theme }: PublicMenuPr
                             style={{ color: theme.colors.muted, alignSelf: 'center' }}
                           />
                           
-                          {/* End right: Price */}
-                          {item.price && (
-                            <div className="flex-shrink-0">
-                              <span
-                                className={`rounded-full px-3 py-1 text-sm font-bold sm:text-base whitespace-nowrap ${isDark ? 'gold-glow' : ''}`}
-                                style={{
-                                  color: isDark ? theme.colors.primary : theme.colors.text,
-                                  backgroundColor: isDark ? `${theme.colors.primary}18` : `${theme.colors.accent}24`,
-                                }}
-                                dir="ltr"
-                              >
-                                {Number(item.price).toFixed(2)} TND
-                              </span>
+                          {/* End right: Price + inline add-to-cart */}
+                          {(item.price || ordering) && (
+                            <div className="flex flex-shrink-0 flex-col items-end gap-2">
+                              {item.price && (
+                                <span
+                                  className={`rounded-full px-3 py-1 text-sm font-bold sm:text-base whitespace-nowrap ${isDark ? 'gold-glow' : ''}`}
+                                  style={{
+                                    color: isDark ? theme.colors.primary : theme.colors.text,
+                                    backgroundColor: isDark ? `${theme.colors.primary}18` : `${theme.colors.accent}24`,
+                                  }}
+                                  dir="ltr"
+                                >
+                                  {Number(item.price).toFixed(2)} TND
+                                </span>
+                              )}
+                              {ordering && <AddToCart item={item} accent={theme.colors.primary} size="sm" />}
                             </div>
                           )}
                         </div>
@@ -659,6 +666,7 @@ function MinimalLayout({
   categories,
   theme,
   isPaused,
+  ordering = false,
   activeCategory,
   setActiveCategory,
   expandedItem,
@@ -668,6 +676,7 @@ function MinimalLayout({
   categories: Category[]
   theme: Theme
   isPaused: boolean
+  ordering?: boolean
   activeCategory: string | null
   setActiveCategory: (id: string | null) => void
   expandedItem: string | null
@@ -884,10 +893,12 @@ function MinimalLayout({
               {/* Items Grid */}
               <div className="space-y-3">
                 {activeItems.map((item, idx) => (
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     key={item.id}
                     onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedItem(expandedItem === item.id ? null : item.id) } }}
                     aria-expanded={expandedItem === item.id}
                     className="minimal-item minimal-fade cursor-pointer rounded-xl p-4 w-full text-left"
                     style={{
@@ -979,9 +990,10 @@ function MinimalLayout({
                             {Number(item.price).toFixed(2)} TND
                           </span>
                         )}
+                        {ordering && <AddToCart item={item} accent={theme.colors.primary} size="sm" />}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
 

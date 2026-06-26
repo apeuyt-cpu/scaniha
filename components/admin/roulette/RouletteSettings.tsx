@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect } from 'react'
-import Button from '@/components/admin/ui/Button'
-import { inputClass } from '@/components/admin/ui/Field'
+import Button from '@/components/admin/kit/Button'
+import { inputClass } from '@/components/admin/kit/Field'
 
 export interface RoulettePrize {
   id: string

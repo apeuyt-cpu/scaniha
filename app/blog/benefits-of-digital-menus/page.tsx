@@ -35,7 +35,7 @@ export default function Post() {
             <p>Les menus numériques offrent une présentation plus professionnelle que les menus imprimés. Ajoutez des photos, des descriptions et personnalisez le design aux couleurs de votre marque.</p>
             <h2 className="text-2xl font-bold text-zinc-900 mt-8">7. Une démarche écologique</h2>
             <p>Réduisez le gaspillage de papier et votre empreinte environnementale. Les menus numériques sont un choix durable pour les restaurants modernes.</p>
-            <div className="bg-orange-50 p-6 rounded-2xl mt-8"><Link href="/signup" className="inline-block px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Essayez le menu numérique gratuitement</Link></div>
+            <div className="bg-orange-50 p-6 rounded-2xl mt-8"><Link href="/business-request" className="inline-block px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Essayez le menu numérique gratuitement</Link></div>
             <p>À lire aussi : <Link href="/blog/how-to-create-qr-menu-for-restaurant" className="text-orange-600">Comment créer un menu QR</Link> · <Link href="/digital-menu-builder" className="text-orange-600">Créateur de menu numérique</Link></p>
           </div>
         </article>

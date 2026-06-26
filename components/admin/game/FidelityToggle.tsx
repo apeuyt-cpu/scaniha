@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { revalidatePublicMenu } from '@/lib/revalidate-menu'
-import Toggle from '@/components/admin/ui/Toggle'
+import { designApi } from '@/lib/admin/design-api'
+import Toggle from '@/components/admin/kit/Toggle'
 
 /**
  * Master switch — "Menu QR seul" ↔ "Menu + Fidélité". Stored business-wide in
@@ -35,17 +35,9 @@ export default function FidelityToggle({ businessId }: { businessId: string }) {
     setEnabled(next) // optimistic
     setSaving(true)
     try {
-      // Re-read so we never clobber other design_settings keys (contact, seo, …).
-      const { data: fresh } = await (supabase.from('businesses') as any)
-        .select('design_settings')
-        .eq('id', businessId)
-        .maybeSingle()
-      const ds = fresh?.design_settings && typeof fresh.design_settings === 'object' ? fresh.design_settings : {}
-      const { error } = await (supabase.from('businesses') as any)
-        .update({ design_settings: { ...ds, loyaltyEnabled: next } })
-        .eq('id', businessId)
-      if (error) throw error
-      revalidatePublicMenu() // push the mode change to the live menu now
+      // Server re-reads the freshest design_settings, merges only this key
+      // (never clobbers contact/seo/…) and busts the public menu cache.
+      await designApi('mergeSettings', { patch: { loyaltyEnabled: next } })
     } catch {
       setEnabled(prev ?? false) // revert on failure
     } finally {

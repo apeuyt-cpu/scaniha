@@ -25,7 +25,7 @@ export default function CafeDigitalMenuPage() {
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE]"><h2 className="text-xl font-bold text-zinc-900 mb-3">Plats du jour</h2><p className="text-zinc-600">Ajoutez des plats du jour ou des menus de saison en quelques secondes. Mettez en avant vos articles phares avec des images et des descriptions.</p></div>
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE]"><h2 className="text-xl font-bold text-zinc-900 mb-3">QR codes de table</h2><p className="text-zinc-600">Placez des QR codes sur chaque table. Les clients parcourent le menu de votre café instantanément, sans attendre un serveur.</p></div>
         </div>
-        <div className="text-center"><Link href="/online-menu-for-restaurants" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">Menu en ligne pour restaurants →</Link><Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Créez le menu de votre café</Link></div>
+        <div className="text-center"><Link href="/online-menu-for-restaurants" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">Menu en ligne pour restaurants →</Link><Link href="/business-request" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Créez le menu de votre café</Link></div>
         <div className="mt-16 text-center"><Link href="/free-qr-menu" className="text-orange-600 font-semibold hover:text-orange-700">Essayer le menu QR gratuit →</Link></div>
       </div>
     </div>

@@ -45,13 +45,13 @@ export default function ResourcesPage() {
             <article key={i} className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE] hover:border-orange-200 hover:shadow-lg transition-all">
               <h2 className="text-xl font-bold text-zinc-900 mb-3">{a.title}</h2>
               <p className="text-zinc-600 mb-4">{a.desc}</p>
-              <Link href="/signup" className="text-orange-600 font-semibold hover:text-orange-700 text-sm">En savoir plus →</Link>
+              <Link href="/business-request" className="text-orange-600 font-semibold hover:text-orange-700 text-sm">En savoir plus →</Link>
             </article>
           ))}
         </div>
 
         <div className="text-center mt-16">
-          <Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Commencer gratuitement</Link>
+          <Link href="/business-request" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Commencer gratuitement</Link>
         </div>
       </div>
     </div>

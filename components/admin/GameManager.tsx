@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { type PrizeRow, splitInt } from '@/lib/game'
 import { useRoueGame } from '@/components/admin/fidelite/useRoueGame'
-import Toggle from '@/components/admin/ui/Toggle'
-import Button from '@/components/admin/ui/Button'
-import { inputClass } from '@/components/admin/ui/Field'
+import Toggle from '@/components/admin/kit/Toggle'
+import Button from '@/components/admin/kit/Button'
+import { inputClass } from '@/components/admin/kit/Field'
 import SetupCard from '@/components/admin/game/SetupCard'
-import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
-import { CardSkeleton } from '@/components/admin/ui/Skeleton'
+import ConfirmDialog from '@/components/admin/kit/ConfirmDialog'
+import { CardSkeleton } from '@/components/admin/kit/Skeleton'
 
 /**
  * Owner configuration for the roulette ("everyone wins, variable value").

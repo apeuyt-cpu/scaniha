@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { deleteImage, uploadBusinessLogo } from '@/lib/storage'
 import { revalidatePublicMenu } from '@/lib/revalidate-menu'
-import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
+import ConfirmDialog from '@/components/admin/kit/ConfirmDialog'
 
 interface LogoUploadProps {
   businessId: string

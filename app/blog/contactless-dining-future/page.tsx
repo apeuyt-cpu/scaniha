@@ -31,7 +31,7 @@ export default function Post() {
             <p>Les menus numériques fournissent des analyses sur les articles les plus consultés. Les restaurants exploitent ces données pour optimiser leurs prix, l’agencement du menu et la gestion des stocks.</p>
             <h2 className="text-2xl font-bold text-zinc-900 mt-8">5. Des pratiques durables</h2>
             <p>Les clients soucieux de l’environnement privilégient les restaurants qui réduisent le gaspillage. Les menus numériques éliminent le gaspillage de papier et favorisent une restauration durable.</p>
-            <div className="bg-orange-50 p-6 rounded-2xl mt-8"><Link href="/signup" className="inline-block px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Préparez l’avenir de votre restaurant gratuitement</Link></div>
+            <div className="bg-orange-50 p-6 rounded-2xl mt-8"><Link href="/business-request" className="inline-block px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Préparez l’avenir de votre restaurant gratuitement</Link></div>
             <p>À lire aussi : <Link href="/blog/digital-menu-vs-paper-menu" className="text-orange-600">Menu numérique ou menu papier</Link> · <Link href="/features" className="text-orange-600">Fonctionnalités de Scaniha</Link></p>
           </div>
         </article>

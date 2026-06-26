@@ -11,6 +11,7 @@ import { fmt, normalizeCats, searchItems, type KitItem } from './kit'
 import { FoodIcon } from './icons'
 import { MenuDock } from './MenuDock'
 import RouletteButton from './RouletteButton'
+import AddToCart from '@/components/order/AddToCart'
 
 const SERIF = "'Playfair Display', Georgia, 'Times New Roman', serif"
 const SANS = 'system-ui, -apple-system, Segoe UI, sans-serif'
@@ -34,9 +35,16 @@ function Flourish({ gradient }: { gradient: string }) {
 }
 
 /* Understated social icon glyphs (line / fill) for the editorial footer row. */
-function SocialGlyph({ icon }: { icon: 'facebook' | 'instagram' | 'x' | 'whatsapp' | 'web' }) {
+function SocialGlyph({ icon }: { icon: 'facebook' | 'instagram' | 'x' | 'whatsapp' | 'web' | 'google' }) {
   const common = { width: 17, height: 17, viewBox: '0 0 24 24', 'aria-hidden': true } as const
   switch (icon) {
+    case 'google':
+      return (
+        <svg {...common} fill="none" stroke="currentColor" strokeWidth={1.6}>
+          <path d="M12 21s6-5.686 6-11a6 6 0 1 0-12 0c0 5.314 6 11 6 11Z" />
+          <circle cx="12" cy="10" r="2.2" />
+        </svg>
+      )
     case 'instagram':
       return (
         <svg {...common} fill="none" stroke="currentColor" strokeWidth={1.6}>
@@ -77,7 +85,7 @@ function SocialGlyph({ icon }: { icon: 'facebook' | 'instagram' | 'x' | 'whatsap
 /** Design6 — "Liste Élégante": an editorial serif carte with centred section
  * heads, refined dotted price leaders, brand orange used sparingly, and a
  * quiet engraved-style social row in the footer. */
-export default function Design6({ business, categories }: { business: any; categories: any[] }) {
+export default function Design6({ business, categories, ordering = false }: { business: any; categories: any[]; ordering?: boolean }) {
   const settings = getDesignSettings(business, 'design6')
   const accent = resolveAccent(settings, 'design6')
   const gradient = resolveGradient(settings, 'design6')
@@ -225,10 +233,12 @@ export default function Design6({ business, categories }: { business: any; categ
                 <ul className="mt-6 lg:grid lg:grid-cols-2 lg:gap-x-10">
                   {cat.items.map((it: KitItem, i: number) => (
                     <li key={it.id} className="border-t first:border-t-0 lg:[&:nth-child(2)]:border-t-0" style={{ borderColor: DIVIDER }}>
-                      <button
-                        type="button"
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setSelected(it)}
-                        className={`group flex w-full items-start gap-3.5 py-4 text-left transition-opacity ${it.available === false ? 'opacity-50' : ''}`}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(it) } }}
+                        className={`group flex w-full cursor-pointer items-start gap-3.5 py-4 text-left transition-opacity ${it.available === false ? 'opacity-50' : ''}`}
                         style={{ minHeight: showThumbnails ? 72 : undefined }}
                       >
                         {/* Fixed left slot — photo or cream tile + glyph (optional). */}
@@ -250,6 +260,11 @@ export default function Design6({ business, categories }: { business: any; categ
                             {settings.showPrices && (
                               <span className="shrink-0 text-[16px] font-bold tabular-nums" style={{ color: INK, fontFamily: SANS }}>{fmt(it.price)}</span>
                             )}
+                            {ordering && (
+                              <span className="shrink-0">
+                                <AddToCart item={{ id: String(it.id), name: it.name, price: it.price, available: it.available }} accent={accent} size="sm" />
+                              </span>
+                            )}
                           </div>
                           {it.available === false && (
                             <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ backgroundColor: '#F2ECE2', color: '#6B6258', fontFamily: SANS }}>Épuisé</span>
@@ -258,7 +273,7 @@ export default function Design6({ business, categories }: { business: any; categ
                             <p className="mt-1.5 text-[13px] italic leading-relaxed" style={{ color: MUTED }}>{it.description}</p>
                           )}
                         </div>
-                      </button>
+                      </div>
                     </li>
                   ))}
                 </ul>

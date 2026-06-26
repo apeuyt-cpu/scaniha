@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import SectionHeader from '@/components/admin/ui/SectionHeader'
-import StatCard from '@/components/admin/ui/StatCard'
+import SectionHeader from '@/components/admin/kit/SectionHeader'
+import StatCard from '@/components/admin/kit/StatCard'
 
 interface Stats {
   playsToday: number

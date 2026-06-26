@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { revalidatePublicMenu } from '@/lib/revalidate-menu'
-import { useToast } from '@/components/admin/ui/Toast'
-import { inputClass } from '@/components/admin/ui/Field'
-import Toggle from '@/components/admin/ui/Toggle'
+import { designApi } from '@/lib/admin/design-api'
+import { useToast } from '@/components/admin/kit/Toast'
+import { inputClass } from '@/components/admin/kit/Field'
+import Toggle from '@/components/admin/kit/Toggle'
 
 type Contact = { enabled: boolean; phone: string; address: string; hours: string }
 

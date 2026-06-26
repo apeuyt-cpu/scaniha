@@ -33,7 +33,7 @@ export default function Post() {
             <p>Placez un code QR à l’entrée pour que les clients puissent consulter le menu avant de s’asseoir. Cela réduit les temps d’attente et améliore leur expérience.</p>
             <h2 className="text-2xl font-bold text-zinc-900 mt-8">6. Multipliez les points de contact</h2>
             <p>Ne vous limitez pas aux codes sur les tables. Ajoutez des codes QR sur les vitrines, les ardoises de menu, les tickets de caisse et vos profils de réseaux sociaux.</p>
-            <div className="bg-orange-50 p-6 rounded-2xl mt-8"><Link href="/signup" className="inline-block px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Générez votre code QR gratuitement</Link></div>
+            <div className="bg-orange-50 p-6 rounded-2xl mt-8"><Link href="/business-request" className="inline-block px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Générez votre code QR gratuitement</Link></div>
             <p>À lire aussi : <Link href="/blog/how-to-create-qr-menu-for-restaurant" className="text-orange-600">Comment créer un menu QR</Link> · <Link href="/qr-menu-for-restaurants" className="text-orange-600">Menu QR pour les restaurants</Link></p>
           </div>
         </article>

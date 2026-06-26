@@ -42,6 +42,7 @@ body {
 
 /* Admin UI — clean modern Latin stack (French-only product) */
 .admin-page,
+.admin-shell,
 .admin-sidebar,
 .menu-page,
 .super-admin-page {
@@ -53,10 +54,64 @@ body {
 .admin-page h1,
 .admin-page h2,
 .admin-page h3,
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3,
 .super-admin-page h1,
 .super-admin-page h2,
 .super-admin-page h3 {
   letter-spacing: -0.018em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Admin v2 — premium-light app shell (sidebar + bottom-nav).
+   Brand orange + warm-neutral surfaces + soft layered shadows. The TOKENS live
+   at :root and the helper utilities are global so the v2 kit primitives render
+   correctly anywhere they're reused (including the super-admin screens, which
+   share the same kit). Only the warm canvas background is scoped to .admin-shell.
+   Tailwind utilities still do most of the work.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --brand: #f47b20;        /* Scaniha orange — the only accent */
+  --brand-600: #e06d12;
+  --brand-soft: #fff4ea;   /* tinted brand surface (chips, active nav) */
+  --surface: #ffffff;      /* cards */
+  --canvas: #faf9f7;       /* page background (warm off-white) */
+  --line: #ececea;         /* hairline borders */
+  --ink: #1c1a17;          /* primary text */
+  --muted: #6b6661;        /* secondary text */
+}
+
+/* Warm canvas only for the v2 admin shell (the public menu keeps its own bg). */
+.admin-shell {
+  background: var(--canvas);
+}
+
+/* Soft, layered elevation for cards/panels — warmer & softer than zinc shadows. */
+.shadow-soft {
+  box-shadow: 0 1px 2px rgba(28, 26, 23, 0.04), 0 4px 16px -8px rgba(28, 26, 23, 0.10);
+}
+.shadow-soft-lg {
+  box-shadow: 0 2px 4px rgba(28, 26, 23, 0.05), 0 18px 40px -20px rgba(28, 26, 23, 0.22);
+}
+
+/* Active sidebar / bottom-nav item gets a brand-tinted pill. */
+.nav-active {
+  background: var(--brand-soft);
+  color: var(--brand-600);
+}
+
+/* Hide scrollbar on the scrollable sidebar without losing wheel/touch scroll. */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+@keyframes adminSheetIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes adminFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* Minimal theme styles */

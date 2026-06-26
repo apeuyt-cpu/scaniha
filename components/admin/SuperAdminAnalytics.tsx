@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Skeleton } from '@/components/admin/ui/Skeleton'
+import { Skeleton } from '@/components/admin/kit/Skeleton'
 
 interface BusinessStat {
   name: string

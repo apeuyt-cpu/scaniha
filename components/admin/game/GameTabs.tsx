@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import GameManager from '@/components/admin/GameManager'
 import LoyaltyManager from '@/components/admin/LoyaltyManager'
 import FidelityToggle from '@/components/admin/game/FidelityToggle'
-import { CardSkeleton } from '@/components/admin/ui/Skeleton'
+import { CardSkeleton } from '@/components/admin/kit/Skeleton'
 
 /** Fetches the owner's business, then shows Roue / Fidélité config in tabs. */
 export default function GameTabs() {

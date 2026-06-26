@@ -76,7 +76,7 @@ export default function PricingPage() {
 
         {/* Free-trial note */}
         <div className="mt-12 text-center">
-          <Link href="/signup" className="text-sm font-semibold text-orange-600 transition-colors hover:text-orange-700">
+          <Link href="/business-request" className="text-sm font-semibold text-orange-600 transition-colors hover:text-orange-700">
             Démarrer l&apos;essai gratuit &rarr;
           </Link>
         </div>

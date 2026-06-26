@@ -3,6 +3,7 @@ import { loadOrderingGate, placeOrder, getOrderStatus } from '@/lib/db/ordering'
 import { orderScanCookieName, verifyScan } from '@/lib/qr-session'
 import { sanitizeCart } from '@/lib/orders'
 import { checkRateLimit } from '@/lib/api/rate-limit'
+import { clientIp } from '@/lib/api/client-ip'
 
 export const runtime = 'nodejs'
 
@@ -29,8 +30,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ ok: false, rescanRequired: true, error: 'Scannez le QR de votre table pour commander.' }, { status: 403 })
   }
 
-  // Per-IP throttle on a public write.
-  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown'
+  // Per-IP throttle on a public write (spoof-resistant IP).
+  const ip = clientIp(req)
   const rl = checkRateLimit('order:' + ip + ':' + slug)
   if (!rl.ok) {
     return NextResponse.json({ ok: false, error: 'Trop de commandes. Réessayez dans un instant.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } })
@@ -40,12 +41,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const table = typeof body?.table === 'string' ? body.table.trim().slice(0, 40) : ''
   const name = typeof body?.name === 'string' ? body.name.trim().slice(0, 60) : null
   const note = typeof body?.note === 'string' ? body.note.trim().slice(0, 300) : null
+  // Client idempotency key (per cart) → safe retries, no duplicate orders.
+  const idem = typeof body?.idem === 'string' ? body.idem.trim().slice(0, 64) || null : null
   const items = sanitizeCart(body?.items)
   if (!table || items.length === 0) {
     return NextResponse.json({ ok: false, error: 'Indiquez votre table et au moins un article.' }, { status: 400 })
   }
 
-  const res = await placeOrder(gate.businessId, table, name, note, items)
+  const res = await placeOrder(gate.businessId, table, name, note, items, idem)
   if (!res.ok) {
     const map: Record<string, { s: number; m: string }> = {
       no_table: { s: 400, m: 'Numéro de table manquant.' },

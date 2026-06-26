@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import Card from '@/components/admin/ui/Card'
-import { useToast } from '@/components/admin/ui/Toast'
+import Card from '@/components/admin/kit/Card'
+import { useToast } from '@/components/admin/kit/Toast'
 import {
   type Order,
   type OrderStatus,
@@ -20,6 +20,9 @@ import {
 
 const POLL_MS = 6000
 const DONE_CAP = 20
+
+type ServiceCall = { id: string; table_number: string; kind: 'service' | 'bill'; created_at: string }
+const CALL_LABEL: Record<ServiceCall['kind'], string> = { service: 'Appel serveur', bill: 'Demande d’addition' }
 
 /** Status-tone → card/badge classes (Tailwind, premium + accessible). */
 const TONE: Record<OrderStatus, { badge: string; dot: string }> = {
@@ -79,11 +82,28 @@ function timeAgo(iso: string): string {
 export default function OrdersConsole() {
   const { error: toastError } = useToast()
   const [orders, setOrders] = useState<Order[]>([])
+  const [calls, setCalls] = useState<ServiceCall[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<Record<string, boolean>>({})
   // Re-render every minute so "il y a … min" labels stay fresh between polls.
   const [, setTick] = useState(0)
   const mounted = useRef(true)
+  // New-order alerting (sound + browser notification). Needs a user gesture to
+  // prime audio/notification permission, so it's opt-in via a button.
+  const [alertsOn, setAlertsOn] = useState(false)
+  const seen = useRef<Set<string>>(new Set())
+  const seeded = useRef(false)
+  const audioCtx = useRef<AudioContext | null>(null)
+
+  function enableAlerts() {
+    try {
+      const AC = window.AudioContext || (window as any).webkitAudioContext
+      audioCtx.current = audioCtx.current || new AC()
+      audioCtx.current.resume()
+    } catch {}
+    try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {}) } catch {}
+    setAlertsOn(true)
+  }
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -93,8 +113,9 @@ export default function OrdersConsole() {
         return
       }
       const data = await res.json().catch(() => null)
-      if (mounted.current && data && Array.isArray(data.orders)) {
-        setOrders(data.orders as Order[])
+      if (mounted.current && data) {
+        if (Array.isArray(data.orders)) setOrders(data.orders as Order[])
+        setCalls(Array.isArray(data.calls) ? (data.calls as ServiceCall[]) : [])
       }
     } catch {
       /* transient network error — keep the last good list, next poll retries */
@@ -106,14 +127,57 @@ export default function OrdersConsole() {
   useEffect(() => {
     mounted.current = true
     fetchOrders()
-    const poll = setInterval(fetchOrders, POLL_MS)
+    let poll = setInterval(fetchOrders, POLL_MS)
+    // Free-tier friendly: stop polling while the tab is hidden, resume + refetch
+    // on focus (a backgrounded console shouldn't keep hitting the DB).
+    const onVis = () => {
+      if (document.hidden) {
+        clearInterval(poll)
+      } else {
+        fetchOrders()
+        poll = setInterval(fetchOrders, POLL_MS)
+      }
+    }
+    document.addEventListener('visibilitychange', onVis)
     const clock = setInterval(() => setTick((t) => t + 1), 60000)
     return () => {
       mounted.current = false
       clearInterval(poll)
       clearInterval(clock)
+      document.removeEventListener('visibilitychange', onVis)
     }
   }, [fetchOrders])
+
+  // Alert (beep + browser notification) when a genuinely NEW order/call arrives.
+  // First load just seeds the seen-set so existing rows don't trigger an alert.
+  useEffect(() => {
+    const ids = orders.map((o) => o.id).concat(calls.map((c) => c.id))
+    if (!seeded.current) {
+      seeded.current = true
+      ids.forEach((id) => seen.current.add(id))
+      return
+    }
+    let fresh = 0
+    for (const id of ids) if (!seen.current.has(id)) { seen.current.add(id); fresh++ }
+    if (!fresh || !alertsOn) return
+    const ctx = audioCtx.current
+    if (ctx) {
+      try {
+        const o = ctx.createOscillator(), g = ctx.createGain()
+        o.connect(g); g.connect(ctx.destination)
+        o.type = 'sine'; o.frequency.value = 880
+        g.gain.setValueAtTime(0.0001, ctx.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02)
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35)
+        o.start(); o.stop(ctx.currentTime + 0.36)
+      } catch {}
+    }
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Scaniha — nouvelle activité', { body: fresh > 1 ? `${fresh} nouvelles commandes / appels` : 'Nouvelle commande ou appel' })
+      }
+    } catch {}
+  }, [orders, calls, alertsOn])
 
   const updateStatus = useCallback(
     async (orderId: string, status: OrderStatus) => {
@@ -127,17 +191,35 @@ export default function OrdersConsole() {
           body: JSON.stringify({ orderId, status }),
         })
         if (!res.ok) throw new Error('failed')
-        // Re-sync so other staff devices' changes show too.
-        fetchOrders()
+        // Re-sync so other staff devices' changes show too. Awaited so `busy`
+        // stays set until the truth is back — no re-click on a stale row.
+        await fetchOrders()
       } catch {
         toastError('Impossible de mettre à jour la commande. Réessayez.')
         // Roll the optimistic change back by refetching the truth.
-        fetchOrders()
+        await fetchOrders()
       } finally {
         if (mounted.current) setBusy((b) => ({ ...b, [orderId]: false }))
       }
     },
     [fetchOrders, toastError]
+  )
+
+  const resolveCall = useCallback(
+    async (callId: string) => {
+      setCalls((cur) => cur.filter((c) => c.id !== callId)) // optimistic
+      try {
+        await fetch('/api/admin/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ callId }),
+        })
+      } catch {
+        /* refetch restores the truth */
+      }
+      fetchOrders()
+    },
+    [fetchOrders]
   )
 
   // Newest first.
@@ -167,8 +249,43 @@ export default function OrdersConsole() {
     )
   }
 
+  const sortedCalls = calls
+    .slice()
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
   return (
     <div className="space-y-8">
+      {/* Appels serveur — sit above everything so staff react first. */}
+      {sortedCalls.length > 0 && (
+        <section aria-label="Appels en attente" className="space-y-2">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-amber-700">
+            <span className="text-base" aria-hidden="true">🛎️</span>
+            Appels en attente
+            <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.5 text-[11px] font-bold text-white">{sortedCalls.length}</span>
+          </h2>
+          <ul className="space-y-2">
+            {sortedCalls.map((c) => (
+              <li key={c.id} className="call-ring flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-sm font-bold text-white">{c.table_number}</div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-amber-900">Table {c.table_number} · {CALL_LABEL[c.kind]}</p>
+                    <p className="text-xs text-amber-700">{timeAgo(c.created_at)}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => resolveCall(c.id)}
+                  className="inline-flex min-h-[40px] shrink-0 items-center justify-center rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-700 active:scale-[0.98]"
+                >
+                  Fait
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Title row + live new-order count */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2.5 text-lg font-bold text-zinc-900">
@@ -183,9 +300,20 @@ export default function OrdersConsole() {
             </span>
           )}
         </h2>
-        <span className="text-xs font-medium text-zinc-400" aria-hidden="true">
-          Actualisé automatiquement
-        </span>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => (alertsOn ? setAlertsOn(false) : enableAlerts())}
+            aria-pressed={alertsOn}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${alertsOn ? 'border-green-200 bg-green-50 text-green-700' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'}`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {alertsOn ? <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></> : <><path d="M13.73 21a2 2 0 0 1-3.46 0" /><path d="M18.63 13A17.89 17.89 0 0 1 18 8" /><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14" /><path d="M18 8a6 6 0 0 0-9.33-5" /><path d="m1 1 22 22" /></>}
+            </svg>
+            {alertsOn ? 'Alertes activées' : 'Activer les alertes'}
+          </button>
+          <span className="hidden text-xs font-medium text-zinc-400 sm:inline" aria-hidden="true">Actualisé auto</span>
+        </div>
       </div>
 
       {/* Active orders */}
@@ -231,8 +359,12 @@ export default function OrdersConsole() {
         .order-new {
           animation: orderPulse 2.2s ease-out infinite;
         }
+        .call-ring {
+          animation: orderPulse 2s ease-out infinite;
+        }
         @media (prefers-reduced-motion: reduce) {
-          .order-new {
+          .order-new,
+          .call-ring {
             animation: none;
           }
         }

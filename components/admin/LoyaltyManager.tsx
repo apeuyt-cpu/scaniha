@@ -1,12 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import Toggle from '@/components/admin/ui/Toggle'
-import Button from '@/components/admin/ui/Button'
-import Field, { inputClass } from '@/components/admin/ui/Field'
+import Toggle from '@/components/admin/kit/Toggle'
+import Button from '@/components/admin/kit/Button'
+import Field, { inputClass } from '@/components/admin/kit/Field'
 import SetupCard from '@/components/admin/game/SetupCard'
-import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
+import ConfirmDialog from '@/components/admin/kit/ConfirmDialog'
 import { uploadImage, deleteImage } from '@/lib/storage'
 
 interface Program {
@@ -25,13 +24,27 @@ interface Reward {
   image_url?: string | null
 }
 
+/** POST a loyalty WRITE to the server route (server-side capability guard +
+ *  service-role write, scoped to the session's business — no anon-client token). */
+async function loyalty(action: string, payload: Record<string, unknown> = {}) {
+  const res = await fetch('/api/admin/loyalty', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...payload }),
+  })
+  const json = await res.json().catch(() => ({}))
+  return { ok: res.ok, json }
+}
+
 /**
  * Owner configuration for the loyalty program. Operate (credit a purchase,
  * validate a reward code) lives in the Caisse console — this is setup:
  * activate, points rules, and the rewards catalogue.
+ *
+ * The `businessId` prop is kept for compatibility with the parent, but the
+ * server route derives the business from the session, so it isn't sent on writes.
  */
-export default function LoyaltyManager({ businessId }: { businessId: string }) {
-  const supabase = createClient()
+export default function LoyaltyManager({ businessId: _businessId }: { businessId: string }) {
   const [program, setProgram] = useState<Program | null>(null)
   const [rewards, setRewards] = useState<Reward[]>([])
   const [pending, setPending] = useState(0)
@@ -46,53 +59,33 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
   const labelTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   const load = useCallback(async () => {
-    const { data: p, error: pErr } = await (supabase.from('loyalty_programs') as any)
-      .select('*')
-      .eq('business_id', businessId)
-      .maybeSingle()
-    if (pErr) {
-      if (pErr.code === '42P01' || pErr.message?.includes('does not exist') || pErr.message?.includes('schema cache')) {
-        setSetupNeeded(true)
-      } else { console.error('LoyaltyManager load error:', pErr); setError('Impossible de charger la fidélité. Réessayez.') }
+    const res = await fetch('/api/admin/loyalty', { method: 'GET' })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      console.error('LoyaltyManager load error:', json?.error)
+      setError('Impossible de charger la fidélité. Réessayez.')
       setLoading(false)
       return
     }
-    // Loyalty is intentionally simple: 1 dinar spent = 1 point, everywhere.
-    // The owner no longer tunes a ratio, so self-heal any legacy non-1 value.
-    if (p && Number(p.points_per_tnd) !== 1) {
-      ;(supabase.from('loyalty_programs') as any).update({ points_per_tnd: 1 }).eq('business_id', businessId)
-      p.points_per_tnd = 1
+    // Tables not installed yet → show the setup card (never surface SQL).
+    if (json.provisioning) {
+      setSetupNeeded(true)
+      setLoading(false)
+      return
     }
+    const p = json.program as Program | null
     setProgram(p ? { redeem_expiry_hours: 48, ...p } : null)
     if (p) {
-      const now = new Date().toISOString()
-      const [{ data: r }, pend] = await Promise.all([
-        (supabase.from('loyalty_rewards') as any).select('*').eq('business_id', businessId).order('points_cost'),
-        (supabase.from('loyalty_redemptions') as any)
-          .select('id', { count: 'exact', head: true })
-          .eq('business_id', businessId)
-          .eq('status', 'pending')
-          .gt('expires_at', now),
-      ])
-      setRewards(r || [])
-      setPending(pend.count ?? 0)
+      setRewards(Array.isArray(json.rewards) ? json.rewards : [])
+      setPending(typeof json.pending === 'number' ? json.pending : 0)
     }
     setLoading(false)
-  }, [businessId, supabase])
+  }, [])
 
   useEffect(() => {
     load()
   }, [load])
 
-  // True when the backend isn't able to provision the feature yet (tables not
-  // installed). We never show SQL to the owner — just a clear French message.
-  function isProvisioningError(err: any) {
-    return (
-      err?.code === '42P01' ||
-      err?.message?.includes('does not exist') ||
-      err?.message?.includes('schema cache')
-    )
-  }
   const PROVISION_MSG =
     "La fidélité n'est pas encore disponible sur votre compte. Réessayez dans un instant ou contactez le support si le problème persiste."
   const SAVE_MSG = 'Impossible d\'enregistrer. Réessayez.'
@@ -100,17 +93,11 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
   async function createProgram() {
     setBusy(true)
     setError(null)
-    const { error: e } = await (supabase.from('loyalty_programs') as any).insert({ business_id: businessId, active: false })
-    if (e) {
-      if (isProvisioningError(e)) setError(PROVISION_MSG)
-      else { console.error('LoyaltyManager createProgram error:', e); setError(SAVE_MSG) }
+    const { ok, json } = await loyalty('createProgram')
+    if (!ok || !json.ok) {
+      if (json.provisioning || json.error === 'PROVISION') setError(PROVISION_MSG)
+      else { console.error('LoyaltyManager createProgram error:', json?.error); setError(SAVE_MSG) }
     } else {
-      const defaults = [
-        { business_id: businessId, label: 'Café offert', points_cost: 50 },
-        { business_id: businessId, label: 'Dessert offert', points_cost: 100 },
-        { business_id: businessId, label: '-20% sur l’addition', points_cost: 200 },
-      ]
-      await (supabase.from('loyalty_rewards') as any).insert(defaults)
       setSetupNeeded(false)
       await load()
     }
@@ -120,14 +107,17 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
   async function updateProgram(patch: Partial<Program>) {
     if (!program) return
     setProgram({ ...program, ...patch })
-    const { error: e } = await (supabase.from('loyalty_programs') as any).update(patch).eq('business_id', businessId)
-    if (e) { console.error('LoyaltyManager updateProgram error:', e); setError(SAVE_MSG) }
+    const { ok, json } = await loyalty('updateProgram', { patch })
+    if (!ok || !json.ok) {
+      if (json.provisioning || json.error === 'PROVISION') setError(PROVISION_MSG)
+      else { console.error('LoyaltyManager updateProgram error:', json?.error); setError(SAVE_MSG) }
+    }
   }
 
   async function updateReward(id: string, patch: Partial<Reward>) {
     setRewards((cur) => cur.map((r) => (r.id === id ? { ...r, ...patch } : r)))
-    const { error: e } = await (supabase.from('loyalty_rewards') as any).update(patch).eq('id', id)
-    if (e) { console.error('LoyaltyManager updateReward error:', e); setError(SAVE_MSG) }
+    const { ok, json } = await loyalty('updateReward', { id, patch })
+    if (!ok || !json.ok) { console.error('LoyaltyManager updateReward error:', json?.error); setError(SAVE_MSG) }
   }
 
   function saveLabelDebounced(id: string, label: string) {
@@ -159,17 +149,14 @@ export default function LoyaltyManager({ businessId }: { businessId: string }) {
   }
 
   async function addReward() {
-    const { data, error: e } = await (supabase.from('loyalty_rewards') as any)
-      .insert({ business_id: businessId, label: 'Nouvelle récompense', points_cost: 100 })
-      .select('*')
-      .single()
-    if (e) { console.error('LoyaltyManager addReward error:', e); setError(SAVE_MSG) }
-    else setRewards((cur) => [...cur, data])
+    const { ok, json } = await loyalty('addReward')
+    if (!ok || !json.ok || !json.reward) { console.error('LoyaltyManager addReward error:', json?.error); setError(SAVE_MSG) }
+    else setRewards((cur) => cur.concat(json.reward as Reward))
   }
 
   async function deleteReward(id: string) {
-    const { error: e } = await (supabase.from('loyalty_rewards') as any).delete().eq('id', id)
-    if (e) { console.error('LoyaltyManager deleteReward error:', e); setError(SAVE_MSG) }
+    const { ok, json } = await loyalty('deleteReward', { id })
+    if (!ok || !json.ok) { console.error('LoyaltyManager deleteReward error:', json?.error); setError(SAVE_MSG) }
     else setRewards((cur) => cur.filter((r) => r.id !== id))
   }
 

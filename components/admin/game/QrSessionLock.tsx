@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Toggle from '@/components/admin/ui/Toggle'
-import { inputClass } from '@/components/admin/ui/Field'
+import Toggle from '@/components/admin/kit/Toggle'
+import { inputClass } from '@/components/admin/kit/Field'
 import { DEFAULT_QR_GATE, QR_TTL_OPTIONS } from '@/lib/game'
 import type { QrGateConfig } from '@/lib/game'
 

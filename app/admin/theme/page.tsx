@@ -1,27 +1,8 @@
-import { requireOwner } from '@/lib/auth'
-import { getActiveBusiness } from '@/lib/db/business'
-import DesignStudio from '@/components/admin/DesignStudio'
-import PageShell from '@/components/admin/ui/PageShell'
+import { redirect } from 'next/navigation'
 
-export default async function ThemePage() {
-  const { user } = await requireOwner()
-  const business = await getActiveBusiness()
+export const dynamic = 'force-dynamic'
 
-  if (!business) {
-    return (
-      <PageShell title="Design" width="5xl">
-        <p className="text-zinc-500">Établissement introuvable</p>
-      </PageShell>
-    )
-  }
-
-  return (
-    <PageShell
-      title="Design"
-      subtitle="Votre marque et l'apparence de votre menu."
-      width="5xl"
-    >
-      <DesignStudio business={business} />
-    </PageShell>
-  )
+// Renamed to /admin/design in the v2 remake. Shim keeps old links working.
+export default function ThemeRedirect() {
+  redirect('/admin/design')
 }

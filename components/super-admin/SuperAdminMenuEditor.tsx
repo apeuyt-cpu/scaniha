@@ -1,6 +1,6 @@
 'use client'
 
-import { ToastProvider } from '@/components/admin/ui/Toast'
+import { ToastProvider } from '@/components/admin/kit/Toast'
 import ModernMenuBuilder from '@/components/menu/ModernMenuBuilder'
 
 /**

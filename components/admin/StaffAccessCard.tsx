@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
-import Card from '@/components/admin/ui/Card'
+import Card from '@/components/admin/kit/Card'
 
 /**
  * Internal "staff access" QR + printable sticker.
@@ -15,14 +15,23 @@ import Card from '@/components/admin/ui/Card'
 
 const DESTS: { target: string; label: string; hint: string }[] = [
   { target: '/admin/caisse', label: 'Caisse', hint: 'Valider un code, créditer des points, rechercher un client.' },
-  { target: '/admin/caisse/codes', label: 'Codes caisse', hint: 'La liste des codes à valider.' },
-  { target: '/admin/roulette', label: 'Roue (comptoir)', hint: 'La roue opérée par le personnel.' },
+  { target: '/admin/caisse?tab=pin', label: 'Codes PIN', hint: 'Les codes PIN du personnel.' },
+  { target: '/admin/comptoir', label: 'Roue (comptoir)', hint: 'La roue opérée par le personnel.' },
   { target: '/admin', label: 'Tableau de bord', hint: "L'accueil admin complet." },
 ]
 
+// Admin routes were renamed in the v2 remake. Map any value an owner saved
+// before the swap to its new home so the picker still highlights the right
+// option (printed QRs already resolve via the redirect shims on the old paths).
+const LEGACY_TARGET: Record<string, string> = {
+  '/admin/caisse/codes': '/admin/caisse?tab=pin',
+  '/admin/roulette': '/admin/comptoir',
+}
+
 export default function StaffAccessCard({ origin, target, onChange, disabled }:
   { origin: string; target: string; onChange: (t: string) => void; disabled?: boolean }) {
-  const dest = DESTS.find((d) => d.target === target) ?? DESTS[0]
+  const normalized = LEGACY_TARGET[target] ?? target
+  const dest = DESTS.find((d) => d.target === normalized) ?? DESTS[0]
   const url = origin ? `${origin}${dest.target}` : ''
   const [qr, setQr] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -104,7 +113,7 @@ export default function StaffAccessCard({ origin, target, onChange, disabled }:
                   type="button"
                   onClick={() => onChange(d.target)}
                   disabled={disabled}
-                  className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50 ${target === d.target ? 'bg-orange-500 text-white' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}
+                  className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50 ${normalized === d.target ? 'bg-orange-500 text-white' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}
                 >
                   {d.label}
                 </button>

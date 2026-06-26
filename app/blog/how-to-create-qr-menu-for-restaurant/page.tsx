@@ -24,7 +24,7 @@ export default function Post() {
             <p>Créer un menu QR pour votre restaurant est l’un des investissements les plus judicieux que vous puissiez faire. Il vous fait économiser sur l’impression, réduit les contacts et vous permet de mettre à jour vos prix instantanément. Voici exactement comment procéder avec Scaniha.</p>
 
             <h2 className="text-2xl font-bold text-zinc-900 mt-8">Étape 1 : Inscrivez-vous sur Scaniha</h2>
-            <p>Rendez-vous sur <Link href="/signup" className="text-orange-600">scaniha.com/signup</Link> et créez votre compte gratuit. Aucune carte bancaire n’est requise pour l’essai de 7 jours. Saisissez votre e-mail, choisissez un mot de passe et indiquez le nom de votre établissement.</p>
+            <p>Rendez-vous sur <Link href="/business-request" className="text-orange-600">scaniha.com/business-request</Link> et créez votre compte gratuit. Aucune carte bancaire n’est requise pour l’essai de 7 jours. Saisissez votre e-mail, choisissez un mot de passe et indiquez le nom de votre établissement.</p>
 
             <h2 className="text-2xl font-bold text-zinc-900 mt-8">Étape 2 : Ajoutez les articles de votre menu</h2>
             <p>Utilisez le créateur de menu de Scaniha pour ajouter des catégories (Entrées, Plats principaux, Desserts, Boissons) et des articles sous chaque catégorie. Pour chaque article, ajoutez un nom, un prix, une description et une photo facultative. Vous pouvez également importer vos articles depuis un fichier Excel.</p>
@@ -43,7 +43,7 @@ export default function Post() {
 
             <div className="bg-orange-50 p-6 rounded-2xl mt-8">
               <p className="text-lg font-semibold text-zinc-900">Prêt à créer votre menu QR ?</p>
-              <Link href="/signup" className="inline-block mt-4 px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Démarrer l’essai gratuit</Link>
+              <Link href="/business-request" className="inline-block mt-4 px-8 py-4 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-bold shadow-lg">Démarrer l’essai gratuit</Link>
             </div>
 
             <p className="mt-8">À lire aussi : <Link href="/blog/benefits-of-digital-menus" className="text-orange-600">Les avantages des menus numériques pour les restaurants</Link> · <Link href="/blog/qr-code-best-practices-restaurants" className="text-orange-600">Les bonnes pratiques du code QR</Link></p>

@@ -46,7 +46,7 @@ export default function ClientsSection() {
                 />
               ))}
               <Link
-                href="/signup"
+                href="/business-request"
                 className="flex h-[96px] w-[140px] shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-zinc-300 text-center text-sm font-semibold text-zinc-400 transition hover:border-orange-400 hover:text-orange-600"
               >
                 Rejoignez-les
@@ -66,7 +66,7 @@ export default function ClientsSection() {
                 </div>
               ))}
               <Link
-                href="/signup"
+                href="/business-request"
                 className="col-span-2 flex h-12 items-center justify-center rounded-2xl border-2 border-dashed border-zinc-300 text-sm font-semibold text-zinc-400 transition hover:border-orange-400 hover:text-orange-600"
               >
                 Rejoignez-les

@@ -39,7 +39,7 @@ export default function BlogPage() {
           ))}
         </div>
         <div className="text-center mt-16">
-          <Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Créez votre menu QR gratuitement</Link>
+          <Link href="/business-request" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Créez votre menu QR gratuitement</Link>
         </div>
       </div>
     </div>

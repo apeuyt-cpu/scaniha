@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { gameCooldownHours, COOLDOWN_OPTIONS } from '@/lib/game'
-import Field, { inputClass } from '@/components/admin/ui/Field'
+import Field, { inputClass } from '@/components/admin/kit/Field'
 import PlayGates from '@/components/admin/game/PlayGates'
 import QrSessionLock from '@/components/admin/game/QrSessionLock'
 import SurveyResponses from '@/components/admin/game/SurveyResponses'
-import { CardSkeleton } from '@/components/admin/ui/Skeleton'
+import { CardSkeleton } from '@/components/admin/kit/Skeleton'
 import { useRoueGame } from './useRoueGame'
 import { useOwnerBusiness } from './useOwnerBusiness'
 

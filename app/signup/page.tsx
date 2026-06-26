@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import SignupForm from '@/components/auth/SignupForm'
 import Image from 'next/image'
 import Link from 'next/link'
+import { SELF_SIGNUP_ENABLED } from '@/lib/flags'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +28,13 @@ export const metadata: Metadata = {
 }
 
 export default async function SignupPage({ searchParams }: { searchParams?: Promise<{ plan?: string }> }) {
-  const plan = (await searchParams)?.plan
+  const sp = await searchParams
+  // v2 onboarding: public self-signup is closed — route demand through the
+  // request form (a super-admin provisions the account). Flip the flag to reopen.
+  if (!SELF_SIGNUP_ENABLED) {
+    redirect(sp?.plan ? `/business-request?plan=${encodeURIComponent(sp.plan)}&source=signup` : '/business-request?source=signup')
+  }
+  const plan = sp?.plan
 
   return (
     <div className="flex min-h-screen flex-col bg-[#FEFEFE] px-6 py-10" dir="ltr">

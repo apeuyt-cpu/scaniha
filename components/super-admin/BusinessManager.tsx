@@ -4,13 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Database } from '@/lib/supabase/database.types'
 import { useToast } from './Toast'
-import Button from '@/components/admin/ui/Button'
-import Toggle from '@/components/admin/ui/Toggle'
-import { inputClass } from '@/components/admin/ui/Field'
+import Button from '@/components/admin/kit/Button'
+import Toggle from '@/components/admin/kit/Toggle'
+import { inputClass } from '@/components/admin/kit/Field'
 import { QR_TTL_OPTIONS } from '@/lib/game'
 import MenuDesignPicker, { type ThemeCtrl } from '@/components/admin/MenuDesignPicker'
 import { isDesignId, DESIGN_ACCENTS, getDesignSettings, type DesignId } from '@/lib/design-settings'
-import { Skeleton } from '@/components/admin/ui/Skeleton'
+import { Skeleton } from '@/components/admin/kit/Skeleton'
 import { uploadBusinessLogo, deleteImage } from '@/lib/storage'
 import StatTile, { type StatTone } from './StatTile'
 
@@ -98,6 +98,9 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
   const [qrRegenConfirm, setQrRegenConfirm] = useState(false)
   // Product mode (design_settings.products) — loaded per café when the sheet opens.
   const [productMode, setProductMode] = useState<{ products: string | null } | null>(null)
+  // QR table ordering + POS provisioning (design_settings.ordering / .pos).
+  const [ordering, setOrdering] = useState<{ enabled: boolean; tables: number; hasKey: boolean } | null>(null)
+  const [pos, setPos] = useState<{ enabled: boolean } | null>(null)
   // Design (theme_id + primary_color) — both already on the business row.
   const [themeSaving, setThemeSaving] = useState<string | null>(null)
   const [themeSaved, setThemeSaved] = useState<string | null>(null)
@@ -148,6 +151,20 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
       .then((r) => r.json())
       .then((j) => { if (!cancelled) setProductMode({ products: j.products ?? null }) })
       .catch(() => { if (!cancelled) setProductMode({ products: null }) })
+    return () => { cancelled = true }
+  }, [selectedId])
+
+  // Lazy-load ordering + POS provisioning state when a detail sheet opens.
+  useEffect(() => {
+    if (!selectedId) { setOrdering(null); setPos(null); return }
+    let cancelled = false
+    setOrdering(null); setPos(null)
+    fetch(`/api/super-admin/businesses/${selectedId}/ordering`).then((r) => r.json())
+      .then((j) => { if (!cancelled) setOrdering({ enabled: !!j.enabled, tables: j.tables ?? 0, hasKey: !!j.hasKey }) })
+      .catch(() => { if (!cancelled) setOrdering({ enabled: false, tables: 0, hasKey: false }) })
+    fetch(`/api/super-admin/businesses/${selectedId}/pos`).then((r) => r.json())
+      .then((j) => { if (!cancelled) setPos({ enabled: !!j.enabled }) })
+      .catch(() => { if (!cancelled) setPos({ enabled: false }) })
     return () => { cancelled = true }
   }, [selectedId])
 
@@ -303,6 +320,34 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
     } finally {
       setLoading(null)
     }
+  }
+
+  // ── QR table ordering (design_settings.ordering) ────────────────────
+  const patchOrdering = async (businessId: string, patch: Record<string, unknown>, okMsg: string) => {
+    setLoading(`ordering-${businessId}`)
+    try {
+      const res = await fetch(`/api/super-admin/businesses/${businessId}/ordering`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour.')
+      setOrdering({ enabled: !!json.enabled, tables: json.tables ?? 0, hasKey: !!json.hasKey })
+      toast(okMsg, 'success')
+    } catch (err: any) { toast(err.message || 'Une erreur est survenue.', 'error') } finally { setLoading(null) }
+  }
+
+  // ── POS provisioning (design_settings.pos) ──────────────────────────
+  const patchPos = async (businessId: string, enabled: boolean) => {
+    setLoading(`pos-${businessId}`)
+    try {
+      const res = await fetch(`/api/super-admin/businesses/${businessId}/pos`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Échec de la mise à jour.')
+      setPos({ enabled: !!json.enabled })
+      toast(enabled ? 'Caisse POS activée.' : 'Caisse POS désactivée.', 'success')
+    } catch (err: any) { toast(err.message || 'Une erreur est survenue.', 'error') } finally { setLoading(null) }
   }
 
   // ── Product mode (formule) ──────────────────────────────────────────
@@ -840,37 +885,55 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                   </div>
                 </Section>
 
-                {/* Produits (formule) */}
-                <Section title="Produits (formule)">
-                  {productMode === null ? (
-                    <div className="space-y-2"><Skeleton className="h-9 w-full rounded-xl" /><Skeleton className="h-9 w-2/3 rounded-xl" /></div>
+                {/* Produits & accès — chaque produit en interrupteur on/off */}
+                <Section title="Produits & accès">
+                  {productMode === null || !ordering || !pos ? (
+                    <div className="space-y-2"><Skeleton className="h-9 w-full rounded-xl" /><Skeleton className="h-9 w-full rounded-xl" /></div>
                   ) : (
-                    <>
-                      <div className="inline-flex flex-wrap gap-1 rounded-xl border border-zinc-200 p-1">
-                        {([
-                          { v: null, label: 'Par défaut' },
-                          { v: 'menu', label: 'Menu QR' },
-                          { v: 'fidelity', label: 'Fidélité' },
-                          { v: 'both', label: 'Les deux' },
-                        ] as const).map((opt) => {
-                          const active = (productMode.products ?? null) === opt.v
-                          return (
-                            <button
-                              key={String(opt.v)}
-                              type="button"
-                              onClick={() => patchProducts(b.id, opt.v, `Formule : ${opt.label}.`)}
+                    <div className="space-y-3">
+                      {(() => {
+                        const menuOn = (productMode.products ?? null) !== 'fidelity'
+                        const fidOn = (productMode.products ?? null) !== 'menu'
+                        const calc = (m: boolean, f: boolean): string | null => (m && f ? 'both' : m ? 'menu' : f ? 'fidelity' : null)
+                        return (
+                          <>
+                            <Toggle
+                              checked={menuOn}
                               disabled={loading === `products-${b.id}`}
-                              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${active ? 'bg-orange-500 text-white' : 'text-zinc-600 hover:bg-zinc-100'}`}
-                            >
-                              {opt.label}
-                            </button>
-                          )
-                        })}
+                              label="Menu QR"
+                              hint="La carte numérique scannable."
+                              onChange={(v) => { if (!v && !fidOn) { toast('Au moins un produit doit rester actif.', 'error'); return } patchProducts(b.id, calc(v, fidOn), 'Produits mis à jour.') }}
+                            />
+                            <Toggle
+                              checked={fidOn}
+                              disabled={loading === `products-${b.id}`}
+                              label="Fidélité"
+                              hint="Points, roue de la chance et récompenses."
+                              onChange={(v) => { if (!v && !menuOn) { toast('Au moins un produit doit rester actif.', 'error'); return } patchProducts(b.id, calc(menuOn, v), 'Produits mis à jour.') }}
+                            />
+                          </>
+                        )
+                      })()}
+                      <div className="space-y-3 border-t border-zinc-100 pt-3">
+                        <Toggle
+                          checked={ordering.enabled}
+                          disabled={loading === `ordering-${b.id}`}
+                          label="Commande à table"
+                          hint="Les clients commandent depuis leur table (QR par table)."
+                          onChange={(v) => patchOrdering(b.id, { enabled: v }, v ? 'Commande à table activée.' : 'Commande à table désactivée.')}
+                        />
+                        <Toggle
+                          checked={pos.enabled}
+                          disabled={loading === `pos-${b.id}`}
+                          label="Caisse POS"
+                          hint="Terminal de vente /pos (produit séparé, facturé à part)."
+                          onChange={(v) => patchPos(b.id, v)}
+                        />
                       </div>
-                      <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">
-                        Ce que le client voit en scannant : « Menu QR » (carte seule), « Fidélité » (carte de fidélité + roue, sans menu), « Les deux ». « Par défaut » = ancien comportement (menu + fidélité si l’owner l’active).
+                      <p className="text-[11px] leading-relaxed text-zinc-400">
+                        Active ou désactive chaque produit pour ce café. Le client et le propriétaire ne voient que ce qui est activé.
                       </p>
-                    </>
+                    </div>
                   )}
                 </Section>
 

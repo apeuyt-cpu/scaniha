@@ -25,7 +25,7 @@ export default function QRMenuForRestaurantsPage() {
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE] text-center"><h2 className="text-2xl font-bold text-zinc-900 mb-3">Mises à jour en temps réel</h2><p className="text-zinc-600">Modifiez les prix, ajoutez des plats du jour ou mettez à jour vos articles instantanément. Votre menu QR reste à jour sans réimpression.</p></div>
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE] text-center"><h2 className="text-2xl font-bold text-zinc-900 mb-3">Sans contact et sûr</h2><p className="text-zinc-600">Offrez une expérience de restauration sans contact. Les clients scannent avec l'appareil photo de leur téléphone — aucun téléchargement ni connexion.</p></div>
         </div>
-        <div className="text-center"><Link href="/features" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">Voir toutes les fonctionnalités →</Link><Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Créez votre menu QR gratuitement</Link></div>
+        <div className="text-center"><Link href="/features" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">Voir toutes les fonctionnalités →</Link><Link href="/business-request" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Créez votre menu QR gratuitement</Link></div>
         <div className="mt-16 text-center"><Link href="/pricing" className="text-orange-600 font-semibold hover:text-orange-700">Voir les tarifs →</Link></div>
       </div>
     </div>

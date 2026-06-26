@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireOwner } from '@/lib/auth'
-import { getActiveBusiness } from '@/lib/db/business'
+import { withStaff } from '@/lib/access/withStaff'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { DEFAULT_PRIZES } from '@/lib/game'
 import { newQrKey } from '@/lib/qr-session'
@@ -8,30 +7,20 @@ import { newQrKey } from '@/lib/qr-session'
 /**
  * GET → the owner's roulette game id + config (+ slug). Used by the QR-gate
  * admin panel and the Partage page to read/embed the current qrKey.
+ * page.fidelite (every staff who can see Partage also has Fidélité in presets).
  */
-export async function GET() {
-  try {
-    const { user } = await requireOwner()
-    const business = await getActiveBusiness()
-    if (!business) {
-      return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
-    }
-    const supabase: any = await createServiceRoleClient()
-    const { data } = await supabase
-      .from('games')
-      .select('id, config')
-      .eq('business_id', business.id)
-      .eq('type', 'roulette')
-      .order('created_at', { ascending: true })
-      .limit(1)
-    const game = data?.[0]
-    return NextResponse.json({ slug: business.slug, gameId: game?.id || null, config: game?.config || {} })
-  } catch (e: any) {
-    if (e?.digest?.startsWith('NEXT_REDIRECT')) throw e
-    console.error('admin/game GET:', e?.message)
-    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
-  }
-}
+export const GET = withStaff('page.fidelite', async (_req, { business }) => {
+  const supabase: any = await createServiceRoleClient()
+  const { data } = await supabase
+    .from('games')
+    .select('id, config')
+    .eq('business_id', business.id)
+    .eq('type', 'roulette')
+    .order('created_at', { ascending: true })
+    .limit(1)
+  const game = data?.[0]
+  return NextResponse.json({ slug: business.slug, gameId: game?.id || null, config: game?.config || {} })
+})
 
 /**
  * Owner game (roulette) setup — server-side CRUD so saving never depends on the
@@ -55,13 +44,8 @@ function pick(obj: any, fields: readonly string[]) {
   return out
 }
 
-export async function POST(request: Request) {
+export const POST = withStaff('loyalty.manage', async (request, { business }) => {
   try {
-    const { user } = await requireOwner()
-    const business = await getActiveBusiness()
-    if (!business) {
-      return NextResponse.json({ error: 'Établissement introuvable.' }, { status: 404 })
-    }
     const supabase: any = await createServiceRoleClient()
     const body = await request.json().catch(() => ({}))
     const action = body.action
@@ -144,4 +128,4 @@ export async function POST(request: Request) {
     console.error('admin/game route:', e?.message)
     return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
   }
-}
+})

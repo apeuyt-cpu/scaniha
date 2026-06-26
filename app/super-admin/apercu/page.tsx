@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { requireSuperAdmin } from '@/lib/auth'
 import { getAllBusinesses } from '@/lib/db/business'
 import { createServiceRoleClient } from '@/lib/supabase/server'
-import SectionHeader from '@/components/admin/ui/SectionHeader'
+import SectionHeader from '@/components/admin/kit/SectionHeader'
 import StatTile from '@/components/super-admin/StatTile'
 import PaymentReview from '@/components/super-admin/PaymentReview'
 

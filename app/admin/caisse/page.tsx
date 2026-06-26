@@ -1,12 +1,7 @@
-import PageShell from '@/components/admin/ui/PageShell'
-import CaisseConsole from '@/components/admin/caisse/CaisseConsole'
+import CaisseTabs from '@/components/admin/caisse/CaisseTabs'
 
 export const dynamic = 'force-dynamic'
 
 export default function CaissePage() {
-  return (
-    <PageShell title="Caisse">
-      <CaisseConsole />
-    </PageShell>
-  )
+  return <CaisseTabs />
 }

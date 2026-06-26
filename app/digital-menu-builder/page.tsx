@@ -26,7 +26,7 @@ export default function DigitalMenuBuilderPage() {
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE]"><h2 className="text-xl font-bold text-zinc-900 mb-3">Thèmes personnalisés</h2><p className="text-zinc-600">Choisissez parmi des thèmes premium et personnalisez les couleurs pour correspondre à l'identité de votre restaurant.</p></div>
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE]"><h2 className="text-xl font-bold text-zinc-900 mb-3">Tableau de bord analytique</h2><p className="text-zinc-600">Suivez les vues de votre menu, les articles populaires et l'engagement des clients grâce aux statistiques intégrées.</p></div>
         </div>
-        <div className="text-center"><Link href="/features" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">Découvrir les fonctionnalités →</Link><Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Commencez à créer votre menu</Link></div>
+        <div className="text-center"><Link href="/features" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">Découvrir les fonctionnalités →</Link><Link href="/business-request" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Commencez à créer votre menu</Link></div>
         <div className="mt-16 text-center"><Link href="/qr-menu-for-restaurants" className="text-orange-600 font-semibold hover:text-orange-700">Créez un menu QR pour votre restaurant →</Link></div>
       </div>
     </div>

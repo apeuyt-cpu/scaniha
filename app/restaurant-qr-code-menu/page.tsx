@@ -25,7 +25,7 @@ export default function RestaurantQRCodeMenuPage() {
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE]"><h2 className="text-xl font-bold text-zinc-900 mb-3">Comment ça marche</h2><p className="text-zinc-600">Inscrivez-vous, ajoutez vos articles, générez un QR code et placez-le sur les tables. Les clients scannent avec l'appareil photo de n'importe quel smartphone.</p></div>
           <div className="p-6 rounded-2xl border border-zinc-200 bg-[#FEFEFE]"><h2 className="text-xl font-bold text-zinc-900 mb-3">Fonctionne partout</h2><p className="text-zinc-600">Aucun matériel spécial nécessaire. Fonctionne sur tout smartphone doté d'un appareil photo. Les clients pointent, scannent et parcourent le menu.</p></div>
         </div>
-        <div className="text-center"><Link href="/digital-menu-builder" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">Découvrir le créateur de menu numérique →</Link><Link href="/signup" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Créez votre menu QR gratuitement</Link></div>
+        <div className="text-center"><Link href="/digital-menu-builder" className="text-orange-600 font-semibold hover:text-orange-700 mr-6">Découvrir le créateur de menu numérique →</Link><Link href="/business-request" className="inline-block px-10 py-5 bg-gradient-to-r from-[#F47B20] to-[#F5B82E] text-white rounded-xl font-extrabold text-xl shadow-xl">Créez votre menu QR gratuitement</Link></div>
         <div className="mt-16 text-center"><Link href="/pricing" className="text-orange-600 font-semibold hover:text-orange-700">Voir les forfaits →</Link></div>
       </div>
     </div>

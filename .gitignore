@@ -91,3 +91,21 @@ dev-server.log
 /qr stadns.png
 /qr hamed.png
 
+# Archived clutter (209 experimental route folders, dead code, scrap assets) moved
+# out of the app during the v2 cleanup. Kept locally, never built/tracked. See v2-plan/AUDIT.md.
+/assets/archive/
+
+# Heavy ad working assets (~1.1GB of generated PNGs) — kept local, never tracked in the public repo
+/video-ads/
+
+# Internal business / strategy docs — not part of the public app (repo is public)
+/fundraising/
+/audit/
+/presentation/
+/docs/_*-critic.json
+/pos/_smarter-analyses.json
+
+# Loose scratch assets at repo root (not referenced anywhere in the app)
+/logo with bg.png
+/menu-template.xlsx
+

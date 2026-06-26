@@ -7,8 +7,8 @@ import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 import type { Database } from '@/lib/supabase/database.types'
 import { useLocale } from '@/lib/i18n/LocaleContext'
 import { useCurrency } from '@/lib/i18n/CurrencyContext'
-import { useToast } from '@/components/admin/ui/Toast'
-import ConfirmDialog from '@/components/admin/ui/ConfirmDialog'
+import { useToast } from '@/components/admin/kit/Toast'
+import ConfirmDialog from '@/components/admin/kit/ConfirmDialog'
 
 type Item = Database['public']['Tables']['items']['Row']
 
@@ -21,6 +21,20 @@ type CategoryImageChange = File | null | undefined
 interface ModernMenuBuilderProps {
   businessId: string
   initialCategories: Category[]
+}
+
+/* Server-authoritative menu writes — RLS can't read the staff PIN cookie, so a
+ * staff member without `catalog.manage` would inherit the owner's session and be
+ * allowed to write directly. Every DATABASE write goes through this route (guarded
+ * by capability); only image upload/delete (Storage) stays on the anon client. */
+async function menu(action: string, payload: Record<string, unknown>) {
+  const res = await fetch('/api/admin/menu', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...payload }),
+  })
+  const json = await res.json().catch(() => ({}))
+  return { ok: res.ok, json: json as any }
 }
 
 /* ────────────────────────── icons (clean SVG, no emoji) ───────────────────── */
@@ -180,20 +194,15 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
     setSaving(true)
     try {
       const position = categories.length
-      const { data: newCat, error: catError } = await (supabase.from('categories') as any)
-        .insert({ business_id: businessId, name: name.trim(), position, available: true })
-        .select()
-        .single()
-
-      if (catError) throw catError
+      const { ok, json } = await menu('addCategory', { name: name.trim(), position })
+      if (!ok || !json?.category) throw new Error(json?.error || t('common.error'))
+      const newCat: any = json.category
 
       let imageFailed = false
       if (imageFile && newCat?.id) {
         try {
           const imageUrl = await uploadCategoryImage(newCat.id, imageFile)
-          await (supabase.from('categories') as any)
-            .update({ image_url: imageUrl })
-            .eq('id', newCat.id)
+          await menu('updateCategory', { id: newCat.id, patch: { image_url: imageUrl } })
           newCat.image_url = imageUrl
         } catch (imgErr) {
           console.error('Category image upload failed:', imgErr)
@@ -231,36 +240,29 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
           price: itemData.price || null,
         }
 
+        // Old image_url comes from local state (no extra DB read needed).
+        const existingItem = categories
+          .find((c) => c.id === categoryId)?.items
+          .find((i) => i.id === itemId)
+        const oldImageUrl = existingItem?.image_url || null
+
         if (itemData.removeImage) {
           // Remove image
-          const { data: oldItem } = await (supabase.from('items') as any)
-            .select('image_url')
-            .eq('id', itemId)
-            .single()
-
-          if (oldItem?.image_url) {
-            try { await deleteImage(oldItem.image_url) } catch {}
+          if (oldImageUrl) {
+            try { await deleteImage(oldImageUrl) } catch {}
           }
           updateData.image_url = null
         } else if (itemData.image) {
           // Upload new image
-          const { data: oldItem } = await (supabase.from('items') as any)
-            .select('image_url')
-            .eq('id', itemId)
-            .single()
-
-          if (oldItem?.image_url) {
-            try { await deleteImage(oldItem.image_url) } catch {}
+          if (oldImageUrl) {
+            try { await deleteImage(oldImageUrl) } catch {}
           }
-
           const imageUrl = await uploadItemImage(itemId, itemData.image)
           updateData.image_url = imageUrl
         }
 
-        const { error: updErr } = await (supabase.from('items') as any)
-          .update(updateData)
-          .eq('id', itemId)
-        if (updErr) throw updErr
+        const { ok, json } = await menu('updateItem', { id: itemId, patch: updateData })
+        if (!ok) throw new Error(json?.error || t('common.error'))
 
         // Optimistic: patch the item in place.
         setCategories((cur) =>
@@ -280,27 +282,21 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
           : -1
         const newPosition = maxPosition + 1
 
-        const { data: newItem, error: insertError } = await (supabase.from('items') as any)
-          .insert({
-            category_id: categoryId,
-            name: itemData.name,
-            description: itemData.description || null,
-            price: itemData.price || null,
-            available: true,
-            position: newPosition
-          })
-          .select()
-          .single()
-
-        if (insertError) throw insertError
+        const { ok, json } = await menu('addItem', {
+          categoryId,
+          name: itemData.name,
+          description: itemData.description || null,
+          price: itemData.price ?? null,
+          position: newPosition,
+        })
+        if (!ok || !json?.item) throw new Error(json?.error || t('common.error'))
+        const newItem: any = json.item
 
         let imageFailed = false
         if (itemData.image && newItem?.id) {
           try {
             const imageUrl = await uploadItemImage(newItem.id, itemData.image)
-            await (supabase.from('items') as any)
-              .update({ image_url: imageUrl })
-              .eq('id', newItem.id)
+            await menu('updateItem', { id: newItem.id, patch: { image_url: imageUrl } })
             newItem.image_url = imageUrl
           } catch (imageError) {
             console.error('Image upload failed:', imageError)
@@ -349,10 +345,8 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
         }
       }
 
-      const { error: updErr } = await (supabase.from('categories') as any)
-        .update(updateData)
-        .eq('id', categoryId)
-      if (updErr) throw updErr
+      const { ok, json } = await menu('updateCategory', { id: categoryId, patch: updateData })
+      if (!ok) throw new Error(json?.error || t('common.error'))
 
       // Optimistic: patch the category in place.
       setCategories((cur) => cur.map((c) => (c.id === categoryId ? { ...c, ...updateData } : c)))
@@ -376,8 +370,8 @@ export default function ModernMenuBuilder({ businessId, initialCategories }: Mod
       if (imageUrl) {
         try { await deleteImage(imageUrl) } catch {}
       }
-      const { error: delErr } = await (supabase.from('items') as any).delete().eq('id', itemId)
-      if (delErr) throw delErr
+      const { ok, json } = await menu('deleteItem', { id: itemId })
+      if (!ok) throw new Error(json?.error || t('common.error'))
       toast.success('Article supprimé')
     } catch (err: any) {
       setCategories(prev) // revert

@@ -7,8 +7,12 @@ import PublicMenu from '@/components/menu/PublicMenu'
 import PoweredByScaniha from '@/components/menu/PoweredByScaniha'
 import FidelityHub from '@/components/game/FidelityHub'
 import { businessAccent, businessGradient } from '@/lib/db/game'
-import { resolveMode, fidelityLanding, isOrderingLive } from '@/lib/design-settings'
-import OrderSheet from '@/components/order/OrderSheet'
+import { resolveMode, fidelityLanding, isOrderingLive, isPromoLive, promoConfig } from '@/lib/design-settings'
+import PromoBanner from '@/components/menu/PromoBanner'
+import { CartProvider } from '@/components/order/cart-context'
+import OrderBar from '@/components/order/OrderBar'
+import ServiceCallButton from '@/components/order/ServiceCallButton'
+import CheckoutSheet from '@/components/order/CheckoutSheet'
 import LogView from '@/components/LogView'
 import QrScanMint from '@/components/game/QrScanMint'
 import type { Database } from '@/lib/supabase/database.types'
@@ -88,6 +92,11 @@ export default async function PublicMenuPage({
 
   const theme = getTheme(business.theme_id, business.primary_color)
 
+  // Table-ordering is live → diners add items inline on the menu, a sticky bar
+  // summarises the cart, and a checkout sheet places the order.
+  const ordering = !isPaused && isOrderingLive(business)
+  const orderAccent = business.primary_color || '#F47B20'
+
   // Create a business object with modified status for display
   const businessForDisplay = {
     ...business,
@@ -102,7 +111,7 @@ export default async function PublicMenuPage({
   const seo = getBusinessSeo(business)
 
   // Social profiles → schema.org sameAs (top-level business columns).
-  const sameAs = [business.facebook_url, business.instagram_url, business.twitter_url, business.website_url].filter(Boolean) as string[]
+  const sameAs = [business.facebook_url, business.instagram_url, business.twitter_url, business.website_url, (business as any).google_url].filter(Boolean) as string[]
   // Contact info lives in the active design's settings (address / phone).
   const contact = (business.design_settings && typeof business.design_settings === 'object'
     ? (business.design_settings as any)[business.theme_id]
@@ -154,22 +163,34 @@ export default async function PublicMenuPage({
             .replace(/\u2029/g, '\\u2029'),
         }}
       />
-      <PublicMenu
-        business={businessForDisplay}
-        categories={categories}
-        theme={theme}
-      />
+      {/* Owner-set time-bound announcement, above everything. */}
+      {!isPaused && isPromoLive(business) && (
+        <PromoBanner slug={business.slug} message={promoConfig(business).message} emoji={promoConfig(business).emoji} accent={businessAccent(business)} />
+      )}
       {/* Menu is a standalone product now — it never links to fidelity/roulette.
-          The loyalty hub + roulette live at /{slug}/fidelite (its own QR). */}
-      {!isPaused && <PoweredByScaniha />}
-      {!isPaused && isOrderingLive(business) && (
-        <OrderSheet
-          slug={business.slug}
-          businessName={business.name}
-          accent={business.primary_color || '#F47B20'}
-          categories={categories.map((c) => ({ id: c.id, name: c.name, items: c.items }))}
+          The loyalty hub + roulette live at /{slug}/fidelite (its own QR).
+          When ordering is live, the whole menu shares one cart: items add inline,
+          the OrderBar summarises, and CheckoutSheet places + tracks the order. */}
+      {ordering ? (
+        <CartProvider slug={business.slug}>
+          <PublicMenu
+            business={businessForDisplay}
+            categories={categories}
+            theme={theme}
+            ordering
+          />
+          <OrderBar accent={orderAccent} />
+          <ServiceCallButton slug={business.slug} accent={orderAccent} />
+          <CheckoutSheet slug={business.slug} businessName={business.name} accent={orderAccent} />
+        </CartProvider>
+      ) : (
+        <PublicMenu
+          business={businessForDisplay}
+          categories={categories}
+          theme={theme}
         />
       )}
+      {!isPaused && <PoweredByScaniha />}
       <LogView businessId={business.id} slug={business.slug} />
       {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
       <QrScanMint slug={business.slug} />

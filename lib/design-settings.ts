@@ -361,6 +361,34 @@ export function isOrderingLive(business: any): boolean {
   return o.enabled && o.qrKey.length > 0
 }
 
+export interface PromoConfig { enabled: boolean; message: string; emoji: string; until: string | null }
+
+/**
+ * Time-bound promo banner shown above the public menu (business-wide sibling key
+ * design_settings.promo). e.g. "Happy hour 17h–19h : -20% sur les boissons".
+ * `until` (ISO date) auto-expires it. Defaults OFF.
+ */
+export function promoConfig(business: any): PromoConfig {
+  const p = business?.design_settings?.promo
+  return {
+    enabled: Boolean(p?.enabled),
+    message: typeof p?.message === 'string' ? p.message : '',
+    emoji: typeof p?.emoji === 'string' ? p.emoji : '',
+    until: typeof p?.until === 'string' && p.until ? p.until : null,
+  }
+}
+
+/** Whether the promo banner should show right now (enabled, has text, not expired). */
+export function isPromoLive(business: any): boolean {
+  const p = promoConfig(business)
+  if (!p.enabled || !p.message.trim()) return false
+  if (p.until) {
+    const t = new Date(p.until).getTime()
+    if (Number.isFinite(t) && t < Date.now()) return false
+  }
+  return true
+}
+
 type AnyItem = { id: string | number; available?: boolean }
 
 /** Deterministic-ish shuffle seeded by a number (so SSR/CSR agree per render seed). */

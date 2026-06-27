@@ -1,0 +1,111 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# migration backup files (may contain sensitive data)
+*.backup
+*_backup.json
+*_mapping.json
+*_results.json
+*_verification.json
+migration_verification_report.json
+old_users_backup.json
+user_id_mapping.json
+user_migration_results.json
+user_migration_verification.json
+storage_migration_results.json
+
+# Supabase CLI local state (project ref, pooler url, version marker) — local only
+supabase/.temp/
+
+# SQL files - kept locally only, EXCEPT the versioned DB migrations
+# (schema / policies / triggers — no secrets) so a fresh clone / new DB is reproducible.
+*.sql
+!supabase/*.sql
+!supabase/**/*.sql
+
+# Documentation files - kept locally only
+*.md
+!README.md
+
+# Local staging dump of provided designs / deprecated wheel feature.
+# Not built or served (outside app/ and public/). Ignored so it can never be
+# committed by accident. Delete manually once no longer needed.
+/TTT/
+
+# Local promo/poster image dump (~43 MB of source PNGs) — not app assets.
+/POSTES/
+
+# Local-only internal product catalog DATA (physical products / pricing). Dev
+# machine ONLY — must never be committed or deployed. The landing page renders it
+# only under `next dev` AND only when this file exists, so it stays invisible in
+# production and for anyone who clones the repo. Do NOT remove this rule.
+/public/_local-products.json
+/public/_local-products/
+/app/secret-products/
+
+# Runtime dev-server log
+dev-server.log
+
+# Design source files (PSD) + local verification screenshots — not app assets
+*.psd
+/landing-shots/
+/menu-designs-review/
+/design-menu/
+/img22.png
+/desinges.png
+/phones menus.png
+/qr stadns.png
+/qr hamed.png
+
+# Archived clutter (209 experimental route folders, dead code, scrap assets) moved
+# out of the app during the v2 cleanup. Kept locally, never built/tracked. See v2-plan/AUDIT.md.
+/assets/archive/
+
+# Heavy ad working assets (~1.1GB of generated PNGs) — kept local, never tracked in the public repo
+/video-ads/
+
+# Internal business / strategy docs — not part of the public app (repo is public)
+/fundraising/
+/audit/
+/presentation/
+/docs/_*-critic.json
+/pos/_smarter-analyses.json
+
+# Loose scratch assets at repo root (not referenced anywhere in the app)
+/logo with bg.png
+/menu-template.xlsx
+

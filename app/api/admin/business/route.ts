@@ -1,0 +1,205 @@
+import { NextResponse } from 'next/server'
+import { requireOwner } from '@/lib/auth'
+import { withStaff, requireCap } from '@/lib/access/withStaff'
+import { getActiveBusiness } from '@/lib/db/business'
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { generateSlug } from '@/lib/utils/slug'
+import { PAYMENT_PLANS } from '@/lib/payment-config'
+import { seedDemoMenu } from '@/lib/demo-menu-seed'
+
+/** Friendly plan name — all lifetime variants collapse to "À vie". */
+function planDisplayLabel(plan: string): string {
+  if (typeof plan === 'string' && plan.startsWith('lifetime')) return 'À vie'
+  return PAYMENT_PLANS[plan]?.label || plan
+}
+
+/**
+ * Current plan for a business: the most recent APPROVED manual payment request
+ * (payment_requests is service-role only). With no approved payment, we only
+ * call it the free trial when the subscription window is short (~the 7-day trial
+ * set at signup). A LONG window with no payment record is a legacy/comped paid
+ * account — it must never be labelled "Essai gratuit" (returns null → no badge;
+ * the dashboard still shows "Abonnement actif" + the expiry).
+ */
+async function currentPlan(business: any): Promise<string | null> {
+  try {
+    const svc: any = await createServiceRoleClient()
+    const { data } = await svc
+      .from('payment_requests')
+      .select('plan, created_at')
+      .eq('business_id', business.id)
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const pr = data?.[0]
+    if (pr?.plan) return planDisplayLabel(pr.plan)
+    if (business.status === 'active' && business.expires_at) {
+      const created = business.created_at ? new Date(business.created_at).getTime() : NaN
+      const windowDays = Number.isFinite(created)
+        ? (new Date(business.expires_at).getTime() - created) / 86_400_000
+        : Infinity
+      // 7-day trial (+ buffer). Any longer window = a paid/legacy plan, not a trial.
+      if (windowDays <= 14) return 'Essai gratuit'
+    }
+    return null
+  } catch (e: any) {
+    console.error('[admin/business] plan lookup:', e?.message)
+    return null
+  }
+}
+
+// Dashboard reads the business + plan label — every signed-in staff needs it.
+export const GET = withStaff('page.dashboard', async (_req, { business }) => {
+  // Return business as-is (even if expired) + the current plan label.
+  const plan = await currentPlan(business)
+  return NextResponse.json({ ...business, plan })
+})
+
+export const PATCH = withStaff('settings.manage', async (request, { business }) => {
+  try {
+    const supabase = await createServerClient()
+    const body = await request.json()
+
+    const allowedFields = ['name', 'primary_color']
+    const updates: Record<string, any> = {}
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updates[field] = body[field]
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'Aucun champ valide à mettre à jour.' }, { status: 400 })
+    }
+
+    const { error } = await (supabase.from('businesses') as any)
+      .update(updates)
+      .eq('id', business.id)
+
+    if (error) {
+      console.error('[admin/business] PATCH update error:', error.message)
+      return NextResponse.json(
+        { error: "Échec de la mise à jour de l'établissement." },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, updates })
+  } catch (error: any) {
+    if (error?.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error
+    }
+    console.error('[admin/business] PATCH error:', error?.message)
+    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
+  }
+})
+
+export async function POST(request: Request) {
+  try {
+    const { user, profile } = await requireOwner()
+    // A super-admin "Gérer comme l'établissement" must never create a business —
+    // it would be owned by the super-admin's own account. Owners only.
+    if (profile.role === 'super_admin') {
+      return NextResponse.json({ error: 'Action réservée au propriétaire.' }, { status: 403 })
+    }
+    // Creating a business is an account-owner action — block non-owner staff
+    // (only the owner holds settings.manage when staff PINs are enabled).
+    const g = await requireCap('settings.manage')
+    if ('res' in g) return g.res
+
+    const { businessName } = await request.json()
+
+    if (!businessName || !businessName.trim()) {
+      return NextResponse.json(
+        { error: "Le nom de l'établissement est requis." },
+        { status: 400 }
+      )
+    }
+
+    const supabase = await createServerClient()
+    const slug = generateSlug(businessName.trim())
+
+    // Prevent using reserved slugs
+    if (slug === 'super-admin' || slug === 'admin' || slug === 'login' || slug === 'signup') {
+      return NextResponse.json(
+        { error: 'Ce nom est réservé et ne peut pas être utilisé. Veuillez en choisir un autre.' },
+        { status: 400 }
+      )
+    }
+
+    // Check if business name already exists
+    const { data: existingBusinessName } = await (supabase
+      .from('businesses') as any)
+      .select('id')
+      .eq('name', businessName.trim())
+      .maybeSingle()
+
+    if (existingBusinessName) {
+      return NextResponse.json(
+        { error: "Ce nom d'établissement est déjà utilisé. Veuillez en choisir un autre." },
+        { status: 400 }
+      )
+    }
+
+    // Check if slug already exists
+    const { data: existingSlug } = await (supabase
+      .from('businesses') as any)
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle()
+
+    if (existingSlug) {
+      return NextResponse.json(
+        { error: "Ce nom d'établissement génère un lien déjà utilisé. Veuillez en choisir un autre." },
+        { status: 400 }
+      )
+    }
+
+    // Create business with 7-day free trial
+    const expirationDate = new Date()
+    expirationDate.setDate(expirationDate.getDate() + 7) // 7 days from now
+
+    const { data: business, error: businessError } = await (supabase
+      .from('businesses') as any)
+      .insert({
+        owner_id: user.id,
+        name: businessName.trim(),
+        slug: slug,
+        expires_at: expirationDate.toISOString(),
+        status: 'active',
+        theme_id: 'design12',
+        // New cafés start as a plain QR menu — fidelity (points, roulette, the
+        // bottom nav) stays hidden until the owner turns it on themselves.
+        // Existing cafés (loyaltyEnabled unset) keep today's behaviour.
+        design_settings: { loyaltyEnabled: false },
+      })
+      .select()
+      .single()
+
+    if (businessError) {
+      if (businessError.code === '23505') {
+        return NextResponse.json(
+          { error: "Ce nom d'établissement est déjà utilisé. Veuillez en choisir un autre." },
+          { status: 400 }
+        )
+      }
+      console.error('[admin/business] POST insert error:', businessError.message)
+      return NextResponse.json(
+        { error: "Échec de la création de l'établissement." },
+        { status: 500 }
+      )
+    }
+
+    // Pre-fill a starter demo menu (best-effort, idempotent).
+    if (business?.id) await seedDemoMenu(supabase, business.id)
+
+    return NextResponse.json(business)
+  } catch (error: any) {
+    // Don't catch redirect errors - let them propagate
+    if (error?.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error
+    }
+    console.error('[admin/business] POST error:', error?.message)
+    return NextResponse.json({ error: 'Erreur serveur.' }, { status: 500 })
+  }
+}

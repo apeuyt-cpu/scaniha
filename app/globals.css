@@ -1,0 +1,531 @@
+/* Arabic Font */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap');
+
+/* Other Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600&family=Source+Sans+Pro:wght@300;400;600&family=Cinzel:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Stop mobile Safari from auto-zooming when a form field gains focus.
+   iOS zooms in whenever a focused control's font-size is BELOW 16px, so on
+   touch devices we pin form controls to exactly 16px. Desktop keeps its
+   designed sizes, and pinch-to-zoom stays enabled (no viewport maximum-scale
+   hack that would block readers from zooming the menu). !important is required
+   to beat Tailwind's text-sm / text-[13px] utilities on the same elements. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+/* Admin UI — clean modern Latin stack (French-only product) */
+.admin-page,
+.admin-shell,
+.admin-sidebar,
+.menu-page,
+.super-admin-page {
+  font-family: 'DM Sans', 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.admin-page h1,
+.admin-page h2,
+.admin-page h3,
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3,
+.super-admin-page h1,
+.super-admin-page h2,
+.super-admin-page h3 {
+  letter-spacing: -0.018em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Admin v2 — premium-light app shell (sidebar + bottom-nav).
+   Brand orange + warm-neutral surfaces + soft layered shadows. The TOKENS live
+   at :root and the helper utilities are global so the v2 kit primitives render
+   correctly anywhere they're reused (including the super-admin screens, which
+   share the same kit). Only the warm canvas background is scoped to .admin-shell.
+   Tailwind utilities still do most of the work.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --brand: #f47b20;        /* Scaniha orange — the only accent */
+  --brand-600: #e06d12;
+  --brand-soft: #fff4ea;   /* tinted brand surface (chips, active nav) */
+  --surface: #ffffff;      /* cards */
+  --canvas: #faf9f7;       /* page background (warm off-white) */
+  --line: #ececea;         /* hairline borders */
+  --ink: #1c1a17;          /* primary text */
+  --muted: #6b6661;        /* secondary text */
+}
+
+/* Warm canvas only for the v2 admin shell (the public menu keeps its own bg). */
+.admin-shell {
+  background: var(--canvas);
+}
+
+/* Soft, layered elevation for cards/panels — warmer & softer than zinc shadows. */
+.shadow-soft {
+  box-shadow: 0 1px 2px rgba(28, 26, 23, 0.04), 0 4px 16px -8px rgba(28, 26, 23, 0.10);
+}
+.shadow-soft-lg {
+  box-shadow: 0 2px 4px rgba(28, 26, 23, 0.05), 0 18px 40px -20px rgba(28, 26, 23, 0.22);
+}
+
+/* Active sidebar / bottom-nav item gets a brand-tinted pill. */
+.nav-active {
+  background: var(--brand-soft);
+  color: var(--brand-600);
+}
+
+/* Hide scrollbar on the scrollable sidebar without losing wheel/touch scroll. */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+@keyframes adminSheetIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes adminFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Minimal theme styles */
+.minimal-container {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.minimal-fade {
+  animation: minFade 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes minFade {
+  from { 
+    opacity: 0; 
+    transform: translateY(8px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.minimal-item {
+  transition: all 0.2s ease;
+}
+
+.minimal-item:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.minimal-item:active {
+  transform: scale(0.99);
+}
+
+.item-expand {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.category-tab {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.category-tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+}
+
+.category-tab.active::after {
+  transform: scaleX(1);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 2px;
+}
+
+/* Hide scrollbars on horizontal carousels / tab bars (all browsers). */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ============================================================
+   SCANIHA LANDING — Premium Design System & Motion
+   ============================================================ */
+.landing {
+  --orange: #F47B20;
+  --orange-deep: #D8631A;
+  --charcoal: #1A1A1A;
+  --amber: #F5B82E;
+  --bg: #FEFEFE;
+  --ring: rgba(244, 123, 32, 0.35);
+  --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --card-shadow-lg: 0 18px 48px rgba(26, 26, 26, 0.12);
+  font-family: 'Tajawal', 'Cairo', system-ui, sans-serif;
+  background: var(--bg);
+  color: #1A1A1A;
+  -webkit-font-smoothing: antialiased;
+}
+
+.landing h1,
+.landing h2,
+.landing h3 {
+  font-family: 'Tajawal', 'Cairo', system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* Arabic headline line-height tightening */
+.landing .headline {
+  line-height: 1.12;
+}
+
+/* ---- Gradient text ---- */
+.landing .grad-text {
+  background: linear-gradient(120deg, var(--orange) 0%, var(--amber) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ---- Cards ---- */
+.landing .lp-card {
+  background: #fff;
+  border: 1px solid rgba(26, 26, 26, 0.06);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+  will-change: transform;
+}
+.landing .lp-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--card-shadow-lg);
+  border-color: var(--ring);
+}
+
+/* ---- Glassmorphism feature pill ---- */
+.landing .glass-pill {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 28px rgba(26, 26, 26, 0.1);
+}
+
+/* ---- Shimmer button ---- */
+.landing .btn-shine {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+  will-change: transform;
+}
+.landing .btn-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+.landing .btn-shine:hover::after {
+  left: 130%;
+}
+.landing .btn-shine:hover {
+  box-shadow: 0 14px 34px rgba(244, 123, 32, 0.4);
+}
+.landing .btn-shine:active {
+  transform: scale(0.97);
+}
+
+/* ---- Drifting background orbs ---- */
+.landing .orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.5;
+  pointer-events: none;
+  will-change: transform;
+}
+.landing .orb-1 {
+  background: radial-gradient(circle, rgba(244, 123, 32, 0.45), transparent 70%);
+  animation: orbDrift 14s ease-in-out infinite;
+}
+.landing .orb-2 {
+  background: radial-gradient(circle, rgba(245, 184, 46, 0.45), transparent 70%);
+  animation: orbDrift 18s ease-in-out infinite reverse;
+}
+@keyframes orbDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -30px) scale(1.12); }
+}
+
+/* ---- Floating hero image ---- */
+.landing .float-img {
+  animation: floatY 6s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+
+/* ---- Scroll reveal ---- */
+.landing .reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: transform, opacity;
+}
+.landing .reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---- Hero staggered fade-up (auto on load) ---- */
+.landing .hero-up {
+  opacity: 0;
+  transform: translateY(24px);
+  animation: heroUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: var(--hero-delay, 0ms);
+}
+@keyframes heroUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Popular pricing card pulse ---- */
+.landing .pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 18px 48px rgba(244, 123, 32, 0.3); }
+  50% { box-shadow: 0 22px 64px rgba(244, 123, 32, 0.55); }
+}
+
+/* ---- Step number badge pop ---- */
+.landing .reveal.is-visible .badge-pop {
+  animation: badgePop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+}
+@keyframes badgePop {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+
+/* ---- Icon container micro-bounce on hover ---- */
+.landing .lp-card:hover .icon-container {
+  animation: iconBounce 0.6s ease;
+}
+@keyframes iconBounce {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.12); }
+  60% { transform: scale(0.97); }
+}
+
+/* Glow effect on icon container hover */
+.landing .lp-card:hover .icon-container::after {
+  opacity: 1;
+}
+.landing .icon-container {
+  position: relative;
+}
+.landing .icon-container::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 18px;
+  background: inherit;
+  filter: blur(14px);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
+}
+
+/* ---- Trust badge checkmark draw ---- */
+.landing .reveal.is-visible .check-draw {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: checkDraw 0.5s ease forwards;
+  animation-delay: var(--check-delay, 0ms);
+}
+@keyframes checkDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ---- Payment logos marquee ---- */
+.landing .marquee {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.landing .marquee-track {
+  display: flex;
+  gap: 2rem;
+  width: max-content;
+  animation: marquee 28s linear infinite;
+}
+.landing .marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ---- Sticky mobile CTA ---- */
+.landing .sticky-cta {
+  transform: translateY(120%);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.landing .sticky-cta.show {
+  transform: translateY(0);
+}
+
+/* ---- Animated background shapes ---- */
+@keyframes drift1 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(28px, -36px); }
+}
+@keyframes drift2 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(-26px, 28px) rotate(18deg); }
+}
+@keyframes drift3 {
+  0%, 100% { transform: translate(0, 0) rotate(45deg); }
+  50% { transform: translate(22px, 26px) rotate(62deg); }
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .anim-shape {
+    animation: none !important;
+  }
+  .landing .orb,
+  .landing .float-img,
+  .landing .pulse-glow,
+  .landing .marquee-track,
+  .landing .badge-pop,
+  .landing .icon-container,
+  .landing .check-draw,
+  .landing .hero-up {
+    animation: none !important;
+  }
+  .landing .reveal,
+  .landing .hero-up {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .landing .check-draw {
+    stroke-dashoffset: 0 !important;
+  }
+}
+
+/* ── Image protection — deter casual saving (see NoDownloadGuard.tsx) ──
+   Drag-to-save is blocked everywhere (harmless on marketing pages), but
+   text/image SELECTION and the iOS long-press menu must NOT be globally
+   disabled: that would block normal interaction (copy, select, long-press)
+   on the marketing/funnel pages and hurt conversion. NoDownloadGuard.tsx
+   already blocks right-click + drag only on the menu/admin pages. */
+img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+}
+
+/* ── Hero image: glowing rotating rays + breathing glow ── */
+.hero-aura {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 155%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+}
+.hero-aura .rays {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: repeating-conic-gradient(from 0deg, rgba(244, 123, 32, 0.16) 0deg 4deg, transparent 4deg 20deg);
+  filter: blur(5px);
+  -webkit-mask: radial-gradient(closest-side, transparent 24%, rgba(0,0,0,0.85) 46%, transparent 74%);
+  mask: radial-gradient(closest-side, transparent 24%, rgba(0,0,0,0.85) 46%, transparent 74%);
+  animation: heroRaysSpin 26s linear infinite;
+}
+.hero-aura .glow {
+  position: absolute;
+  inset: 6%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(244, 123, 32, 0.34), rgba(245, 184, 46, 0.15) 48%, transparent 78%);
+  filter: blur(64px);
+  animation: heroGlowPulse 4.5s ease-in-out infinite;
+}
+@keyframes heroRaysSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes heroGlowPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-aura .rays, .hero-aura .glow { animation: none !important; }
+}

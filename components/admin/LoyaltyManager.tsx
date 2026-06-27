@@ -74,7 +74,7 @@ export default function LoyaltyManager({ businessId: _businessId }: { businessId
       return
     }
     const p = json.program as Program | null
-    setProgram(p ? { redeem_expiry_hours: 48, ...p } : null)
+    setProgram(p ? { ...p, redeem_expiry_hours: p.redeem_expiry_hours ?? 48 } : null)
     if (p) {
       setRewards(Array.isArray(json.rewards) ? json.rewards : [])
       setPending(typeof json.pending === 'number' ? json.pending : 0)

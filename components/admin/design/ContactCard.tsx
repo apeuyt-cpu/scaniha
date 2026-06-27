@@ -6,6 +6,7 @@ import { designApi } from '@/lib/admin/design-api'
 import { useToast } from '@/components/admin/kit/Toast'
 import { inputClass } from '@/components/admin/kit/Field'
 import Toggle from '@/components/admin/kit/Toggle'
+import { revalidatePublicMenu } from '@/lib/revalidate-menu'
 
 type Contact = { enabled: boolean; phone: string; address: string; hours: string }
 

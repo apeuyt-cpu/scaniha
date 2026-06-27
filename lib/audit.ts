@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { isUntrackedActor } from '@/lib/audit-exclusions'
 
 /**
  * Record an EXPLICIT platform event in audit_log — for "moves" that don't write
@@ -15,6 +16,8 @@ export async function logAudit(entry: {
   businessId?: string | null
   detail?: string | null
 }) {
+  // Accounts excluded from Super Eyes (e.g. the founder) are never recorded.
+  if (isUntrackedActor(entry.actor)) return
   try {
     const admin = await createServiceRoleClient()
     await (admin.from('audit_log') as any).insert({

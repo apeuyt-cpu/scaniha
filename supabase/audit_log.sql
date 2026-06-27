@@ -39,8 +39,11 @@ declare
   v_row  jsonb;
   v_biz  text;
 begin
-  -- Skip automatic / service-role / background writes (no signed-in user).
-  if auth.uid() is null then
+  -- Skip automatic / service-role / background writes (no signed-in user), and
+  -- accounts excluded from Super Eyes (founder) — keep this array in sync with
+  -- lib/audit-exclusions.ts.
+  if auth.uid() is null
+     or auth.uid() = any (array['3c147303-dbe5-4fbc-a411-0bc40c49182d']::uuid[]) then  -- saif@gmail.com
     return case when TG_OP = 'DELETE' then OLD else NEW end;
   end if;
   begin
@@ -74,6 +77,9 @@ begin
   end loop;
 end $$;
 
--- One-time cleanup: drop the automatic / service-role rows already captured
--- (actor IS NULL) so the feed only shows deliberate user actions.
-delete from public.audit_log where actor is null;
+-- Cleanup: drop automatic / service-role rows (actor IS NULL) AND any rows for
+-- accounts excluded from Super Eyes, so the feed only shows tracked, deliberate
+-- actions. Re-runnable; keep the array in sync with lib/audit-exclusions.ts.
+delete from public.audit_log
+ where actor is null
+    or actor = any (array['3c147303-dbe5-4fbc-a411-0bc40c49182d']::uuid[]);  -- saif@gmail.com

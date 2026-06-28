@@ -30,8 +30,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true })
   } catch (err: any) {
-    console.error('send-verification error:', err?.message)
+    console.error('send-verification error:', err)
     const msg = (err?.message || '').toLowerCase()
+    const statusCode = err?.statusCode || err?.status
     if (
       msg.includes('invalid') ||
       msg.includes('not a valid') ||
@@ -42,6 +43,12 @@ export async function POST(req: Request) {
       msg.includes('5.1.1')
     ) {
       return NextResponse.json({ error: 'Cette adresse email semble invalide. Vérifiez-la et réessayez.', invalidEmail: true }, { status: 400 })
+    }
+    if (msg.includes('domain') || msg.includes('verified') || msg.includes('sender') || msg === 'unauthorized') {
+      return NextResponse.json({ error: 'Erreur d\'envoi. Vérifiez la configuration email (domaine non vérifié).' }, { status: 500 })
+    }
+    if (statusCode === 401 || msg.includes('api key')) {
+      return NextResponse.json({ error: 'Erreur de configuration email (clé API invalide).' }, { status: 500 })
     }
     return NextResponse.json({ error: 'Erreur lors de l\'envoi du code.' }, { status: 500 })
   }

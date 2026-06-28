@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/utils/slug'
 import { useLocale } from '@/lib/i18n/LocaleContext'
@@ -9,7 +9,6 @@ import { seedDemoMenu } from '@/lib/demo-menu-seed'
 
 const MIN_PASSWORD_LENGTH = 8
 
-/** Price label for the selected-plan banner — from the single pricing source. */
 function planPriceLabel(plan?: string): string {
   const p = (plan && PAYMENT_PLANS[plan]) || PAYMENT_PLANS['1year']
   return `${p.price} TND`
@@ -25,9 +24,17 @@ export default function SignupForm({ plan }: { plan?: string }) {
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
+
+  const [codeDigits, setCodeDigits] = useState(['', '', '', '', '', ''])
+  const [codeSent, setCodeSent] = useState(false)
+  const [codeVerified, setCodeVerified] = useState(false)
+  const [sendingCode, setSendingCode] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [verificationError, setVerificationError] = useState<string | null>(null)
+  const codeInputRefs = useRef<(HTMLInputElement | null)[]>([])
+
   const supabase = createClient()
 
-  // Field order drives where focus moves on validation failure (accessibility).
   const fieldOrder = ['email', 'password', 'confirmPassword', 'phoneNumber', 'businessName'] as const
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
@@ -37,6 +44,54 @@ export default function SignupForm({ plan }: { plan?: string }) {
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [resendCooldown])
+
+  const sendCode = useCallback(async () => {
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+      setFieldErrors(prev => ({ ...prev, email: 'Email invalide.' }))
+      return
+    }
+
+    setSendingCode(true)
+    setVerificationError(null)
+    setFieldErrors(prev => ({ ...prev, email: '' }))
+
+    try {
+      const res = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmedEmail }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          const match = data.error?.match(/(\d+)/)
+          const seconds = match ? parseInt(match[1]) : 60
+          setResendCooldown(seconds)
+        }
+        setVerificationError(data.error || 'Erreur.')
+        setSendingCode(false)
+        return
+      }
+
+      setCodeSent(true)
+      setResendCooldown(60)
+      setTimeout(() => codeInputRefs.current[0]?.focus(), 100)
+    } catch {
+      setVerificationError('Erreur réseau.')
+    } finally {
+      setSendingCode(false)
+    }
+  }, [email])
 
   const validate = () => {
     const errs: Record<string, string> = {}
@@ -86,7 +141,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
       .maybeSingle()
 
     if (existingEmail) {
-      setFieldErrors({ email: 'Cette adresse email est déjà utilisée. Connectez-vous ou utilisez une autre adresse.' })
+      setFieldErrors({ email: 'Cette adresse email est déjà utilisée.' })
       inputRefs.current.email?.focus()
       setLoading(false)
       return
@@ -99,7 +154,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
       .maybeSingle()
 
     if (existingBusinessName) {
-      setFieldErrors({ businessName: 'Ce nom d\'établissement est déjà pris. Veuillez en choisir un autre.' })
+      setFieldErrors({ businessName: 'Ce nom d\'établissement est déjà pris.' })
       inputRefs.current.businessName?.focus()
       setLoading(false)
       return
@@ -112,10 +167,41 @@ export default function SignupForm({ plan }: { plan?: string }) {
       .maybeSingle()
 
     if (existingSlug) {
-      setFieldErrors({ businessName: 'Ce nom d\'établissement génère une adresse déjà utilisée. Veuillez en choisir un autre.' })
+      setFieldErrors({ businessName: 'Ce nom génère une adresse déjà utilisée.' })
       inputRefs.current.businessName?.focus()
       setLoading(false)
       return
+    }
+
+    const fullCode = codeDigits.join('')
+    if (!codeVerified) {
+      if (!codeSent) {
+        setVerificationError('Veuillez d\'abord envoyer le code de vérification.')
+        setLoading(false)
+        return
+      }
+      if (fullCode.length !== 6) {
+        setVerificationError('Veuillez entrer le code à 6 chiffres reçu par email.')
+        setLoading(false)
+        return
+      }
+
+      const checkRes = await fetch('/api/auth/check-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), code: fullCode }),
+      })
+      const checkData = await checkRes.json()
+
+      if (!checkRes.ok) {
+        setVerificationError(checkData.error || 'Code incorrect.')
+        setCodeDigits(['', '', '', '', '', ''])
+        if (checkRes.status === 429 || checkData.error?.includes('expiré')) {
+          setTimeout(() => sendCode(), 500)
+        }
+        setLoading(false)
+        return
+      }
     }
 
     try {
@@ -129,7 +215,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
         if (authError) console.error('Signup auth error:', authError.message)
         const msg = (authError?.message || '').toLowerCase()
         if (msg.includes('already registered') || msg.includes('already been registered') || msg.includes('user already')) {
-          setFieldErrors({ email: 'Cette adresse email est déjà utilisée. Connectez-vous ou utilisez une autre adresse.' })
+          setFieldErrors({ email: 'Cette adresse email est déjà utilisée.' })
           inputRefs.current.email?.focus()
         } else if (msg.includes('password') && (msg.includes('weak') || msg.includes('should be') || msg.includes('at least') || msg.includes('characters'))) {
           setFieldErrors({ password: `Mot de passe trop faible. Utilisez au moins ${MIN_PASSWORD_LENGTH} caractères.` })
@@ -138,9 +224,9 @@ export default function SignupForm({ plan }: { plan?: string }) {
           setFieldErrors({ email: 'Veuillez saisir une adresse email valide.' })
           inputRefs.current.email?.focus()
         } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
-          setError('Problème de connexion réseau. Vérifiez votre connexion internet et réessayez.')
+          setError('Problème de connexion réseau.')
         } else {
-          setError('Une erreur est survenue lors de la création du compte. Veuillez réessayer.')
+          setError('Une erreur est survenue lors de la création du compte.')
         }
         setLoading(false)
         return
@@ -148,8 +234,6 @@ export default function SignupForm({ plan }: { plan?: string }) {
 
       const userId = authData.user.id
 
-      // Supabase creates the profile row via a database trigger. Poll briefly
-      // for it to exist, then fall back to inserting it ourselves if it doesn't.
       let profileExists = false
       for (let i = 0; i < 10; i++) {
         const { data: profile } = await (supabase
@@ -173,10 +257,11 @@ export default function SignupForm({ plan }: { plan?: string }) {
             email: email.toLowerCase().trim(),
             phone_number: phoneNumber.trim(),
             role: 'owner',
+            email_verified: true,
           })
 
         if (profileError) {
-          setError('Votre compte a été créé mais une erreur est survenue lors de la configuration. Veuillez vous connecter ou contacter le support.')
+          setError('Compte créé mais erreur de configuration.')
           setLoading(false)
           return
         }
@@ -186,6 +271,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
           .update({
             email: email.toLowerCase().trim(),
             phone_number: phoneNumber.trim(),
+            email_verified: true,
           })
           .eq('user_id', userId)
 
@@ -194,8 +280,6 @@ export default function SignupForm({ plan }: { plan?: string }) {
         }
       }
 
-      // If plan selected → create as pending (no expires_at), payment required first
-      // If no plan → create as active with 7-day free trial
       if (plan) {
         const { data: business, error: businessError } = await (supabase
           .from('businesses') as any)
@@ -206,8 +290,6 @@ export default function SignupForm({ plan }: { plan?: string }) {
             expires_at: null,
             status: 'pending',
             theme_id: 'design12',
-            // Plain QR menu by default — fidelity (points/roulette/bottom bar)
-            // stays off until the owner turns it on.
             design_settings: { loyaltyEnabled: false },
           })
           .select()
@@ -215,17 +297,14 @@ export default function SignupForm({ plan }: { plan?: string }) {
 
         if (businessError) {
           console.error('Business creation error:', businessError.message)
-          setError('Une erreur est survenue lors de la création de votre établissement. Veuillez réessayer.')
+          setError('Erreur lors de la création de votre établissement.')
           setLoading(false)
           return
         }
 
-        // Pre-fill a starter demo menu, then show the first-run showcase.
         if (business?.id) await seedDemoMenu(supabase, business.id)
-        // Manual payment: the owner submits their bank-transfer receipt from the dashboard.
         window.location.href = '/welcome'
       } else {
-        // No plan: create with 7-day free trial
         const expirationDate = new Date()
         expirationDate.setDate(expirationDate.getDate() + 7)
 
@@ -238,8 +317,6 @@ export default function SignupForm({ plan }: { plan?: string }) {
             expires_at: expirationDate.toISOString(),
             status: 'active',
             theme_id: 'design12',
-            // Plain QR menu by default — fidelity (points/roulette/bottom bar)
-            // stays off until the owner turns it on.
             design_settings: { loyaltyEnabled: false },
           })
           .select()
@@ -247,12 +324,11 @@ export default function SignupForm({ plan }: { plan?: string }) {
 
         if (businessError) {
           console.error('Business creation error:', businessError.message)
-          setError('Une erreur est survenue lors de la création de votre établissement. Veuillez réessayer.')
+          setError('Erreur lors de la création de votre établissement.')
           setLoading(false)
           return
         }
 
-        // Pre-fill a starter demo menu, then show the first-run showcase.
         if (business?.id) await seedDemoMenu(supabase, business.id)
         window.location.href = '/welcome'
       }
@@ -260,12 +336,38 @@ export default function SignupForm({ plan }: { plan?: string }) {
       console.error('Signup unexpected error:', err?.message)
       const msg = (err?.message || '').toLowerCase()
       if (msg.includes('network') || msg.includes('fetch')) {
-        setError('Problème de connexion réseau. Vérifiez votre connexion internet et réessayez.')
+        setError('Problème de connexion réseau.')
       } else {
-        setError('Une erreur inattendue est survenue. Veuillez réessayer.')
+        setError('Une erreur inattendue est survenue.')
       }
       setLoading(false)
     }
+  }
+
+  const handleCodeInput = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return
+    const newCode = [...codeDigits]
+    newCode[index] = value.slice(0, 1)
+    setCodeDigits(newCode)
+    setVerificationError(null)
+    if (value && index < 5) {
+      codeInputRefs.current[index + 1]?.focus()
+    }
+  }
+
+  const handleCodeKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !codeDigits[index] && index > 0) {
+      codeInputRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handleCodePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    const newCode = [...codeDigits]
+    for (let i = 0; i < 6; i++) newCode[i] = pasted[i] || ''
+    setCodeDigits(newCode)
+    if (pasted.length === 6) codeInputRefs.current[5]?.focus()
   }
 
   const inputBase =
@@ -285,7 +387,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
             </svg>
             <div>
               <p className="text-sm font-semibold text-orange-900">{t('auth.selectPlan')}: {planPriceLabel(plan)}</p>
-              <p className="text-xs text-orange-700 mt-0.5">Paiement par virement bancaire — vous enverrez votre reçu depuis votre tableau de bord.</p>
+              <p className="text-xs text-orange-700 mt-0.5">Paiement par virement bancaire</p>
             </div>
           </div>
         </div>
@@ -294,30 +396,65 @@ export default function SignupForm({ plan }: { plan?: string }) {
       <div className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-2">
-            {t('auth.email')}
+            {t('auth.email')} <span className="text-red-500">*</span>
           </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            required
-            ref={(el) => { inputRefs.current.email = el }}
-            aria-invalid={!!fieldErrors.email}
-            aria-describedby={fieldErrors.email ? 'email-error' : undefined}
-            className={inputClass('email')}
-            placeholder="example@email.com"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: '' })) }}
-            dir="ltr"
-          />
+          <div className="flex gap-2">
+            <input
+              id="email"
+              name="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              required
+              ref={(el) => { inputRefs.current.email = el }}
+              aria-invalid={!!fieldErrors.email}
+              className={`${inputClass('email')} flex-1`}
+              placeholder="example@email.com"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: '' })) }}
+              dir="ltr"
+            />
+            <button
+              type="button"
+              onClick={sendCode}
+              disabled={sendingCode || resendCooldown > 0}
+              className="shrink-0 px-4 py-3 bg-orange-600 text-white rounded-xl text-sm font-medium hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 transition-colors"
+            >
+              {sendingCode ? '...' : resendCooldown > 0 ? `${resendCooldown}s` : codeSent ? 'Renvoyer' : 'Envoyer le code'}
+            </button>
+          </div>
           {fieldErrors.email && <p id="email-error" className="mt-1.5 text-sm text-red-600">{fieldErrors.email}</p>}
         </div>
 
+        {codeSent && (
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 mb-2">
+              Code de v&eacute;rification (6 chiffres)
+            </label>
+            <div className="flex gap-2 justify-center" onPaste={handleCodePaste}>
+              {codeDigits.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={(el) => { codeInputRefs.current[i] = el }}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleCodeInput(i, e.target.value)}
+                  onKeyDown={(e) => handleCodeKeyDown(i, e)}
+                  className={`w-11 h-12 text-center text-lg font-bold border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-[#FEFEFE] text-zinc-900 ${verificationError ? 'border-red-400' : 'border-zinc-300'}`}
+                  aria-label={`Chiffre ${i + 1}`}
+                />
+              ))}
+            </div>
+            {verificationError && <p className="mt-1.5 text-sm text-red-600 text-center">{verificationError}</p>}
+          </div>
+        )}
+
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-zinc-700 mb-2">
-            {t('auth.password')}
+            {t('auth.password')} <span className="text-red-500">*</span>
           </label>
           <input
             id="password"
@@ -340,7 +477,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
 
         <div>
           <label htmlFor="confirmPassword" className="block text-sm font-medium text-zinc-700 mb-2">
-            Confirmer le mot de passe
+            Confirmer le mot de passe <span className="text-red-500">*</span>
           </label>
           <input
             id="confirmPassword"
@@ -361,7 +498,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
 
         <div>
           <label htmlFor="phone" className="block text-sm font-medium text-zinc-700 mb-2">
-            {t('auth.phone')}
+            {t('auth.phone')} <span className="text-red-500">*</span>
           </label>
           <input
             id="phone"
@@ -372,7 +509,6 @@ export default function SignupForm({ plan }: { plan?: string }) {
             required
             ref={(el) => { inputRefs.current.phoneNumber = el }}
             aria-invalid={!!fieldErrors.phoneNumber}
-            aria-describedby={fieldErrors.phoneNumber ? 'phone-error' : undefined}
             className={inputClass('phoneNumber')}
             placeholder={t('auth.phonePlaceholder')}
             value={phoneNumber}
@@ -384,7 +520,7 @@ export default function SignupForm({ plan }: { plan?: string }) {
 
         <div>
           <label htmlFor="business" className="block text-sm font-medium text-zinc-700 mb-2">
-            {t('auth.establishmentName')}
+            {t('auth.establishmentName')} <span className="text-red-500">*</span>
           </label>
           <input
             id="business"
@@ -393,7 +529,6 @@ export default function SignupForm({ plan }: { plan?: string }) {
             required
             ref={(el) => { inputRefs.current.businessName = el }}
             aria-invalid={!!fieldErrors.businessName}
-            aria-describedby={fieldErrors.businessName ? 'business-error' : undefined}
             className={inputClass('businessName')}
             placeholder={t('auth.establishmentNamePlaceholder')}
             value={businessName}

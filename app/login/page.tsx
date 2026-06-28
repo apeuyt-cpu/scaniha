@@ -48,7 +48,7 @@ export default function LoginPage() {
         {/* Footer link */}
         <p className="mt-6 text-center text-sm text-zinc-500">
           Pas encore de compte&nbsp;?{' '}
-          <Link href="/business-request" className="font-semibold text-orange-600 hover:text-orange-700">
+          <Link href="/signup" className="font-semibold text-orange-600 hover:text-orange-700">
             Inscrivez-vous
           </Link>
         </p>

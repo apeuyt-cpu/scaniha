@@ -176,11 +176,21 @@ export default function LoginForm() {
       // Get user profile to determine correct redirect URL
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, email_verified')
         .eq('user_id', data.user.id)
-        .maybeSingle() as { data: { role: string } | null }
+        .maybeSingle() as { data: { role: string; email_verified: boolean } | null }
 
       const role = profile?.role
+
+      // Block unverified users - redirect to verification page
+      if (profile && !profile.email_verified) {
+        const userEmail = data.user.email || ''
+        setLoading(false)
+        setIsSubmitting(false)
+        router.push(`/verify-email?email=${encodeURIComponent(userEmail)}`)
+        return
+      }
+
       const next = new URLSearchParams(window.location.search).get('next')
       const redirectUrl = safeNext(next, role) || (role === 'super_admin' ? '/super-admin' : '/admin')
 

@@ -6,13 +6,13 @@ type UserRole = 'owner' | 'super_admin' | null
 /**
  * Public routes that don't require authentication
  */
-const PUBLIC_ROUTES = ['/login', '/signup', '/']
+const PUBLIC_ROUTES = ['/login', '/signup', '/verify-email', '/']
 
 /**
  * Check if a path is a public route
  */
 function isPublicRoute(pathname: string): boolean {
-  if (pathname.startsWith('/login') || pathname.startsWith('/signup')) return true
+  if (pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/verify-email')) return true
   if (pathname === '/') return true
   // Public menu routes (slug routes)
   if (pathname.match(/^\/[^\/]+$/) && !pathname.startsWith('/admin') && !pathname.startsWith('/super-admin')) {
@@ -226,5 +226,6 @@ export const config = {
     '/super-admin/:path*',
     '/login',
     '/signup',
+    '/verify-email',
   ],
 }

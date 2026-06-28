@@ -15,6 +15,7 @@ export interface Database {
           email: string | null
           phone_number: string | null
           role: 'owner' | 'super_admin'
+          email_verified: boolean
           created_at: string
           updated_at?: string | null
         }
@@ -23,6 +24,7 @@ export interface Database {
           email?: string | null
           phone_number?: string | null
           role?: 'owner' | 'super_admin'
+          email_verified?: boolean
           created_at?: string
           updated_at?: string | null
         }
@@ -31,8 +33,35 @@ export interface Database {
           email?: string | null
           phone_number?: string | null
           role?: 'owner' | 'super_admin'
+          email_verified?: boolean
           created_at?: string
           updated_at?: string | null
+        }
+      }
+      verification_codes: {
+        Row: {
+          id: string
+          email: string
+          code_hash: string
+          expires_at: string
+          attempts: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          code_hash: string
+          expires_at: string
+          attempts?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          code_hash?: string
+          expires_at?: string
+          attempts?: number
+          created_at?: string
         }
       }
       businesses: {

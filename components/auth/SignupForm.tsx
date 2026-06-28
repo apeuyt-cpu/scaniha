@@ -73,12 +73,17 @@ export default function SignupForm({ plan }: { plan?: string }) {
       const data = await res.json()
 
       if (!res.ok) {
-        if (res.status === 429) {
+        if (data.invalidEmail) {
+          setFieldErrors(prev => ({ ...prev, email: data.error || 'Email invalide.' }))
+          setVerificationError(null)
+        } else if (res.status === 429) {
           const match = data.error?.match(/(\d+)/)
           const seconds = match ? parseInt(match[1]) : 60
           setResendCooldown(seconds)
+          setVerificationError(data.error)
+        } else {
+          setVerificationError(data.error || 'Erreur.')
         }
-        setVerificationError(data.error || 'Erreur.')
         setSendingCode(false)
         return
       }

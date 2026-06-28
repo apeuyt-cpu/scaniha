@@ -7,13 +7,13 @@ export async function POST(req: Request) {
     const { email } = await req.json()
 
     if (!email || typeof email !== 'string') {
-      return NextResponse.json({ error: 'Email requis.' }, { status: 400 })
+      return NextResponse.json({ error: 'Email requis.', invalidEmail: true }, { status: 400 })
     }
 
     const normalizedEmail = email.toLowerCase().trim()
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      return NextResponse.json({ error: 'Email invalide.' }, { status: 400 })
+      return NextResponse.json({ error: 'Email invalide.', invalidEmail: true }, { status: 400 })
     }
 
     const rateCheck = await canSendCode(normalizedEmail)
@@ -31,6 +31,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true })
   } catch (err: any) {
     console.error('send-verification error:', err?.message)
+    const msg = (err?.message || '').toLowerCase()
+    if (
+      msg.includes('invalid') ||
+      msg.includes('not a valid') ||
+      msg.includes('recipient') ||
+      msg.includes('email address') ||
+      msg.includes('verify') ||
+      msg.includes('550') ||
+      msg.includes('5.1.1')
+    ) {
+      return NextResponse.json({ error: 'Cette adresse email semble invalide. Vérifiez-la et réessayez.', invalidEmail: true }, { status: 400 })
+    }
     return NextResponse.json({ error: 'Erreur lors de l\'envoi du code.' }, { status: 500 })
   }
 }

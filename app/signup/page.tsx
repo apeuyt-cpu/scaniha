@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import SignupForm from '@/components/auth/SignupForm'
 import Image from 'next/image'
 import Link from 'next/link'
-import { SELF_SIGNUP_ENABLED } from '@/lib/flags'
+import { isSelfSignupEnabled } from '@/lib/db/platform-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,9 +29,11 @@ export const metadata: Metadata = {
 
 export default async function SignupPage({ searchParams }: { searchParams?: Promise<{ plan?: string }> }) {
   const sp = await searchParams
-  // v2 onboarding: public self-signup is closed — route demand through the
-  // request form (a super-admin provisions the account). Flip the flag to reopen.
-  if (!SELF_SIGNUP_ENABLED) {
+  // v2 onboarding: when self-signup is OFF, route demand through the request form
+  // (a super-admin provisions the account). The super-admin toggles this in
+  // /super-admin/demandes (platform_settings.self_signup); /business-request
+  // does the reverse redirect when it's ON, so one switch drives both pages.
+  if (!(await isSelfSignupEnabled())) {
     redirect(sp?.plan ? `/business-request?plan=${encodeURIComponent(sp.plan)}&source=signup` : '/business-request?source=signup')
   }
   const plan = sp?.plan

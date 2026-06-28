@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import BusinessRequestForm from '@/components/public/BusinessRequestForm'
+import { isSelfSignupEnabled } from '@/lib/db/platform-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +34,11 @@ export default async function BusinessRequestPage({
   searchParams?: Promise<{ plan?: string; source?: string }>
 }) {
   const sp = (await searchParams) || {}
+  // When the super-admin has opened direct self-signup, send visitors to /signup
+  // instead of the request form (mirror of the /signup → /business-request gate).
+  if (await isSelfSignupEnabled()) {
+    redirect(sp.plan ? `/signup?plan=${encodeURIComponent(sp.plan)}` : '/signup')
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-[#FEFEFE] px-6 py-10" dir="ltr">

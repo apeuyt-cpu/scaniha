@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import type { GameRow, PrizeRow } from '@/lib/game'
 
 export interface RoueStats {
@@ -18,7 +17,6 @@ export interface RoueStats {
  * (slider %, renormalisation) stay in GameManager since only that screen needs them.
  */
 export function useRoueGame(businessId: string) {
-  const supabase = createClient()
   const [game, setGame] = useState<GameRow | null>(null)
   const [prizes, setPrizes] = useState<PrizeRow[]>([])
   const [stats, setStats] = useState<RoueStats>({ plays: 0, pending: 0, redeemed: 0 })
@@ -32,39 +30,30 @@ export function useRoueGame(businessId: string) {
 
   const SAVE_MSG = 'Impossible d\'enregistrer. Réessayez.'
 
+  // Read through the server (requireOwner + service role) — NOT the browser
+  // Supabase client. The game tables are RLS-gated, so a super-admin impersonating
+  // an owner (or staff) couldn't see the owner's game/prizes/stats client-side,
+  // which made the UI think no game existed and then fail trying to re-create it.
   const load = useCallback(async () => {
     setError(null)
-    const { data: g, error: gErr } = await (supabase.from('games') as any)
-      .select('*')
-      .eq('business_id', businessId)
-      .eq('type', 'roulette')
-      .maybeSingle()
-    if (gErr) {
-      if (gErr.code === '42P01' || gErr.message?.includes('does not exist') || gErr.message?.includes('schema cache')) {
-        setSetupNeeded(true)
-        setLoading(false)
+    try {
+      const res = await fetch('/api/admin/game', { cache: 'no-store' })
+      if (!res.ok) {
+        console.error('useRoueGame load error:', res.status)
+        setError('Impossible de charger le jeu. Réessayez.')
         return
       }
-      console.error('useRoueGame load error:', gErr)
+      const json = await res.json().catch(() => ({}))
+      setGame(json.game ?? null)
+      setPrizes(json.prizes ?? [])
+      setStats(json.stats ?? { plays: 0, pending: 0, redeemed: 0 })
+    } catch (e) {
+      console.error('useRoueGame load error:', e)
       setError('Impossible de charger le jeu. Réessayez.')
+    } finally {
       setLoading(false)
-      return
     }
-    setGame(g)
-    if (g) {
-      const midnight = new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
-      const now = new Date().toISOString()
-      const [{ data: p }, plays, pending, redeemed] = await Promise.all([
-        (supabase.from('prizes') as any).select('*').eq('game_id', g.id).order('position').order('created_at'),
-        (supabase.from('plays') as any).select('id', { count: 'exact', head: true }).eq('game_id', g.id).gte('created_at', midnight),
-        (supabase.from('wins') as any).select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'pending').gt('expires_at', now),
-        (supabase.from('wins') as any).select('id', { count: 'exact', head: true }).eq('business_id', businessId).eq('status', 'redeemed').gte('redeemed_at', midnight),
-      ])
-      setPrizes(p || [])
-      setStats({ plays: plays.count ?? 0, pending: pending.count ?? 0, redeemed: redeemed.count ?? 0 })
-    }
-    setLoading(false)
-  }, [businessId, supabase])
+  }, [businessId])
 
   useEffect(() => { load() }, [load])
 

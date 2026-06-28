@@ -113,12 +113,33 @@ export async function POST(request: Request) {
       ownerUserId = created.user.id
     }
 
-    // ── Ensure the profile exists with role 'owner' (service role bypasses the
-    //    profiles_guard; the auth.users trigger usually creates it already). ──
-    try {
-      await svc.from('profiles').upsert({ user_id: ownerUserId, role: 'owner' }, { onConflict: 'user_id' })
-    } catch (e: any) {
-      console.warn('[super-admin/businesses] profile upsert warning:', e?.message)
+    // ── Ensure the owner profile exists (businesses.owner_id → profiles.user_id).
+    //    A brand-new user already gets one from the on_auth_user_created trigger,
+    //    but an EXISTING auth user with no profile row (e.g. a diner account, or a
+    //    user created before the trigger) needs one created here. profiles.email
+    //    and phone_number are BOTH NOT NULL, so they MUST be supplied — omitting
+    //    them silently failed the insert and left the business insert to die on the
+    //    owner_id FK (surfacing as "Échec de la création de l'établissement."). ──
+    const { data: existingProfile } = await svc
+      .from('profiles')
+      .select('user_id')
+      .eq('user_id', ownerUserId)
+      .maybeSingle()
+    if (!existingProfile) {
+      const { error: profErr } = await svc.from('profiles').insert({
+        user_id: ownerUserId,
+        email: ownerEmail,
+        phone_number: ownerPhone || '',
+        role: 'owner',
+      })
+      if (profErr) {
+        // Don't leave an orphan auth user behind if we can't give it a profile.
+        if (isNewUser && ownerUserId) {
+          try { await svc.auth.admin.deleteUser(ownerUserId) } catch {}
+        }
+        console.error('[super-admin/businesses] profile create error:', profErr.message)
+        return NextResponse.json({ error: 'Échec de la création du compte propriétaire.' }, { status: 500 })
+      }
     }
 
     // Seed the product grant (formule) from the request/body so the new café opens

@@ -23,7 +23,7 @@ function validateEmailAddress(value: string): { valid: boolean; message?: string
   const domain = normalized.split('@')[1]
   const isValidDomain = Boolean(domain) && domain.includes('.') && !domain.startsWith('.') && !domain.endsWith('.')
   const domainTld = domain?.split('.').pop()
-  const looksLikeMailboxDomain = isValidDomain && Boolean(domainTld) && domainTld.length >= 2
+  const looksLikeMailboxDomain = isValidDomain && typeof domainTld === 'string' && domainTld.length >= 2
 
   if (!looksLikeMailboxDomain) {
     return { valid: false, message: 'L’email est incorrect. Tapez une adresse email valide de boîte mail (Gmail, Yahoo, Outlook, etc.).' }

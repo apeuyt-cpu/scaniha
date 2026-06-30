@@ -24,7 +24,6 @@ export default function LoginForm() {
   const [attemptCount, setAttemptCount] = useState<number>(0)
   const [rateLimited, setRateLimited] = useState<boolean>(false)
   const router = useRouter()
-  const supabase = createClient()
 
   const emailRef = useRef<HTMLInputElement | null>(null)
   const passwordRef = useRef<HTMLInputElement | null>(null)
@@ -35,7 +34,9 @@ export default function LoginForm() {
   // Do NOT call signOut() here as it can clear valid sessions that are still loading
   useEffect(() => {
     const checkExistingSession = async () => {
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return
       try {
+        const supabase = createClient()
         const { data: { session } } = await supabase.auth.getSession()
         if (session) {
           // User is already authenticated, get their role and redirect
@@ -55,7 +56,7 @@ export default function LoginForm() {
       }
     }
     checkExistingSession()
-  }, [supabase])
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -129,6 +130,7 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
+      const supabase = createClient()
       const { error: authError, data } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: trimmedPassword,
@@ -242,7 +244,7 @@ export default function LoginForm() {
               Mot de passe
             </label>
             <Link
-              href="/contact"
+              href="/forgot-password"
               className="text-sm font-medium text-orange-600 hover:text-orange-700"
             >
               Mot de passe oublié&nbsp;?

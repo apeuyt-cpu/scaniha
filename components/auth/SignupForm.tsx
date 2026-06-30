@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/utils/slug'
 import { useLocale } from '@/lib/i18n/LocaleContext'
@@ -22,14 +22,18 @@ export default function SignupForm({ plan }: { plan?: string }) {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [businessName, setBusinessName] = useState('')
+  const [verificationCode, setVerificationCode] = useState<string[]>(Array(6).fill(''))
+  const [codeSent, setCodeSent] = useState(false)
+  const [sendingCode, setSendingCode] = useState(false)
+  const [resendIn, setResendIn] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
 
   // Field order drives where focus moves on validation failure (accessibility).
-  const fieldOrder = ['email', 'password', 'confirmPassword', 'phoneNumber', 'businessName'] as const
+  const fieldOrder = ['email', 'verificationCode', 'password', 'confirmPassword', 'phoneNumber', 'businessName'] as const
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const codeRefs = useRef<Array<HTMLInputElement | null>>([])
 
   const focusFirstError = (errs: Record<string, string>) => {
     const first = fieldOrder.find((f) => errs[f])
@@ -37,6 +41,15 @@ export default function SignupForm({ plan }: { plan?: string }) {
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const joinedCode = verificationCode.join('')
+
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const timer = window.setInterval(() => {
+      setResendIn((current) => Math.max(0, current - 1))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [resendIn])
 
   const validate = () => {
     const errs: Record<string, string> = {}
@@ -44,6 +57,11 @@ export default function SignupForm({ plan }: { plan?: string }) {
       errs.email = 'Veuillez saisir votre adresse email.'
     } else if (!emailRegex.test(email.trim())) {
       errs.email = 'Veuillez saisir une adresse email valide.'
+    }
+    if (!codeSent) {
+      errs.verificationCode = 'Envoyez le code de vérification reçu par email.'
+    } else if (!/^\d{6}$/.test(joinedCode)) {
+      errs.verificationCode = 'Veuillez saisir le code de vérification à 6 chiffres.'
     }
     if (!password) {
       errs.password = 'Veuillez choisir un mot de passe.'
@@ -64,6 +82,89 @@ export default function SignupForm({ plan }: { plan?: string }) {
     return errs
   }
 
+  const handleSendCode = async () => {
+    const clean = email.trim().toLowerCase()
+    setError(null)
+    setFieldErrors((prev) => ({ ...prev, email: '', verificationCode: '' }))
+
+    if (!clean) {
+      setFieldErrors({ email: 'Veuillez saisir votre adresse email.' })
+      inputRefs.current.email?.focus()
+      return
+    }
+    if (!emailRegex.test(clean)) {
+      setFieldErrors({ email: 'Veuillez saisir une adresse email valide.' })
+      inputRefs.current.email?.focus()
+      return
+    }
+    if (resendIn > 0 || sendingCode) return
+
+    setSendingCode(true)
+    try {
+      const res = await fetch('/api/auth/signup-code/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: clean }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        if (res.status === 429 && typeof json.retryAfter === 'number') setResendIn(json.retryAfter)
+        setFieldErrors({ email: json.error || "Impossible d'envoyer le code. Veuillez réessayer." })
+        inputRefs.current.email?.focus()
+        return
+      }
+      setCodeSent(true)
+      setVerificationCode(Array(6).fill(''))
+      setResendIn(typeof json.retryAfter === 'number' ? json.retryAfter : 60)
+      window.setTimeout(() => codeRefs.current[0]?.focus(), 50)
+    } catch {
+      setError('Problème de connexion réseau. Vérifiez votre connexion internet et réessayez.')
+    } finally {
+      setSendingCode(false)
+    }
+  }
+
+  const handleCodeChange = (index: number, value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 6)
+    if (!digits) {
+      setVerificationCode((current) => current.map((char, i) => (i === index ? '' : char)))
+      return
+    }
+
+    setFieldErrors((prev) => ({ ...prev, verificationCode: '' }))
+    setVerificationCode((current) => {
+      const next = [...current]
+      digits.split('').forEach((digit, offset) => {
+        if (index + offset < next.length) next[index + offset] = digit
+      })
+      return next
+    })
+
+    const nextIndex = Math.min(5, index + digits.length)
+    window.setTimeout(() => codeRefs.current[nextIndex]?.focus(), 0)
+  }
+
+  const handleCodeKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
+      codeRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const verifyCodeBeforeSignup = async () => {
+    const res = await fetch('/api/auth/signup-code/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase(), code: joinedCode }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      setFieldErrors({ verificationCode: json.error || 'Code de vérification incorrect.' })
+      codeRefs.current[0]?.focus()
+      return false
+    }
+    return true
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -77,7 +178,14 @@ export default function SignupForm({ plan }: { plan?: string }) {
     setFieldErrors({})
     setLoading(true)
 
+    const codeOk = await verifyCodeBeforeSignup()
+    if (!codeOk) {
+      setLoading(false)
+      return
+    }
+
     const slug = generateSlug(businessName)
+    const supabase = createClient()
 
     const { data: existingEmail } = await (supabase
       .from('profiles') as any)
@@ -296,24 +404,74 @@ export default function SignupForm({ plan }: { plan?: string }) {
           <label htmlFor="email" className="block text-sm font-medium text-zinc-700 mb-2">
             {t('auth.email')}
           </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            required
-            ref={(el) => { inputRefs.current.email = el }}
-            aria-invalid={!!fieldErrors.email}
-            aria-describedby={fieldErrors.email ? 'email-error' : undefined}
-            className={inputClass('email')}
-            placeholder="example@email.com"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors(prev => ({ ...prev, email: '' })) }}
-            dir="ltr"
-          />
+          <div className="flex gap-2 sm:gap-3">
+            <input
+              id="email"
+              name="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              required
+              ref={(el) => { inputRefs.current.email = el }}
+              aria-invalid={!!fieldErrors.email}
+              aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+              className={`${inputClass('email')} ${codeSent ? 'bg-blue-50' : ''}`}
+              placeholder="example@email.com"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                setCodeSent(false)
+                setVerificationCode(Array(6).fill(''))
+                if (fieldErrors.email || fieldErrors.verificationCode) {
+                  setFieldErrors(prev => ({ ...prev, email: '', verificationCode: '' }))
+                }
+              }}
+              dir="ltr"
+            />
+            <button
+              type="button"
+              onClick={handleSendCode}
+              disabled={sendingCode || resendIn > 0}
+              className="shrink-0 rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-orange-300 sm:px-5"
+            >
+              {sendingCode ? 'Envoi...' : resendIn > 0 ? `${resendIn}s` : codeSent ? 'Renvoyer' : 'Envoyer le code'}
+            </button>
+          </div>
           {fieldErrors.email && <p id="email-error" className="mt-1.5 text-sm text-red-600">{fieldErrors.email}</p>}
         </div>
+
+        {codeSent && (
+          <div>
+            <label htmlFor="verification-code-0" className="block text-sm font-medium text-zinc-700 mb-2">
+              Code de vérification (6 chiffres)
+            </label>
+            <div className="grid grid-cols-6 gap-2 sm:gap-3" dir="ltr">
+              {verificationCode.map((digit, index) => (
+                <input
+                  key={index}
+                  id={`verification-code-${index}`}
+                  ref={(el) => { codeRefs.current[index] = el }}
+                  value={digit}
+                  inputMode="numeric"
+                  autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                  maxLength={1}
+                  aria-label={`Chiffre ${index + 1} du code de vérification`}
+                  aria-invalid={!!fieldErrors.verificationCode}
+                  className={`aspect-square w-full rounded-xl border bg-[#FEFEFE] text-center text-xl font-semibold text-zinc-900 outline-none transition focus:border-transparent focus:ring-2 focus:ring-orange-500 ${fieldErrors.verificationCode ? 'border-red-400' : 'border-zinc-300'}`}
+                  onChange={(e) => handleCodeChange(index, e.target.value)}
+                  onKeyDown={(e) => handleCodeKeyDown(index, e)}
+                  onPaste={(e) => {
+                    e.preventDefault()
+                    handleCodeChange(index, e.clipboardData.getData('text'))
+                  }}
+                />
+              ))}
+            </div>
+            {fieldErrors.verificationCode && (
+              <p className="mt-1.5 text-sm text-red-600">{fieldErrors.verificationCode}</p>
+            )}
+          </div>
+        )}
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-zinc-700 mb-2">

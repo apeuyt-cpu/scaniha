@@ -37,6 +37,7 @@ const SELF_SIGNUP_KEY = 'self_signup'
 export async function isSelfSignupEnabled(): Promise<boolean> {
   const v = await getSetting<{ enabled?: boolean }>(SELF_SIGNUP_KEY)
   if (v && typeof v.enabled === 'boolean') return v.enabled
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return true
   return process.env.NEXT_PUBLIC_SELF_SIGNUP === 'on'
 }
 

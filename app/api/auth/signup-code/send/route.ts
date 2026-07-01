@@ -45,6 +45,17 @@ export async function POST(request: Request) {
       if (!res.ok) {
         const detail = await res.text().catch(() => '')
         console.error('[signup-code] Resend error:', detail)
+
+        // In development: Resend test domain can only send to the account owner's email.
+        // Fall back to console so signup can still be tested without a verified domain.
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('⚠️  [signup-code] Resend rejected the email (likely domain restriction).')
+          console.warn('    To fix in production: verify your domain on resend.com and set RESEND_FROM_EMAIL.')
+          console.log(`\n🔑 [signup-code] DEV FALLBACK — code for ${email}: ${issued.code}\n`)
+          // Return success so the UI can proceed; user reads code from this terminal.
+          return NextResponse.json({ ok: true, retryAfter: issued.retryAfter, devFallback: true })
+        }
+
         return NextResponse.json({ error: "Impossible d'envoyer le code. Veuillez réessayer." }, { status: 502 })
       }
     } else if (process.env.NODE_ENV !== 'production') {

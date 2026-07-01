@@ -6,8 +6,12 @@ import { generateSlug } from '@/lib/utils/slug'
 import { useLocale } from '@/lib/i18n/LocaleContext'
 import { PAYMENT_PLANS } from '@/lib/payment-config'
 import { seedDemoMenu } from '@/lib/demo-menu-seed'
+import PhoneInput, { validatePhoneForCountry, COUNTRIES, type Country } from '@/components/ui/PhoneInput'
 
 const MIN_PASSWORD_LENGTH = 8
+
+// Default country Tunisia — the app's primary market
+const DEFAULT_SIGNUP_COUNTRY = COUNTRIES.find((c) => c.iso2 === 'TN')!
 
 /** Price label for the selected-plan banner — from the single pricing source. */
 function planPriceLabel(plan?: string): string {
@@ -21,17 +25,20 @@ export default function SignupForm({ plan }: { plan?: string }) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
+  const [phoneCountry, setPhoneCountry] = useState<Country>(DEFAULT_SIGNUP_COUNTRY)
   const [businessName, setBusinessName] = useState('')
   const [verificationCode, setVerificationCode] = useState<string[]>(Array(6).fill(''))
   const [codeSent, setCodeSent] = useState(false)
   const [sendingCode, setSendingCode] = useState(false)
   const [resendIn, setResendIn] = useState(0)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
 
   // Field order drives where focus moves on validation failure (accessibility).
-  const fieldOrder = ['email', 'verificationCode', 'password', 'confirmPassword', 'phoneNumber', 'businessName'] as const
+  const fieldOrder = ['email', 'verificationCode', 'password', 'confirmPassword', 'phoneNumber', 'businessName', 'termsAccepted'] as const
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const codeRefs = useRef<Array<HTMLInputElement | null>>([])
 
@@ -75,9 +82,20 @@ export default function SignupForm({ plan }: { plan?: string }) {
     }
     if (!phoneNumber.trim()) {
       errs.phoneNumber = 'Veuillez saisir votre numéro de téléphone.'
+    } else {
+      // Extract subscriber number (everything after the dial code)
+      const dialCode = phoneCountry.dialCode
+      const subscriberPart = phoneNumber.startsWith(dialCode)
+        ? phoneNumber.slice(dialCode.length).trim()
+        : phoneNumber.trim()
+      const phoneErr = validatePhoneForCountry(subscriberPart, phoneCountry)
+      if (phoneErr) errs.phoneNumber = phoneErr
     }
     if (!businessName.trim()) {
       errs.businessName = 'Veuillez saisir le nom de votre établissement.'
+    }
+    if (!termsAccepted) {
+      errs.termsAccepted = 'Vous devez accepter les conditions générales et la politique de confidentialité pour continuer.'
     }
     return errs
   }
@@ -521,23 +539,21 @@ export default function SignupForm({ plan }: { plan?: string }) {
           <label htmlFor="phone" className="block text-sm font-medium text-zinc-700 mb-2">
             {t('auth.phone')}
           </label>
-          <input
+          <PhoneInput
             id="phone"
-            name="phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            required
-            ref={(el) => { inputRefs.current.phoneNumber = el }}
-            aria-invalid={!!fieldErrors.phoneNumber}
-            aria-describedby={fieldErrors.phoneNumber ? 'phone-error' : undefined}
-            className={inputClass('phoneNumber')}
-            placeholder={t('auth.phonePlaceholder')}
             value={phoneNumber}
-            onChange={(e) => { setPhoneNumber(e.target.value); if (fieldErrors.phoneNumber) setFieldErrors(prev => ({ ...prev, phoneNumber: '' })) }}
-            dir="ltr"
+            onChange={(fullValue, _isValid, country) => {
+              setPhoneNumber(fullValue)
+              setPhoneCountry(country)
+              if (fieldErrors.phoneNumber) setFieldErrors(prev => ({ ...prev, phoneNumber: '' }))
+            }}
+            error={fieldErrors.phoneNumber}
+            onBlurValidate={(err) => {
+              if (err) setFieldErrors(prev => ({ ...prev, phoneNumber: err }))
+            }}
+            inputRef={(el) => { inputRefs.current.phoneNumber = el }}
+            ariaDescribedBy={fieldErrors.phoneNumber ? 'phone-error' : undefined}
           />
-          {fieldErrors.phoneNumber && <p id="phone-error" className="mt-1.5 text-sm text-red-600">{fieldErrors.phoneNumber}</p>}
         </div>
 
         <div>
@@ -577,11 +593,43 @@ export default function SignupForm({ plan }: { plan?: string }) {
         </div>
       )}
 
-      {error && (
-        <div role="alert" aria-live="assertive" className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm text-center">
-          {error}
+      {/* Terms and Privacy Policy Checkbox */}
+      <div className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+        <div className="flex h-5 items-center">
+          <input
+            id="terms"
+            name="terms"
+            type="checkbox"
+            required
+            ref={(el) => { inputRefs.current.termsAccepted = el }}
+            checked={termsAccepted}
+            onChange={(e) => {
+              setTermsAccepted(e.target.checked)
+              if (fieldErrors.termsAccepted) setFieldErrors(prev => ({ ...prev, termsAccepted: '' }))
+            }}
+            className="h-4 w-4 rounded border-zinc-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+          />
         </div>
-      )}
+        <div className="flex flex-col">
+          <label htmlFor="terms" className="text-sm font-medium text-zinc-800 cursor-pointer">
+            J'accepte les{' '}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                setIsPrivacyModalOpen(true)
+              }}
+              className="text-orange-600 hover:text-orange-700 underline focus:outline-none focus:ring-2 focus:ring-orange-500 rounded-sm"
+            >
+              Conditions générales et la Politique de confidentialité
+            </button>
+            {' '}<span className="text-red-500">*</span>
+          </label>
+          {fieldErrors.termsAccepted && (
+            <p className="mt-1 text-sm text-red-600 font-medium">{fieldErrors.termsAccepted}</p>
+          )}
+        </div>
+      </div>
 
       <div>
         <button
@@ -592,6 +640,100 @@ export default function SignupForm({ plan }: { plan?: string }) {
           {loading ? t('auth.signingUp') : t('auth.createAccount')}
         </button>
       </div>
+      {/* Privacy Policy Modal Overlay */}
+      {isPrivacyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" dir="ltr">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsPrivacyModalOpen(false)}
+            aria-hidden="true"
+          />
+          
+          {/* Modal Content */}
+          <div 
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="privacy-modal-title"
+          >
+            <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-4">
+              <h2 id="privacy-modal-title" className="text-lg font-bold text-zinc-900">
+                Politique de Confidentialité & Conditions d'Utilisation
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsPrivacyModalOpen(false)}
+                className="text-zinc-400 hover:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500 rounded-lg p-1"
+                aria-label="Fermer"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto px-6 py-6 text-sm text-zinc-600 space-y-6 scrollbar-thin">
+              <section>
+                <h3 className="font-bold text-zinc-900 mb-2 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                  1. Conformité Internationale (Standard ISO/IEC 27001 & RGPD)
+                </h3>
+                <p>
+                  Ce document certifie la conformité de Scaniha avec les normes internationales relatives à la sécurité 
+                  de l'information et à la gestion des données numériques commerciales.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="font-bold text-zinc-900 mb-2">2. Droits d'Accès et Traitement des Données</h3>
+                <p>
+                  En créant un compte sur cette plateforme, l'établissement (le Souscripteur) reconnaît, autorise et accorde 
+                  expressément à <strong>Scaniha et à ses administrateurs officiels</strong> le droit absolu d'accéder, 
+                  de traiter, de modérer et de gérer l'intégralité des données hébergées sur le service. Cela inclut, sans 
+                  s'y limiter : les données de l'établissement, les statistiques de scan, le menu, ainsi que toute 
+                  donnée client (utilisateurs finaux) collectée via l'utilisation du code QR.
+                </p>
+                <p className="mt-2">
+                  Cet accès est garanti à des fins de maintenance, de sécurité, d'audit légal et d'amélioration continue 
+                  du service, conformément à la législation internationale en vigueur.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="font-bold text-zinc-900 mb-2">3. Responsabilité Légale du Souscripteur</h3>
+                <p>
+                  Le Souscripteur confirme que toutes les données collectées via son menu QR le sont de manière pleinement légale. 
+                  Il s'engage à respecter les droits des consommateurs finaux. Scaniha agit en tant que prestataire technologique 
+                  et décline toute responsabilité quant à l'usage illicite des données par l'établissement.
+                </p>
+              </section>
+              
+              <section>
+                <h3 className="font-bold text-zinc-900 mb-2">4. Propriété et Rétention</h3>
+                <p>
+                  Scaniha se réserve le droit de suspendre, supprimer ou modifier tout compte enfreignant les présentes 
+                  conditions, avec ou sans préavis. Les données sont hébergées sur des serveurs sécurisés et chiffrés.
+                </p>
+              </section>
+            </div>
+            
+            <div className="border-t border-zinc-100 bg-zinc-50 px-6 py-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setTermsAccepted(true)
+                  if (fieldErrors.termsAccepted) setFieldErrors(prev => ({ ...prev, termsAccepted: '' }))
+                  setIsPrivacyModalOpen(false)
+                }}
+                className="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-6 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+              >
+                J'accepte
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   )
 }

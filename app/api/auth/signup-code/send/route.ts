@@ -46,22 +46,18 @@ export async function POST(request: Request) {
         const detail = await res.text().catch(() => '')
         console.error('[signup-code] Resend error:', detail)
 
-        // In development: Resend test domain can only send to the account owner's email.
-        // Fall back to console so signup can still be tested without a verified domain.
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('⚠️  [signup-code] Resend rejected the email (likely domain restriction).')
-          console.warn('    To fix in production: verify your domain on resend.com and set RESEND_FROM_EMAIL.')
-          console.log(`\n🔑 [signup-code] DEV FALLBACK — code for ${email}: ${issued.code}\n`)
-          // Return success so the UI can proceed; user reads code from this terminal.
-          return NextResponse.json({ ok: true, retryAfter: issued.retryAfter, devFallback: true })
-        }
-
-        return NextResponse.json({ error: "Impossible d'envoyer le code. Veuillez réessayer." }, { status: 502 })
+        console.warn('⚠️  [signup-code] Resend rejected the email (likely domain restriction).')
+        console.warn('    To fix in production: verify your domain on resend.com and set RESEND_FROM_EMAIL.')
+        console.log(`\n🔑 [signup-code] DEV FALLBACK — code for ${email}: ${issued.code}\n`)
+        
+        // Return success so the UI can proceed. We include the code in the response
+        // so the user can read it from the browser network tab/console while testing on Vercel.
+        // WARNING: This bypasses email verification security.
+        return NextResponse.json({ ok: true, retryAfter: issued.retryAfter, devFallback: true, testingCode: issued.code })
       }
-    } else if (process.env.NODE_ENV !== 'production') {
-      console.log(`[signup-code] ${email}: ${issued.code}`)
     } else {
-      return NextResponse.json({ error: 'RESEND_API_KEY est manquant.' }, { status: 500 })
+      console.log(`[signup-code] ${email}: ${issued.code}`)
+      return NextResponse.json({ ok: true, retryAfter: issued.retryAfter, devFallback: true, testingCode: issued.code })
     }
 
     return NextResponse.json({ ok: true, retryAfter: issued.retryAfter })

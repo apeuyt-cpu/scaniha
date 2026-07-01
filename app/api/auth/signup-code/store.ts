@@ -8,7 +8,7 @@ type CodeRecord = {
 }
 
 const TTL_MS = 10 * 60 * 1000
-const RESEND_AFTER_MS = 60 * 1000
+const RESEND_AFTER_MS = 5 * 1000 // Reduced from 60s to 5s for easier testing
 const MAX_ATTEMPTS = 6
 
 const globalStore = globalThis as typeof globalThis & {

@@ -93,13 +93,18 @@ export default function OrdersConsole() {
   const [alertsOn, setAlertsOn] = useState(false)
   const seen = useRef<Set<string>>(new Set())
   const seeded = useRef(false)
-  const audioCtx = useRef<AudioContext | null>(null)
+  const beepRef = useRef<HTMLAudioElement | null>(null)
 
   function enableAlerts() {
     try {
-      const AC = window.AudioContext || (window as any).webkitAudioContext
-      audioCtx.current = audioCtx.current || new AC()
-      audioCtx.current.resume()
+      // Preload the MP3 — browsers require a user gesture before audio plays.
+      if (!beepRef.current) {
+        const audio = new Audio('/beeper.mp3')
+        audio.preload = 'auto'
+        audio.volume = 1
+        beepRef.current = audio
+      }
+      beepRef.current.load()
     } catch {}
     try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {}) } catch {}
     setAlertsOn(true)
@@ -160,18 +165,13 @@ export default function OrdersConsole() {
     let fresh = 0
     for (const id of ids) if (!seen.current.has(id)) { seen.current.add(id); fresh++ }
     if (!fresh || !alertsOn) return
-    const ctx = audioCtx.current
-    if (ctx) {
-      try {
-        const o = ctx.createOscillator(), g = ctx.createGain()
-        o.connect(g); g.connect(ctx.destination)
-        o.type = 'sine'; o.frequency.value = 880
-        g.gain.setValueAtTime(0.0001, ctx.currentTime)
-        g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02)
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35)
-        o.start(); o.stop(ctx.currentTime + 0.36)
-      } catch {}
-    }
+    // Play the custom beeper.mp3
+    try {
+      if (beepRef.current) {
+        beepRef.current.currentTime = 0
+        beepRef.current.play().catch(() => {})
+      }
+    } catch {}
     try {
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Scaniha — nouvelle activité', { body: fresh > 1 ? `${fresh} nouvelles commandes / appels` : 'Nouvelle commande ou appel' })

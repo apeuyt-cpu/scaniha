@@ -137,7 +137,21 @@ export default function CheckoutSheet({ slug, businessName, accent = '#F47B20' }
 
             {lines.length > 0 && (
               <div className="mt-5 space-y-3 rounded-2xl bg-white p-4" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
-                <div><label htmlFor="ord-table" className="mb-1 block text-xs font-semibold" style={{ color: MUT }}>Numéro de table</label><input id="ord-table" value={table} onChange={(e) => setTable(e.target.value)} inputMode="numeric" placeholder="ex. 5" className="w-full rounded-xl border px-3 py-2.5 text-base outline-none" style={{ borderColor: LINE, color: INK }} /></div>
+                <div>
+                  <label htmlFor="ord-table" className="mb-1 block text-xs font-semibold flex items-center justify-between" style={{ color: MUT }}>
+                    <span>Numéro de table</span>
+                    <span className="text-[10px] uppercase tracking-wider opacity-70">Automatique</span>
+                  </label>
+                  <input 
+                    id="ord-table" 
+                    value={table} 
+                    readOnly 
+                    placeholder="Scannez le QR de la table" 
+                    className="w-full rounded-xl border px-3 py-2.5 text-base outline-none cursor-not-allowed bg-black/5" 
+                    style={{ borderColor: LINE, color: INK }} 
+                    title="Le numéro de table est défini automatiquement via le QR code"
+                  />
+                </div>
                 <div><label htmlFor="ord-name" className="mb-1 block text-xs font-semibold" style={{ color: MUT }}>Votre prénom (optionnel)</label><input id="ord-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Prénom" className="w-full rounded-xl border px-3 py-2.5 text-base outline-none" style={{ borderColor: LINE, color: INK }} /></div>
                 <div><label htmlFor="ord-note" className="mb-1 block text-xs font-semibold" style={{ color: MUT }}>Note (optionnel)</label><textarea id="ord-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Sans oignon, bien cuit…" className="w-full resize-none rounded-xl border px-3 py-2.5 text-base outline-none" style={{ borderColor: LINE, color: INK }} /></div>
               </div>

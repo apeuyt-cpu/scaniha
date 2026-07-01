@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
     const apiKey = process.env.RESEND_API_KEY
     if (apiKey) {
-      const from = process.env.RESEND_FROM_EMAIL || 'Scaniha <onboarding@resend.dev>'
+      const from = process.env.RESEND_FROM_EMAIL || 'Scaniha <noreply@scaniha.com>'
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {

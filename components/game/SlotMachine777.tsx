@@ -1,14 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
-/* ── Default symbols used when prizes don't map to known icons ──── */
-const DEFAULT_SYMBOLS = ['🍒', '🔔', '💎', '7️⃣', '⭐', '🍋', '🎰', '🍀']
-
-const GOLD = '#F5C518'
-const GOLD_DARK = '#C9A227'
-const DARK_BG = '#0D0608'
-const REEL_BG = '#1A0A0A'
+const DEFAULT_SYMBOLS = ['💎', '👑', '🎰', '7️⃣', '🍒', '🎯', '🌟', '🔔']
 
 interface SlotMachineProps {
   prizes: string[]
@@ -18,82 +12,78 @@ interface SlotMachineProps {
   onSpinEnd: () => void
 }
 
-function ReelStrip({ symbols, targetSymbol, spinning, delay, onDone }: {
-  symbols: string[]
-  targetSymbol: string
-  spinning: boolean
-  delay: number
-  onDone?: () => void
-}) {
+function Reel({ symbols, targetSymbol, spinning, delay, onDone }: { symbols: string[], targetSymbol: string, spinning: boolean, delay: number, onDone?: () => void }) {
   const [offset, setOffset] = useState(0)
-  const [stopped, setStopped] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const ITEM_H = 80
+  const [stopped, setStopped] = useState(true)
+  const ITEM_H = 100
   const VISIBLE = 3
 
   useEffect(() => {
-    if (!spinning) { setStopped(false); return }
+    if (!spinning) { setStopped(true); return }
     setStopped(false)
-    let frame = 0
+    let startTime = performance.now()
     let animId: number
-    const fastSpin = () => {
-      frame++
-      setOffset((prev) => (prev + 8) % (symbols.length * ITEM_H))
-      animId = requestAnimationFrame(fastSpin)
+    
+    // We create an infinite loop array by duplicating symbols
+    const totalHeight = symbols.length * ITEM_H
+    
+    const spin = (time: number) => {
+      const elapsed = time - startTime
+      if (elapsed > delay) {
+        // Snap to target
+        const idx = symbols.indexOf(targetSymbol)
+        const snapOffset = (idx >= 0 ? idx : 0) * ITEM_H
+        setOffset(snapOffset)
+        setStopped(true)
+        onDone?.()
+        return
+      }
+      
+      // Fast spin
+      setOffset(prev => (prev + 35) % totalHeight)
+      animId = requestAnimationFrame(spin)
     }
-    animId = requestAnimationFrame(fastSpin)
-    timerRef.current = setTimeout(() => {
-      cancelAnimationFrame(animId)
-      // Snap to target
-      const idx = symbols.indexOf(targetSymbol)
-      const snapTo = idx >= 0 ? idx * ITEM_H : 0
-      setOffset(snapTo)
-      setStopped(true)
-      onDone?.()
-    }, delay)
-    return () => {
-      cancelAnimationFrame(animId)
-      if (timerRef.current) clearTimeout(timerRef.current)
-    }
+    animId = requestAnimationFrame(spin)
+    
+    return () => cancelAnimationFrame(animId)
   }, [spinning, targetSymbol, delay, symbols, onDone])
 
-  const extSymbols = [...symbols, ...symbols, ...symbols]
+  // Quadruple symbols to ensure smooth wrapping visually when translating
+  const extSymbols = [...symbols, ...symbols, ...symbols, ...symbols]
 
   return (
-    <div
-      style={{
-        width: 80,
-        height: ITEM_H * VISIBLE,
-        overflow: 'hidden',
-        background: REEL_BG,
-        borderRadius: 12,
-        boxShadow: `inset 0 0 20px rgba(0,0,0,0.8), inset 0 0 0 2px ${GOLD}33`,
-        position: 'relative',
-      }}
-    >
-      {/* Top/bottom fade overlays */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 50, background: `linear-gradient(to bottom, ${REEL_BG}, transparent)`, zIndex: 2 }} />
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 50, background: `linear-gradient(to top, ${REEL_BG}, transparent)`, zIndex: 2 }} />
-      {/* Center highlight line */}
-      <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: ITEM_H, transform: 'translateY(-50%)', border: `2px solid ${GOLD}88`, borderRadius: 8, zIndex: 3, background: `${GOLD}08` }} />
-      <div
-        style={{
-          transform: `translateY(-${offset}px)`,
-          transition: stopped ? 'transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1)' : undefined,
-        }}
-      >
+    <div style={{
+      width: 90,
+      height: ITEM_H * VISIBLE,
+      position: 'relative',
+      background: '#F9F9F9',
+      borderRadius: '8px',
+      overflow: 'hidden',
+      boxShadow: 'inset 0 15px 25px rgba(0,0,0,0.6), inset 0 -15px 25px rgba(0,0,0,0.6), 0 0 10px rgba(0,0,0,0.8)',
+    }}>
+      {/* 3D Cylinder shading overlay */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 10,
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.05) 70%, rgba(0,0,0,0.85) 100%)',
+        pointerEvents: 'none'
+      }} />
+      <div style={{
+        // Align the target symbol to the middle of the 3 visible items
+        transform: `translateY(-${offset + ITEM_H}px)`,
+        // The bounce-back effect (cubic-bezier) when stopped
+        transition: stopped ? 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)' : 'none',
+        willChange: 'transform'
+      }}>
         {extSymbols.map((sym, i) => (
-          <div
-            key={i}
-            style={{
-              height: ITEM_H,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 40,
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
-            }}
-          >
+          <div key={i} style={{
+            height: ITEM_H,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '56px',
+            filter: !stopped ? 'blur(1px)' : 'none',
+            textShadow: '0 4px 6px rgba(0,0,0,0.2)'
+          }}>
             {sym}
           </div>
         ))}
@@ -103,109 +93,129 @@ function ReelStrip({ symbols, targetSymbol, spinning, delay, onDone }: {
 }
 
 export default function SlotMachine777({ prizes, prizeIcons, spinning, targetIndex, onSpinEnd }: SlotMachineProps) {
-  const [reel1Done, setReel1Done] = useState(false)
-  const [reel2Done, setReel2Done] = useState(false)
-  const [reel3Done, setReel3Done] = useState(false)
+  const [r1Done, setR1] = useState(false)
+  const [r2Done, setR2] = useState(false)
+  const [r3Done, setR3] = useState(false)
   const [jackpot, setJackpot] = useState(false)
 
   // Map prizes to symbols (use icon if available, else default symbols)
-  const symbols = prizes.map((p, i) => prizeIcons?.[i] || DEFAULT_SYMBOLS[i % DEFAULT_SYMBOLS.length])
+  let symbols = prizes.map((p, i) => prizeIcons?.[i] || DEFAULT_SYMBOLS[i % DEFAULT_SYMBOLS.length])
+  if (symbols.length < 3) symbols = [...symbols, ...DEFAULT_SYMBOLS].slice(0, 5)
 
   const targetSymbol = targetIndex !== null ? (symbols[targetIndex] ?? symbols[0]) : symbols[0]
 
-  // For reels 1 and 2, show random near-miss or same symbol
-  const r1sym = targetSymbol
-  const r2sym = targetSymbol
-  const r3sym = targetSymbol
-
   useEffect(() => {
-    if (!spinning) {
-      setReel1Done(false); setReel2Done(false); setReel3Done(false); setJackpot(false)
-    }
+    if (!spinning) { setR1(false); setR2(false); setR3(false); setJackpot(false) }
   }, [spinning])
 
   useEffect(() => {
-    if (reel1Done && reel2Done && reel3Done) {
+    if (r1Done && r2Done && r3Done) {
       setJackpot(true)
-      const t = setTimeout(() => onSpinEnd(), 800)
+      const t = setTimeout(() => onSpinEnd(), 1000)
       return () => clearTimeout(t)
     }
-  }, [reel1Done, reel2Done, reel3Done, onSpinEnd])
+  }, [r1Done, r2Done, r3Done, onSpinEnd])
 
   return (
-    <div className="flex flex-col items-center select-none" style={{ gap: 0 }}>
+    <div className="flex flex-col items-center select-none w-full max-w-sm mx-auto">
       <style jsx>{`
-        @keyframes sm-jackpot { 0%, 100% { transform: scale(1) } 25% { transform: scale(1.05) } 75% { transform: scale(0.98) } }
-        @keyframes sm-glow { 0%, 100% { box-shadow: 0 0 30px 8px #F5C51844 } 50% { box-shadow: 0 0 60px 20px #F5C51888 } }
-        @keyframes sm-lever { 0% { transform: rotate(0deg) } 40% { transform: rotate(60deg) } 100% { transform: rotate(0deg) } }
-        .sm-jackpot-anim { animation: sm-jackpot 0.4s ease-in-out 2 }
-        .sm-glow { animation: sm-glow 2s ease-in-out infinite }
-        .sm-lever-pull { animation: sm-lever 0.6s ease-in-out }
+        @keyframes sm-jackpot { 0%, 100% { transform: scale(1); box-shadow: 0 0 30px #FFD700; } 50% { transform: scale(1.02); box-shadow: 0 0 60px #FFD700, 0 0 100px #FF8C00; } }
+        @keyframes sm-light { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        @keyframes marquee { 0% { background-position: 0 0; } 100% { background-position: -40px 0; } }
+        .jackpot-anim { animation: sm-jackpot 0.8s ease-in-out infinite; }
       `}</style>
 
-      {/* Machine body */}
+      {/* Main Machine Body - Professional Metallic & Casino theme */}
       <div
-        className={jackpot ? 'sm-glow' : ''}
+        className={jackpot ? 'jackpot-anim' : ''}
         style={{
-          background: `linear-gradient(160deg, #1a0505 0%, #0d0608 50%, #1a0a00 100%)`,
-          borderRadius: 24,
-          padding: '20px 16px',
-          border: `3px solid ${GOLD_DARK}`,
-          boxShadow: `0 0 0 1px ${GOLD}22, 0 8px 40px rgba(0,0,0,0.8), inset 0 1px 0 ${GOLD}33`,
+          background: `linear-gradient(145deg, #2b0404 0%, #1a0202 50%, #3d0505 100%)`,
+          borderRadius: 28,
+          padding: '24px 20px',
+          border: '4px solid #B8860B',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.8), inset 0 2px 2px rgba(255,255,255,0.2), inset 0 -4px 10px rgba(0,0,0,0.6)',
           position: 'relative',
           width: '100%',
-          maxWidth: 320,
         }}
       >
-        {/* Top banner */}
-        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+        {/* Lights Border */}
+        <div style={{
+          position: 'absolute', inset: 8, border: '2px dotted #FFD700', borderRadius: 20, opacity: 0.5, pointerEvents: 'none'
+        }} />
+
+        {/* Top Casino Banner */}
+        <div style={{ textAlign: 'center', marginBottom: 20, position: 'relative', zIndex: 2 }}>
           <div style={{
-            background: `linear-gradient(90deg, ${DARK_BG}, #300000, ${DARK_BG})`,
-            border: `2px solid ${GOLD}`,
-            borderRadius: 10,
-            padding: '6px 12px',
-            display: 'inline-block',
+            background: 'linear-gradient(180deg, #FFD700 0%, #DAA520 40%, #B8860B 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontFamily: '"Georgia", serif',
+            fontSize: '32px',
+            fontWeight: '900',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
           }}>
-            <span style={{ color: GOLD, fontFamily: '"Georgia", serif', fontSize: 22, fontWeight: 'bold', letterSpacing: '0.15em', textShadow: `0 0 20px ${GOLD}` }}>
-              7 7 7
-            </span>
+            LUCKY 777
           </div>
+          {jackpot && (
+            <div style={{ color: '#FFD700', fontSize: 14, fontWeight: 'bold', marginTop: 4, textShadow: '0 0 10px #FFD700' }}>
+              JACKPOT WINNER!
+            </div>
+          )}
         </div>
 
-        {/* Reels */}
-        <div
-          className={jackpot ? 'sm-jackpot-anim' : ''}
-          style={{
-            display: 'flex',
-            gap: 10,
-            justifyContent: 'center',
-            background: '#050203',
-            borderRadius: 16,
-            padding: 12,
-            border: `2px solid ${GOLD}44`,
-            boxShadow: `inset 0 0 30px rgba(0,0,0,0.9)`,
-          }}
-        >
-          <ReelStrip symbols={symbols.length >= 3 ? symbols : DEFAULT_SYMBOLS} targetSymbol={r1sym} spinning={spinning} delay={1800} onDone={() => setReel1Done(true)} />
-          <ReelStrip symbols={symbols.length >= 3 ? symbols : DEFAULT_SYMBOLS} targetSymbol={r2sym} spinning={spinning} delay={2600} onDone={() => setReel2Done(true)} />
-          <ReelStrip symbols={symbols.length >= 3 ? symbols : DEFAULT_SYMBOLS} targetSymbol={r3sym} spinning={spinning} delay={3400} onDone={() => setReel3Done(true)} />
+        {/* Reels Container */}
+        <div style={{
+          position: 'relative',
+          background: '#0a0a0a',
+          borderRadius: 12,
+          padding: '16px 12px',
+          border: '3px solid #666',
+          boxShadow: 'inset 0 0 20px rgba(0,0,0,1)',
+          display: 'flex',
+          justifyContent: 'center',
+          gap: 12,
+          zIndex: 2
+        }}>
+          {/* Winning Line Glow */}
+          <div style={{
+            position: 'absolute', top: '50%', left: 0, right: 0, height: 4, background: 'rgba(255, 0, 0, 0.7)',
+            transform: 'translateY(-50%)', zIndex: 11, boxShadow: '0 0 15px 4px rgba(255,0,0,0.5)'
+          }} />
+
+          {/* Triangles for the winning line */}
+          <div style={{ position: 'absolute', top: '50%', left: -10, transform: 'translateY(-50%)', borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '12px solid #FF0000', zIndex: 12 }} />
+          <div style={{ position: 'absolute', top: '50%', right: -10, transform: 'translateY(-50%)', borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderRight: '12px solid #FF0000', zIndex: 12 }} />
+
+          <Reel symbols={symbols} targetSymbol={targetSymbol} spinning={spinning} delay={2000} onDone={() => setR1(true)} />
+          <Reel symbols={symbols} targetSymbol={targetSymbol} spinning={spinning} delay={3000} onDone={() => setR2(true)} />
+          <Reel symbols={symbols} targetSymbol={targetSymbol} spinning={spinning} delay={4000} onDone={() => setR3(true)} />
         </div>
 
-        {/* Jackpot lights row */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 14 }}>
-          {Array.from({ length: 7 }, (_, i) => (
-            <div
-              key={i}
-              style={{
-                width: 10, height: 10,
-                borderRadius: '50%',
-                background: jackpot ? GOLD : '#3A2000',
-                boxShadow: jackpot ? `0 0 8px ${GOLD}` : 'none',
-                transition: 'all 0.2s',
-                transitionDelay: `${i * 60}ms`,
-              }}
-            />
-          ))}
+        {/* Bottom Decorative Panel */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, padding: '0 10px', position: 'relative', zIndex: 2 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} style={{
+                width: 12, height: 12, borderRadius: '50%', background: jackpot ? '#00FF00' : '#FF0000',
+                boxShadow: `0 0 10px ${jackpot ? '#00FF00' : '#FF0000'}`, animation: spinning ? `sm-light 0.5s infinite ${i * 0.1}s` : 'none'
+              }} />
+            ))}
+          </div>
+          <div style={{
+            background: '#111', border: '2px solid #444', borderRadius: 6, padding: '4px 16px', color: '#0f0', fontFamily: 'monospace', fontSize: 16, fontWeight: 'bold', boxShadow: 'inset 0 0 10px rgba(0,255,0,0.2)'
+          }}>
+            {spinning ? 'SPINNING...' : (jackpot ? 'WINNER !!!' : 'INSERT COIN')}
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} style={{
+                width: 12, height: 12, borderRadius: '50%', background: jackpot ? '#00FF00' : '#FF0000',
+                boxShadow: `0 0 10px ${jackpot ? '#00FF00' : '#FF0000'}`, animation: spinning ? `sm-light 0.5s infinite ${i * 0.1}s` : 'none'
+              }} />
+            ))}
+          </div>
         </div>
       </div>
     </div>

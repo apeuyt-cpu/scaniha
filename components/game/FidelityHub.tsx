@@ -338,7 +338,7 @@ export default function FidelityHub({
           <CarteTab session={session} businessName={businessName} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} welcomePoints={welcomePoints} onPlay={() => requireLogin()} onLogout={logout} />
         )}
         {hasRoulette && tab === 'roue' && (
-          <RoueTab prizes={prizes} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} onSpin={() => spin()} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
+          <RoueTab prizes={prizes} prizeIcons={prizeIcons} gameMode={gameMode} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} onSpin={() => spin()} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
         )}
         {tab === 'boutique' && (
           <BoutiqueTab session={session} businessName={businessName} accent={accent} gradient={gradient} balance={balance} loyaltyActive={loyaltyActive} rewards={rewards} busyRewardId={busyRewardId} redeemed={redeemed} error={boutiqueError} rescan={boutiqueRescan} onRedeem={redeem} />
@@ -517,8 +517,8 @@ function CarteTab(props: {
 }
 
 /* ── Roue ────────────────────────────────────────────────────────────────────── */
-function RoueTab(props: { prizes: string[]; accent: string; gradient: string; phase: Phase; played: boolean; result: SpinResult | null; error: string | null; rescan: string | null; nextPlayAt: string | null; onSpin: () => void; onSpinEnd: () => void; onReview: () => void }) {
-  const { prizes, accent, gradient, phase, played, result, error, rescan, nextPlayAt, onSpin, onSpinEnd, onReview } = props
+function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; gameMode: string; accent: string; gradient: string; phase: Phase; played: boolean; result: SpinResult | null; error: string | null; rescan: string | null; nextPlayAt: string | null; onSpin: () => void; onSpinEnd: () => void; onReview: () => void }) {
+  const { prizes, prizeIcons, gameMode, accent, gradient, phase, played, result, error, rescan, nextPlayAt, onSpin, onSpinEnd, onReview } = props
   const blocked = phase === 'blocked'
   return (
     <div className="flex flex-col items-center gap-6 pt-3">

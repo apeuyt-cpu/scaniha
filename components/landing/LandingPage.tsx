@@ -522,6 +522,16 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
           </div>
 
           <FidelityShowcase />
+
+          <div className="reveal mt-20 flex justify-center">
+            <Image
+              src="/leprechaunhappywheel.png"
+              alt="Casino Games - Slot Machine and Lucky Wheel"
+              width={1000}
+              height={750}
+              className="h-auto w-full max-w-[1000px] drop-shadow-2xl hover:scale-[1.02] transition-transform duration-500 ease-out"
+            />
+          </div>
         </div>
       </section>
 

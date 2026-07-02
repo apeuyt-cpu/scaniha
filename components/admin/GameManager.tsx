@@ -10,13 +10,8 @@ import { inputClass } from '@/components/admin/kit/Field'
 import SetupCard from '@/components/admin/game/SetupCard'
 import ConfirmDialog from '@/components/admin/kit/ConfirmDialog'
 import { CardSkeleton } from '@/components/admin/kit/Skeleton'
+import PrizeIconPicker from '@/components/admin/game/PrizeIconPicker'
 
-/**
- * Owner configuration for the roulette ("everyone wins, variable value").
- * This screen stays deliberately simple: activate, prizes (name + chance), and a
- * live preview. Everything else — play limits, cost/stock, conditions, QR lock —
- * lives on the separate "Réglages avancés" page so first setup never feels heavy.
- */
 export default function GameManager({ businessId, slug }: { businessId: string; slug: string }) {
   const {
     game, prizes, setPrizes, stats, loading, setupNeeded, error, setError,
@@ -25,15 +20,10 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
 
   const [busy, setBusy] = useState(false)
   const [prizeToDelete, setPrizeToDelete] = useState<string | null>(null)
-  // Prize NAME persists on a short debounce (not only on blur) so a typed name is
-  // never lost if the owner switches tab or navigates before the input blurs.
   const labelTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
-  // Slider odds persist on a short debounce so dragging stays smooth (one write
-  // per settle, not one per pixel). pendingWeights collects the final value per lot.
   const weightTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingWeights = useRef<Map<string, number>>(new Map())
 
-  // Drop the pending timer on unmount to avoid a late setState.
   useEffect(() => () => { if (weightTimer.current) clearTimeout(weightTimer.current) }, [])
 
   async function handleCreate() {
@@ -42,8 +32,6 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
     setBusy(false)
   }
 
-  // Debounced batch-save of slider weights: drag updates state instantly, the DB
-  // write fires ~450ms after the owner stops moving the slider.
   function queueWeightSave(updates: Map<string, number>) {
     updates.forEach((w, id) => pendingWeights.current.set(id, w))
     if (weightTimer.current) clearTimeout(weightTimer.current)
@@ -54,12 +42,9 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
     }, 450)
   }
 
-  // The odds are stored as weights that sum to 100, so weight reads as "% of spins".
-  // Setting one lot to t% scales the OTHER active lots proportionally to fill the
-  // remaining (100 − t)%, each keeping at least 1% — the total is always exactly 100.
   function setPct(id: string, target: number) {
     const active = prizes.filter((p) => p.active)
-    if (active.length <= 1) return // a single active lot is pinned at 100%
+    if (active.length <= 1) return 
     const others = active.filter((p) => p.id !== id)
     const t = Math.max(1, Math.min(100 - others.length, Math.round(target)))
     const otherInts = splitInt(others.map((p) => Math.max(0, p.weight || 0)), 100 - t, 1)
@@ -70,9 +55,6 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
     queueWeightSave(next)
   }
 
-  // Re-spread the active lots' weights to sum to 100 after the active set changes
-  // (add / delete / activate / deactivate). Keeps the slider %s honest and ensures
-  // every active lot stays winnable (weight ≥ 1).
   async function renormalizeActive(list: PrizeRow[]) {
     const active = list.filter((p) => p.active)
     if (active.length === 0) return
@@ -102,18 +84,18 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
   async function addPrize() {
     if (!game) return
     const { ok, json } = await gameApi('addPrize', { gameId: game.id, position: prizes.length })
-    if (!ok || !json.prize) { console.error('GameManager addPrize error:', json.error); setError(json.error || 'Impossible d\'enregistrer. Réessayez.'); return }
+    if (!ok || !json.prize) { setError(json.error || 'Impossible d\'enregistrer. Réessayez.'); return }
     const next = [...prizes, json.prize as PrizeRow]
     setPrizes(next)
-    renormalizeActive(next) // give the new lot a fair share, keep the total at 100%
+    renormalizeActive(next)
   }
 
   async function deletePrize(id: string) {
     const { ok, json } = await gameApi('deletePrize', { prizeId: id })
-    if (!ok) { console.error('GameManager deletePrize error:', json.error); setError(json.error || 'Impossible d\'enregistrer. Réessayez.'); return }
+    if (!ok) { setError(json.error || 'Impossible d\'enregistrer. Réessayez.'); return }
     const next = prizes.filter((p) => p.id !== id)
     setPrizes(next)
-    renormalizeActive(next) // re-spread the freed-up odds across the remaining lots
+    renormalizeActive(next) 
   }
 
   if (loading) {
@@ -123,10 +105,10 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
   if (setupNeeded || !game) {
     return (
       <SetupCard
-        icon={<span aria-hidden="true">🎡</span>}
-        title="Roue de la chance"
-        description="Vos clients scannent, tournent la roue et gagnent toujours quelque chose — vous contrôlez les lots et leur fréquence. Un aimant à fidélité pour votre établissement."
-        cta="Configurer ma roue"
+        icon={<span aria-hidden="true">🎰</span>}
+        title="Jeux de Casino"
+        description="Vos clients scannent, jouent et gagnent toujours quelque chose — vous contrôlez les lots et leur pourcentage de victoire. Un aimant à fidélité super pro."
+        cta="Configurer mes jeux"
         onActivate={handleCreate}
         busy={busy}
         error={error}
@@ -134,32 +116,31 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
     )
   }
 
-  // Display odds: each active lot's share rounded to whole %s that ALWAYS sum to
-  // 100 (largest-remainder), so the live bar and the readouts never lie by ±1.
   const activeList = prizes.filter((p) => p.active)
   const activePcts = splitInt(activeList.map((p) => Math.max(0, p.weight || 0)), 100, activeList.length ? 1 : 0)
   const pctById: Record<string, number> = {}
   activeList.forEach((p, i) => { pctById[p.id] = activePcts[i] })
   const activePrizes = activeList.length
-  // A lot can take at most this %, leaving every other active lot at least 1%.
   const sliderMax = Math.max(1, 100 - (activeList.length - 1))
-  // Stable warm colour per lot (by row order) — shared by the live bar and dots.
   const colorById: Record<string, string> = {}
   prizes.forEach((p, i) => { colorById[p.id] = PRIZE_COLORS[i % PRIZE_COLORS.length] })
 
+  const currentMode = game.config?.mode ?? 'roulette'
+  const currentTheme = game.config?.theme ?? 'gold'
+
   return (
     <div className="space-y-4">
-      {/* Status + activation */}
+      {/* Status */}
       <div className="rounded-2xl border border-zinc-200 bg-white p-5">
         <Toggle
           checked={game.active}
           onChange={(v) => updateGame({ active: v })}
-          label={game.active ? 'Roue active' : 'Roue désactivée'}
-          hint={game.active ? 'Le bouton « Tentez votre chance » apparaît sur votre menu.' : 'Activez pour afficher la roue sur votre menu.'}
+          label={game.active ? 'Jeu actif' : 'Jeu désactivé'}
+          hint={game.active ? 'Le jeu apparaît sur l\'espace fidélité.' : 'Activez pour afficher le jeu.'}
         />
         {game.active && activePrizes < 2 && (
           <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            Ajoutez au moins 2 lots actifs pour que la roue s&apos;affiche.
+            Ajoutez au moins 2 lots actifs pour que le jeu s&apos;affiche.
           </p>
         )}
         <div className="mt-4 grid grid-cols-3 gap-2">
@@ -174,11 +155,68 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
         )}
       </div>
 
+      {/* Mode de jeu */}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-lg">🎰</span>
+          <h4 className="font-semibold text-zinc-900">Mode de jeu</h4>
+        </div>
+        <div className="flex gap-2">
+          {(['roulette', 'slot777'] as const).map((mode) => {
+            const labels: Record<string, string> = { roulette: '🎡 Roulette Casino', slot777: '7️⃣ Slot Machine' }
+            const active = currentMode === mode
+            return (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => updateGame({ config: { ...game.config, mode } })}
+                className={`flex-1 rounded-xl border-2 py-3 text-sm font-semibold transition ${
+                  active ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-zinc-200 text-zinc-600 hover:border-zinc-300'
+                }`}
+              >
+                {labels[mode]}
+              </button>
+            )
+          })}
+        </div>
+        <p className="mt-2 text-xs text-zinc-400">La machine à sous propose une expérience classique 777. La roulette est une roue élégante.</p>
+      </div>
+
+      {/* Theme */}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-lg">✨</span>
+          <h4 className="font-semibold text-zinc-900">Thème Visuel</h4>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { id: 'gold', label: '🏆 Gold & Red', colors: ['#8B0000', '#F5C518'] },
+            { id: 'neon', label: '💜 Vegas Neon', colors: ['#1a0033', '#FF00FF'] },
+            { id: 'classic', label: '🃏 Classic', colors: ['#000000', '#FFFFFF'] },
+          ] as const).map((theme) => {
+            const active = currentTheme === theme.id
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={() => updateGame({ config: { ...game.config, theme: theme.id } })}
+                className={`rounded-xl border-2 py-3 text-xs font-semibold transition ${
+                  active ? 'ring-2 ring-offset-1 ring-amber-400' : ''
+                }`}
+                style={{ background: `linear-gradient(135deg, ${theme.colors[0]}, ${theme.colors[1]})`, color: theme.id === 'classic' ? '#000' : '#fff', borderColor: active ? '#F5C518' : 'transparent' }}
+              >
+                {theme.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Prizes */}
       <div className="rounded-2xl border border-zinc-200 bg-white p-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h4 className="font-semibold text-zinc-900">Lots de la roue</h4>
+            <h4 className="font-semibold text-zinc-900">Lots & Pourcentage de victoire</h4>
             <p className="mt-0.5 text-xs text-zinc-400">
               Glissez pour régler la chance de chaque lot — le total reste toujours à 100&nbsp;%.
             </p>
@@ -186,7 +224,6 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
           <Button variant="neutral" onClick={addPrize} className="!min-h-0 shrink-0 px-3 py-2 text-xs">+ Lot</Button>
         </div>
 
-        {/* Live odds bar — each active lot's share at a glance; the per-row dots are its legend */}
         {activeList.length > 0 && (
           <div className="mt-4">
             <div className="flex h-3 w-full overflow-hidden rounded-full bg-zinc-100">
@@ -199,20 +236,29 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                 />
               ))}
             </div>
-            <p className="mt-2 text-center text-[11px] text-zinc-400">Tout le monde gagne — les chances font toujours 100&nbsp;%.</p>
           </div>
         )}
 
         <div className="mt-4 space-y-2.5">
           {prizes.map((p) => (
             <div key={p.id} className={`rounded-xl border border-zinc-200 bg-white p-3.5 transition ${p.active ? '' : 'opacity-70'}`}>
-              {/* Row 1: colour dot · name · delete */}
               <div className="flex items-center gap-2.5">
                 <span
                   className="h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: p.active ? colorById[p.id] : '#D4D4D8' }}
                   aria-hidden="true"
                 />
+                
+                {/* ICON PICKER */}
+                <PrizeIconPicker
+                  value={(p as any).config?.icon || ''}
+                  onChange={(icon) => {
+                    const nextConfig = { ...(p as any).config, icon }
+                    setPrizes((cur) => cur.map((x) => (x.id === p.id ? { ...x, config: nextConfig } : x)))
+                    updatePrize(p.id, { config: nextConfig } as any)
+                  }}
+                />
+
                 <input
                   value={p.label}
                   onChange={(e) => { const v = e.target.value; setPrizes((cur) => cur.map((x) => (x.id === p.id ? { ...x, label: v } : x))); saveLabelDebounced(p.id, v) }}
@@ -220,6 +266,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                   className={`${inputClass} min-w-0 flex-1`}
                   placeholder="Nom du lot"
                 />
+                
                 <button
                   type="button"
                   onClick={() => setPrizeToDelete(p.id)}
@@ -230,7 +277,6 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6" /></svg>
                 </button>
               </div>
-              {/* Row 2: active toggle + chance slider — moving one auto-balances the rest to 100% */}
               <div className="mt-3 flex items-center gap-3">
                 <button
                   type="button"
@@ -258,7 +304,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                     </span>
                   </>
                 ) : (
-                  <span className="text-[11px] text-zinc-400">N&apos;apparaît pas sur la roue.</span>
+                  <span className="text-[11px] text-zinc-400">N&apos;apparaît pas sur le jeu.</span>
                 )}
               </div>
             </div>
@@ -267,7 +313,6 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
         </div>
       </div>
 
-      {/* Advanced settings — moved off this screen to keep setup simple. */}
       <Link
         href="/admin/fidelite/roue/reglages"
         className="flex w-full items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-left transition hover:bg-zinc-50"
@@ -289,7 +334,7 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
       <ConfirmDialog
         open={!!prizeToDelete}
         title="Supprimer ce lot ?"
-        message="Ce lot ne sera plus proposé sur la roue. Action irréversible."
+        message="Ce lot ne sera plus proposé sur le jeu. Action irréversible."
         confirmLabel="Supprimer"
         danger
         onConfirm={() => {
@@ -312,5 +357,4 @@ function Stat({ label, value }: { label: string; value: number }) {
   )
 }
 
-/* Warm, on-brand palette (orange → amber) for the odds bar + per-lot dots. */
 const PRIZE_COLORS = ['#F47B20', '#FB923C', '#F59E0B', '#FDBA74', '#FBBF24', '#EA580C', '#FCD34D', '#FED7AA']

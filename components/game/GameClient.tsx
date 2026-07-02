@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import RouletteWheel from './RouletteWheel'
 import Confetti from './Confetti'
+import SlotMachine777 from './SlotMachine777'
 import DinerAuth, { type DinerSession } from './DinerAuth'
 import RewardsStore from './RewardsStore'
 import PlayGatesGate from './PlayGatesGate'
@@ -55,6 +56,8 @@ function clearToken(slug: string) {
 export default function GameClient({ slug }: { slug: string }) {
   const [phase, setPhase] = useState<Phase>('loading')
   const [prizes, setPrizes] = useState<string[]>([])
+  const [prizeIcons, setPrizeIcons] = useState<(string | null)[]>([])
+  const [gameMode, setGameMode] = useState('roulette')
   const [businessName, setBusinessName] = useState('')
   // The roulette + account are a SCANIHA feature → always the Scaniha brand
   // orange, NOT the café owner's custom menu colour/gradient.
@@ -99,7 +102,7 @@ export default function GameClient({ slug }: { slug: string }) {
           setPhase('inactive')
           return
         }
-        setPrizes(json.prizes)
+        const loadedPrizes = Array.isArray(json.prizes) ? json.prizes : []; setPrizes(loadedPrizes); setPrizeIcons(loadedPrizes.map((p: any) => p.config?.icon || null)); setGameMode(json.config?.mode || 'roulette');
         setBusinessName(json.businessName || '')
         setGates(Array.isArray(json.gates) ? json.gates : [])
 
@@ -418,29 +421,49 @@ export default function GameClient({ slug }: { slug: string }) {
           spin button sits right under the wheel instead of stranded at the bottom. */}
       <div className="flex flex-1 flex-col items-center justify-center gap-5 py-2">
         <div className="text-center">
-          <h1 className="text-2xl font-medium text-[#1B1714]">Roue de la chance</h1>
+          <h1 className="text-2xl font-medium text-[#1B1714]">{gameMode === 'slot777' ? 'Slot 777' : 'Roue de la chance'}</h1>
           {greeting && <p className="mt-1.5 text-sm font-medium text-[#1B1714]">Bonjour {greeting}</p>}
           {!played && (
             <p className="mx-auto mt-1.5 max-w-[18rem] text-sm leading-relaxed text-[#8A8178]">
-              Tournez la roue — tout le monde gagne quelque chose.
+              Tentez votre chance — tout le monde gagne quelque chose.
             </p>
           )}
         </div>
 
-        <RouletteWheel
-          prizes={prizes}
-          accent={accent}
-          spinning={phase === 'spinning' && result !== null}
-          targetIndex={result ? result.prizeIndex : null}
-          onSpinEnd={() => {
-            if (result) {
-              setRevealed(true)
-              setConfetti(true)
-              setPhase('won')
-              setWinModalOpen(true)
-            }
-          }}
-        />
+        
+        {gameMode === 'slot777' ? (
+          <SlotMachine777
+            prizes={prizes}
+            prizeIcons={prizeIcons}
+            spinning={phase === 'spinning' && result !== null}
+            targetIndex={result ? result.prizeIndex : null}
+            onSpinEnd={() => {
+              if (result) {
+                setRevealed(true)
+                setConfetti(true)
+                setPhase('won')
+                setWinModalOpen(true)
+              }
+            }}
+          />
+        ) : (
+          <RouletteWheel
+            prizes={prizes}
+            prizeIcons={prizeIcons}
+            accent={accent}
+            spinning={phase === 'spinning' && result !== null}
+            targetIndex={result ? result.prizeIndex : null}
+            onSpinEnd={() => {
+              if (result) {
+                setRevealed(true)
+                setConfetti(true)
+                setPhase('won')
+                setWinModalOpen(true)
+              }
+            }}
+          />
+        )}
+
 
         {/* Action — directly under the wheel, full width. */}
         <div className="w-full">
@@ -453,7 +476,7 @@ export default function GameClient({ slug }: { slug: string }) {
               className="block w-full rounded-2xl py-4 text-base font-medium text-white transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
               style={{ backgroundColor: accent, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
             >
-              {phase === 'spinning' ? 'La roue tourne…' : 'Tourner la roue'}
+              {phase === 'spinning' ? 'En cours…' : 'Jouer'}
             </button>
             {rescan !== null ? (
               <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour jouer" />
@@ -629,7 +652,7 @@ function WinModal({
         role="dialog"
         aria-modal="true"
         aria-label="Vous avez gagné"
-        className="relative w-full max-w-sm overflow-hidden rounded-t-3xl bg-white px-6 pb-7 pt-8 text-center shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.35)] animate-[winpop_.3s_cubic-bezier(0.16,0.84,0.3,1)] sm:rounded-3xl"
+        className="relative w-full max-w-sm overflow-hidden rounded-t-3xl bg-white px-6 pb-7 pt-8 text-center shadow-[0_0_50px_rgba(245,197,24,0.4)] border-t-4 border-[#F5C518] animate-[winpop_.3s_cubic-bezier(0.16,0.84,0.3,1)] sm:rounded-3xl"
       >
         <button
           type="button"
@@ -640,7 +663,7 @@ function WinModal({
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
 
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl" style={{ backgroundColor: `${accent}1a` }}>🎉</div>
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl" style={{ background: `radial-gradient(circle, #F5C518, #C9A227)` }}>🏆</div>
         <h2 className="mt-3 text-2xl font-bold text-[#1B1714]">Vous avez gagné&nbsp;!</h2>
         <p className="mt-1 text-lg font-semibold" style={{ color: accent }}>{result.prizeLabel}</p>
 

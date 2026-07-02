@@ -12,6 +12,7 @@ const RouletteWheel = dynamic(() => import('./RouletteWheel'), {
   ssr: false,
   loading: () => <div className="aspect-square w-full" aria-hidden="true" />,
 })
+const SlotMachine777 = dynamic(() => import('./SlotMachine777'), { ssr: false, loading: () => <div className="aspect-square w-full" aria-hidden="true" /> })
 const QRCodeSVG = dynamic(() => import('qrcode.react').then((m) => m.QRCodeSVG), { ssr: false })
 import DinerAuth, { type DinerSession } from './DinerAuth'
 import PlayGatesGate from './PlayGatesGate'
@@ -62,6 +63,8 @@ export default function FidelityHub({
   // Whether the roulette is on for this café. When OFF but loyalty is ON, the hub
   // runs in "points-only" mode (no Roue tab/CTA). true → identical to before.
   const [hasRoulette, setHasRoulette] = useState(false)
+  const [gameMode, setGameMode] = useState('roulette')
+  const [prizeIcons, setPrizeIcons] = useState<(string | null)[]>([])
   // Welcome bonus credited at signup — surfaced as the join hook (0 = none).
   const [welcomePoints, setWelcomePoints] = useState(0)
   const [session, setSession] = useState<DinerSession | null>(null)
@@ -123,7 +126,7 @@ export default function FidelityHub({
         // Active if EITHER the roulette OR the points program is on (points-only allowed).
         if (!roulette && !loyalty) { setPhase('inactive'); return }
         setHasRoulette(roulette); setLoyaltyActive(loyalty); setWelcomePoints(Number(json.welcomePoints) || 0)
-        setPrizes(Array.isArray(json.prizes) ? json.prizes : []); setGates(Array.isArray(json.gates) ? json.gates : [])
+        const loadedPrizes = Array.isArray(json.prizes) ? json.prizes : []; setPrizes(loadedPrizes); setPrizeIcons(loadedPrizes.map((p: any) => p.config?.icon || null)); setGameMode(json.config?.mode || 'roulette'); setGates(Array.isArray(json.gates) ? json.gates : [])
 
         const token = readToken(slug)
         let authed: DinerSession | null = null
@@ -315,7 +318,7 @@ export default function FidelityHub({
   const pct = nextReward ? Math.min(100, Math.round((balance / nextReward.points_cost) * 100)) : 100
   const activeCodes = [...summary.activeWins.map((c) => ({ ...c, kind: 'Lot' })), ...summary.activeRedemptions.map((c) => ({ ...c, kind: 'Récompense' }))]
   const cardCode = session ? `SCANIHA:${slug}:${session.phone}` : '' // Phase 6: signed rotating token
-  const tabTitle = tab === 'carte' ? 'Ma carte' : tab === 'roue' ? 'Roue de la chance' : 'Boutique'
+  const tabTitle = tab === 'carte' ? 'Ma carte' : tab === 'roue' ? '🎰 Games' : 'Boutique'
 
   return (
     <div className="mx-auto min-h-[100svh] max-w-md pb-28" style={{ background: BG }}>
@@ -377,7 +380,7 @@ function FidelityNav({ tab, setTab, hasMenu, hasRoulette, slug, accent }: { tab:
           <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h4" /></svg>
         </NavItem>
         {hasRoulette && (
-          <NavItem active={tab === 'roue'} onClick={() => setTab('roue')} label="Roue" pill={pill} lbl={lbl}>
+          <NavItem active={tab === 'roue'} onClick={() => setTab('roue')} label="Games" pill={pill} lbl={lbl}>
             <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4" /></svg>
           </NavItem>
         )}
@@ -490,7 +493,7 @@ function CarteTab(props: {
           ))}
         </div>
       ) : (
-        <p className="rounded-[18px] bg-white px-4 py-6 text-center text-sm" style={{ color: MUT, boxShadow: SOFT }}>{hasRoulette ? 'Aucun bon pour le moment. Tournez la roue pour gagner !' : 'Aucun bon pour le moment. Cumulez des points à chaque visite !'}</p>
+        <p className="rounded-[18px] bg-white px-4 py-6 text-center text-sm" style={{ color: MUT, boxShadow: SOFT }}>{hasRoulette ? 'Aucun bon pour le moment. Jouez pour gagner !' : 'Aucun bon pour le moment. Cumulez des points à chaque visite !'}</p>
       )}
 
       {/* Historique */}
@@ -519,16 +522,35 @@ function RoueTab(props: { prizes: string[]; accent: string; gradient: string; ph
   const blocked = phase === 'blocked'
   return (
     <div className="flex flex-col items-center gap-6 pt-3">
-      {!played && <p className="mx-auto max-w-[18rem] text-center text-sm leading-relaxed" style={{ color: MUT }}>Tournez la roue — tout le monde gagne quelque chose.</p>}
+      {!played && <p className="mx-auto max-w-[18rem] text-center text-sm leading-relaxed" style={{ color: MUT }}>Tentez votre chance — tout le monde gagne quelque chose.</p>}
       <div className="w-full transition-all" style={blocked ? { opacity: 0.4, filter: 'grayscale(0.25)', pointerEvents: 'none' } : undefined}>
-        <RouletteWheel prizes={prizes} accent={accent} spinning={phase === 'spinning' && result !== null} targetIndex={result ? result.prizeIndex : null} onSpinEnd={onSpinEnd} />
+        
+        {gameMode === 'slot777' ? (
+          <SlotMachine777
+            prizes={prizes}
+            prizeIcons={prizeIcons}
+            spinning={phase === 'spinning' && result !== null}
+            targetIndex={result ? result.prizeIndex : null}
+            onSpinEnd={onSpinEnd}
+          />
+        ) : (
+          <RouletteWheel
+            prizes={prizes}
+            prizeIcons={prizeIcons}
+            spinning={phase === 'spinning' && result !== null}
+            targetIndex={result ? result.prizeIndex : null}
+            onSpinEnd={onSpinEnd}
+            accent={accent}
+          />
+        )}
+
       </div>
       <div className="w-full">
         {blocked ? (
           <Cooldown accent={accent} until={nextPlayAt} />
         ) : !played ? (
           <>
-            <button type="button" onClick={onSpin} disabled={phase === 'spinning'} aria-busy={phase === 'spinning'} className="block w-full rounded-[18px] py-[17px] text-base font-semibold text-white transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -14px ${accent}` }}>{phase === 'spinning' ? 'La roue tourne…' : 'Tourner la roue'}</button>
+            <button type="button" onClick={onSpin} disabled={phase === 'spinning'} aria-busy={phase === 'spinning'} className="block w-full rounded-[18px] py-[17px] text-base font-semibold text-white transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -14px ${accent}` }}>{phase === 'spinning' ? 'En cours…' : 'Jouer'}</button>
             {rescan !== null ? <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour jouer" /> : error ? <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p> : <p className="mt-3.5 text-center text-[11px] leading-relaxed" style={{ color: FAINT_TEXT }}>Vos gains et vos points sont gardés sur votre compte.</p>}
           </>
         ) : (

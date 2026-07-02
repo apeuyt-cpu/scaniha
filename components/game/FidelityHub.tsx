@@ -362,7 +362,7 @@ export default function FidelityHub({
       <FidelityNav tab={tab} setTab={setTab} hasMenu={hasMenu} hasRoulette={hasRoulette} slug={slug} accent={accent} />
 
       {phase === 'won' && result && winModalOpen && (
-        <WinModal result={result} accent={accent} gradient={gradient} copied={copied} onCopy={copyCode} onClose={() => setWinModalOpen(false)} onSeeCard={() => { setWinModalOpen(false); setTab('carte') }} />
+        <WinModal result={result} isLose={Boolean(prizeIsLose[result.prizeIndex])} accent={accent} gradient={gradient} copied={copied} onCopy={copyCode} onClose={() => setWinModalOpen(false)} onSeeCard={() => { setWinModalOpen(false); setTab('carte') }} />
       )}
 
       {gatesModalOpen && (
@@ -847,7 +847,7 @@ function Cooldown({ accent, until }: { accent: string; until: string | null }) {
 }
 
 /* ── Win popup ───────────────────────────────────────────────────────────────── */
-function WinModal({ result, accent, gradient, copied, onCopy, onClose, onSeeCard }: { result: SpinResult; accent: string; gradient: string; copied: boolean; onCopy: () => void; onClose: () => void; onSeeCard: () => void }) {
+function WinModal({ result, isLose, accent, gradient, copied, onCopy, onClose, onSeeCard }: { result: SpinResult; isLose?: boolean; accent: string; gradient: string; copied: boolean; onCopy: () => void; onClose: () => void; onSeeCard: () => void }) {
   const dialogRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const prevFocused = document.activeElement as HTMLElement | null
@@ -861,16 +861,31 @@ function WinModal({ result, accent, gradient, copied, onCopy, onClose, onSeeCard
   }, [onClose])
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <Confetti accent={accent} />
-      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`Vous avez gagné ${result.prizeLabel}, code ${result.code}`} className="relative w-full max-w-[22rem] overflow-hidden rounded-[26px] bg-white px-6 pb-7 pt-8 text-center outline-none animate-[fhwin_.3s_cubic-bezier(0.16,0.84,0.3,1)]" style={{ boxShadow: '0 30px 60px -24px rgba(0,0,0,0.5)' }}>
+      {!isLose && <Confetti accent={accent} />}
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={isLose ? `Pas de chance : ${result.prizeLabel}` : `Vous avez gagné ${result.prizeLabel}, code ${result.code}`} className="relative w-full max-w-[22rem] overflow-hidden rounded-[26px] bg-white px-6 pb-7 pt-8 text-center outline-none animate-[fhwin_.3s_cubic-bezier(0.16,0.84,0.3,1)]" style={{ boxShadow: '0 30px 60px -24px rgba(0,0,0,0.5)' }}>
         <button type="button" onClick={onClose} aria-label="Fermer" className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#FAF7F3]" style={{ color: MUT }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl" style={{ backgroundColor: `${accent}1a` }}>🎉</div>
-        <h2 className="mt-3 text-2xl font-bold" style={{ color: INK }}>Vous avez gagné&nbsp;!</h2>
-        <p className="mt-1 text-lg font-semibold" style={{ color: accent }}>{result.prizeLabel}</p>
-        <button type="button" onClick={onCopy} className="mx-auto mt-5 flex w-fit items-center gap-2.5 rounded-2xl px-6 py-3 font-mono text-2xl font-bold tracking-[0.2em] transition" style={{ background: '#FAF7F3', color: INK }} title="Copier le code">{result.code}<span className="font-sans text-xs font-medium tracking-normal" style={{ color: MUT }}>{copied ? 'copié ✓' : 'copier'}</span></button>
-        <p className="mt-3 text-xs leading-relaxed" style={{ color: MUT }}>Montrez ce code au personnel pour récupérer votre gain.<br />Valable jusqu’au {new Date(result.expiresAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.</p>
+        
+        {isLose ? (
+          <>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl" style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>😢</div>
+            <h2 className="mt-3 text-2xl font-bold" style={{ color: INK }}>Pas de chance !</h2>
+            <p className="mt-1 text-lg font-semibold" style={{ color: '#DC2626' }}>{result.prizeLabel}</p>
+            <p className="mt-3 text-sm leading-relaxed" style={{ color: MUT }}>Meilleure chance la prochaine fois !</p>
+          </>
+        ) : (
+          <>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl" style={{ backgroundColor: `${accent}1a` }}>🎉</div>
+            <h2 className="mt-3 text-2xl font-bold" style={{ color: INK }}>Vous avez gagné&nbsp;!</h2>
+            <p className="mt-1 text-lg font-semibold" style={{ color: accent }}>{result.prizeLabel}</p>
+            <button type="button" onClick={onCopy} className="mx-auto mt-5 flex w-fit items-center gap-2.5 rounded-2xl px-6 py-3 font-mono text-2xl font-bold tracking-[0.2em] transition" style={{ background: '#FAF7F3', color: INK }} title="Copier le code">{result.code}<span className="font-sans text-xs font-medium tracking-normal" style={{ color: MUT }}>{copied ? 'copié ✓' : 'copier'}</span></button>
+            <p className="mt-3 text-xs leading-relaxed" style={{ color: MUT }}>Montrez ce code au personnel pour récupérer votre gain.<br />Valable jusqu’au {new Date(result.expiresAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.</p>
+          </>
+        )}
+        
         <NextSpinCountdown accent={accent} until={result.nextPlayAt ?? null} />
-        <button type="button" onClick={onSeeCard} className="mt-5 block w-full rounded-[18px] py-3.5 text-center text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -16px ${accent}` }}>Voir ma carte</button>
+        {!isLose && (
+          <button type="button" onClick={onSeeCard} className="mt-5 block w-full rounded-[18px] py-3.5 text-center text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -16px ${accent}` }}>Voir ma carte</button>
+        )}
         <style jsx global>{`@keyframes fhwin { from { opacity: 0; transform: translateY(28px) scale(0.96) } to { opacity: 1; transform: translateY(0) scale(1) } }`}</style>
       </div>
     </div>

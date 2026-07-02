@@ -54,6 +54,7 @@ export interface GameConfig {
   businessName: string
   prizes: string[]
   prizeIsLose?: boolean[]
+  prizeIcons?: (string | null)[]
   slotEnabled?: boolean
   slotPointCost?: number
   rouletteEnabled?: boolean
@@ -70,7 +71,7 @@ export interface GameConfig {
 
 /** Public wheel config for /[slug]/jeu and the menu FAB. Tolerates missing tables. */
 export async function loadGameConfig(slug: string): Promise<GameConfig> {
-  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], prizeIsLose: [], slotEnabled: false, slotPointCost: 10, rouletteEnabled: true, rouletteSchedule: null, welcomePoints: 0, accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', gates: [], qrGate: { enabled: false } }
+  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], prizeIsLose: [], prizeIcons: [], slotEnabled: false, slotPointCost: 10, rouletteEnabled: true, rouletteSchedule: null, welcomePoints: 0, accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', gates: [], qrGate: { enabled: false } }
   try {
     const supabase: any = await createServiceRoleClient()
     const { data: business } = await supabase
@@ -108,7 +109,8 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
         .order('position', { ascending: true })
         .order('created_at', { ascending: true })
       prizes = (rows || []).map((p: any) => p.label)
-      prizeIsLose = (rows || []).map((p: any) => Boolean(p.config?.isLose))
+      prizeIsLose = (rows || []).map((p: any) => Boolean(gConf.prizeConfig?.[p.id]?.isLose))
+      const prizeIcons = (rows || []).map((p: any) => gConf.prizeConfig?.[p.id]?.icon || null)
       const gConf = (game as any).config || {}
       slotEnabled = Boolean(gConf.slotEnabled)
       slotPointCost = Number(gConf.slotPointCost) || 10
@@ -157,6 +159,7 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
       businessName: business.name,
       prizes,
       prizeIsLose,
+      prizeIcons,
       slotEnabled,
       slotPointCost,
       rouletteEnabled,

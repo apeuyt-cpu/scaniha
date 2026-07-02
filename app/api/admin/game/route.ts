@@ -64,7 +64,7 @@ export const GET = withStaff('page.fidelite', async (_req, { business }) => {
  *   { action: 'deletePrize', prizeId }
  */
 const GAME_FIELDS = ['active', 'daily_limit', 'win_expiry_hours', 'config'] as const
-const PRIZE_FIELDS = ['label', 'weight', 'cost', 'stock', 'active', 'position', 'config'] as const
+const PRIZE_FIELDS = ['label', 'weight', 'cost', 'stock', 'active', 'position'] as const
 
 function pick(obj: any, fields: readonly string[]) {
   const out: Record<string, any> = {}

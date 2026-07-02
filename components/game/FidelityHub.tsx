@@ -133,7 +133,7 @@ export default function FidelityHub({
         // Active if EITHER the roulette OR the points program is on (points-only allowed).
         if (!roulette && !loyalty) { setPhase('inactive'); return }
         setHasRoulette(roulette); setLoyaltyActive(loyalty); setWelcomePoints(Number(json.welcomePoints) || 0)
-        const loadedPrizes = Array.isArray(json.prizes) ? json.prizes : []; setPrizes(loadedPrizes); setPrizeIcons(loadedPrizes.map((p: any) => p.config?.icon || null)); setGameMode(json.config?.mode || 'roulette'); setGates(Array.isArray(json.gates) ? json.gates : [])
+        const loadedPrizes = Array.isArray(json.prizes) ? json.prizes : []; setPrizes(loadedPrizes); setPrizeIcons(Array.isArray(json.prizeIcons) ? json.prizeIcons : []); setGameMode(json.config?.mode || 'roulette'); setGates(Array.isArray(json.gates) ? json.gates : [])
 
         setPrizeIsLose(json.prizeIsLose || [])
         setSlotEnabled(Boolean(json.slotEnabled))

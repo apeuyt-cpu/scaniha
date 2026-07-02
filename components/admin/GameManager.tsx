@@ -315,11 +315,10 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                 
                 {/* ICON PICKER */}
                 <PrizeIconPicker
-                  value={(p as any).config?.icon || ''}
+                  value={game.config?.prizeConfig?.[p.id]?.icon || ''}
                   onChange={(icon) => {
-                    const nextConfig = { ...(p as any).config, icon }
-                    setPrizes((cur) => cur.map((x) => (x.id === p.id ? { ...x, config: nextConfig } : x)))
-                    updatePrize(p.id, { config: nextConfig } as any)
+                    const newConfig = { ...game.config, prizeConfig: { ...(game.config?.prizeConfig || {}), [p.id]: { ...(game.config?.prizeConfig?.[p.id] || {}), icon } } }
+                    updateGame({ config: newConfig })
                   }}
                 />
 
@@ -327,13 +326,12 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                 <div className="flex items-center gap-1.5">
                   <div className="w-24 shrink-0">
                     <Toggle
-                      checked={Boolean((p as any).config?.isLose)}
+                      checked={Boolean(game.config?.prizeConfig?.[p.id]?.isLose)}
                       onChange={(v) => {
-                        const nextConfig = { ...((p as any).config || {}), isLose: v }
-                        setPrizes(cur => cur.map(x => x.id === p.id ? { ...x, config: nextConfig } as any : x))
-                        persistPrize(p.id, { config: nextConfig } as any)
+                        const newConfig = { ...game.config, prizeConfig: { ...(game.config?.prizeConfig || {}), [p.id]: { ...(game.config?.prizeConfig?.[p.id] || {}), isLose: v } } }
+                        updateGame({ config: newConfig })
                       }}
-                      label={(p as any).config?.isLose ? '💀 Perte' : '🎁 Gain'}
+                      label={game.config?.prizeConfig?.[p.id]?.isLose ? '💀 Perte' : '🎁 Gain'}
                     />
                   </div>
                 </div>

@@ -219,12 +219,11 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
           <span className="text-lg">🎰</span>
           <h4 className="font-semibold text-zinc-900">Slot Machine 777</h4>
         </div>
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-zinc-700">Activer le Slot Machine</span>
+        <div className="mb-3">
           <Toggle
             checked={Boolean(game.config?.slotEnabled)}
             onChange={(v) => updateGame({ config: { ...game.config, slotEnabled: v } })}
-            id="slot-enabled"
+            label="Activer le Slot Machine"
           />
         </div>
         <div className="flex items-center justify-between mb-3">
@@ -245,12 +244,11 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
           <span className="text-lg">🎡</span>
           <h4 className="font-semibold text-zinc-900">Disponibilité de la Roulette</h4>
         </div>
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-zinc-700">Toujours disponible</span>
+        <div className="mb-3">
           <Toggle
             checked={game.config?.rouletteEnabled !== false}
             onChange={(v) => updateGame({ config: { ...game.config, rouletteEnabled: v } })}
-            id="roulette-enabled"
+            label="Toujours disponible"
           />
         </div>
         {game.config?.rouletteEnabled !== false && (
@@ -327,17 +325,17 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
 
                 
                 <div className="flex items-center gap-1.5">
-                  <Toggle
-                    checked={Boolean((p as any).config?.isLose)}
-                    onChange={(v) => {
-                      const nextConfig = { ...((p as any).config || {}), isLose: v }
-                      setPrizes(cur => cur.map(x => x.id === p.id ? { ...x, config: nextConfig } as any : x))
-                      persistPrize(p.id, { config: nextConfig } as any)
-                    }}
-                    id={"prize-lose-"+p.id}
-                    size="sm"
-                  />
-                  <span className="text-xs text-zinc-500 w-12">{(p as any).config?.isLose ? '💀 Perte' : '🎁 Gain'}</span>
+                  <div className="w-24 shrink-0">
+                    <Toggle
+                      checked={Boolean((p as any).config?.isLose)}
+                      onChange={(v) => {
+                        const nextConfig = { ...((p as any).config || {}), isLose: v }
+                        setPrizes(cur => cur.map(x => x.id === p.id ? { ...x, config: nextConfig } as any : x))
+                        persistPrize(p.id, { config: nextConfig } as any)
+                      }}
+                      label={(p as any).config?.isLose ? '💀 Perte' : '🎁 Gain'}
+                    />
+                  </div>
                 </div>
 
                 <input

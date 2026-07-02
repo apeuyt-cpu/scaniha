@@ -47,11 +47,17 @@ export function businessGradient(business: any): string {
   return `linear-gradient(135deg, ${c}, ${c})`
 }
 
+
 export interface GameConfig {
   active: boolean
   loyaltyActive: boolean
   businessName: string
   prizes: string[]
+  prizeIsLose?: boolean[]
+  slotEnabled?: boolean
+  slotPointCost?: number
+  rouletteEnabled?: boolean
+  rouletteSchedule?: any
   /** Welcome bonus credited at signup (0 when loyalty is off) — shown as the join hook. */
   welcomePoints: number
   accent: string
@@ -64,7 +70,7 @@ export interface GameConfig {
 
 /** Public wheel config for /[slug]/jeu and the menu FAB. Tolerates missing tables. */
 export async function loadGameConfig(slug: string): Promise<GameConfig> {
-  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], welcomePoints: 0, accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', gates: [], qrGate: { enabled: false } }
+  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], prizeIsLose: [], slotEnabled: false, slotPointCost: 10, rouletteEnabled: true, rouletteSchedule: null, welcomePoints: 0, accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', gates: [], qrGate: { enabled: false } }
   try {
     const supabase: any = await createServiceRoleClient()
     const { data: business } = await supabase

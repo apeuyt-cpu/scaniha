@@ -148,10 +148,9 @@ export default function SlotMachine777({ prizes, prizeIcons, prizeIsLose, spinni
 
   // Build display symbols: use icons from prizes or food defaults
   let symbols = prizes.map((p, i) => prizeIcons?.[i] || FOOD_SYMBOLS[i % FOOD_SYMBOLS.length])
-  if (symbols.length < 3) symbols = FOOD_SYMBOLS.slice(0, 8)
+  if (symbols.length === 0) symbols = FOOD_SYMBOLS.slice(0, 3)
 
-  const targetSym = targetIndex !== null ? (symbols[targetIndex] ?? symbols[0]) : symbols[0]
-  const targetIdx = symbols.indexOf(targetSym)
+  const targetIdx = targetIndex !== null ? Math.max(0, Math.min(targetIndex, symbols.length - 1)) : 0
   const isLoseOutcome = targetIndex !== null && (prizeIsLose?.[targetIndex] === true)
 
   useEffect(() => {

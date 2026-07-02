@@ -352,7 +352,7 @@ export default function FidelityHub({
           <CarteTab session={session} businessName={businessName} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} welcomePoints={welcomePoints} onPlay={() => requireLogin()} onLogout={logout} />
         )}
         {hasRoulette && tab === 'roue' && (
-          <RoueTab prizes={prizes} prizeIcons={prizeIcons} prizeIsLose={prizeIsLose} slotEnabled={slotEnabled} slotPointCost={slotPointCost} rouletteEnabled={rouletteEnabled} rouletteSchedule={rouletteSchedule} gameMode={gameMode} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} balance={balance} onSpin={() => spin(undefined, undefined, gameMode)} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
+          <RoueTab prizes={prizes} prizeIcons={prizeIcons} prizeIsLose={prizeIsLose} slotEnabled={slotEnabled} slotPointCost={slotPointCost} rouletteEnabled={rouletteEnabled} rouletteSchedule={rouletteSchedule} gameMode={gameMode} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} balance={balance} onSpin={(gm) => spin(undefined, undefined, gm || gameMode)} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
         )}
         {tab === 'boutique' && (
           <BoutiqueTab session={session} businessName={businessName} accent={accent} gradient={gradient} balance={balance} loyaltyActive={loyaltyActive} rewards={rewards} busyRewardId={busyRewardId} redeemed={redeemed} error={boutiqueError} rescan={boutiqueRescan} onRedeem={redeem} />
@@ -532,7 +532,7 @@ function CarteTab(props: {
 
 /* ── Games Arcade Tab ─────────────────────────────────────────────────────── */
 
-function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; prizeIsLose?: boolean[]; slotEnabled?: boolean; slotPointCost?: number; rouletteEnabled?: boolean; rouletteSchedule?: any; gameMode: string; accent: string; gradient: string; phase: Phase; played: boolean; result: SpinResult | null; error: string | null; rescan: string | null; nextPlayAt: string | null; balance: number; onSpin: () => void; onSpinEnd: () => void; onReview: () => void }) {
+function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; prizeIsLose?: boolean[]; slotEnabled?: boolean; slotPointCost?: number; rouletteEnabled?: boolean; rouletteSchedule?: any; gameMode: string; accent: string; gradient: string; phase: Phase; played: boolean; result: SpinResult | null; error: string | null; rescan: string | null; nextPlayAt: string | null; balance: number; onSpin: (gm?: string) => void; onSpinEnd: () => void; onReview: () => void }) {
   const { prizes, prizeIcons, prizeIsLose, slotEnabled, slotPointCost = 10, rouletteEnabled = true, rouletteSchedule, accent, gradient, phase, played, result, error, rescan, nextPlayAt, balance, onSpin, onSpinEnd, onReview } = props
   const [selectedGame, setSelectedGame] = useState<'roulette' | 'slot777' | null>(null)
   const blocked = phase === 'blocked'
@@ -736,7 +736,7 @@ function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; prize
           <>
             <button
               type="button"
-              onClick={onSpin}
+              onClick={() => onSpin(currentGameMode)}
               disabled={phase === 'spinning' || !canPlay}
               className="block w-full rounded-[18px] py-[17px] text-base font-semibold text-white transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
               style={{ background: gameBg, border: `2px solid ${gameColor}`, boxShadow: `0 14px 30px -14px ${gameColor}88`, color: gameColor }}
@@ -747,7 +747,7 @@ function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; prize
           </>
         ) : (
           <div className="space-y-2.5">
-            <button type="button" onClick={onSpin} className="block w-full rounded-[18px] py-3.5 text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -14px ${accent}` }}>Rejouer</button>
+            <button type="button" onClick={() => onSpin(currentGameMode)} className="block w-full rounded-[18px] py-3.5 text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -14px ${accent}` }}>Rejouer</button>
             {result && <button type="button" onClick={onReview} className="flex w-full items-center justify-center gap-2 rounded-[18px] bg-white py-3.5 text-sm font-semibold transition active:scale-[0.99]" style={{ color: '#1A1410', boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 12px 30px -20px rgba(0,0,0,0.3)' }}>🎁 Revoir mon gain</button>}
           </div>
         )}

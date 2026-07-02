@@ -104,7 +104,7 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
     if (game) {
       const { data: rows } = await supabase
         .from('prizes')
-        .select('label, config')
+        .select('id, label')
         .eq('game_id', game.id)
         .eq('active', true)
         .order('position', { ascending: true })

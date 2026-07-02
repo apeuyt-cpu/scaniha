@@ -190,13 +190,13 @@ export default function FidelityHub({
     setSession(null); setSummary(EMPTY); setResult(null); setConfetti(false); setQrOpen(false); setError(null); setRedeemed(null); loadPublicRewards(); setTabState(hasRoulette ? 'roue' : 'carte'); setPhase('ready')
   }
 
-  async function spin(tokenOverride?: string, gatesOk?: boolean) {
+  async function spin(tokenOverride?: string, gatesOk?: boolean, gameMode?: string) {
     if (!gatesOk && gates.length > 0 && !gatesCleared) { setGatesModalOpen(true); return }
     const token = tokenOverride ?? session?.token
     if (!token) { setPendingSpin(true); requireLogin('Connectez-vous pour tourner la roue — vos gains et points sont gardés sur votre compte.'); return }
     setError(null); setRescan(null); setResult(null); setPhase('spinning')
     try {
-      const res = await fetch(`/api/game/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: deviceId(), token }) })
+      const res = await fetch(`/api/game/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: deviceId(), token, gameMode: gameMode || 'roulette' }) })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.success) {
         if (res.status === 401 || json.authRequired) { requireLogin('Votre session a expiré. Reconnectez-vous pour jouer.'); return }
@@ -550,6 +550,8 @@ function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; prize
   const isSlot = selectedGame === 'slot777'
   const GAME_COST = isSlot ? slotPointCost : 10
   const canPlay = balance >= GAME_COST || played
+  const currentGameMode = isSlot ? 'slot777' : 'roulette'
+  void currentGameMode
 
   if (!selectedGame) {
     return (

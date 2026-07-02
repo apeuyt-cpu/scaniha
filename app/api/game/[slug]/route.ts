@@ -32,6 +32,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const body = await req.json().catch(() => ({}))
+  const gameMode = typeof body.gameMode === 'string' ? body.gameMode : 'roulette'
 
   // Login required: the spin is tied to a diner account (phone derived from the
   // session token, never trusted from the client).
@@ -76,6 +77,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   if (limited) {
     const e = ERR[limited.reason]
     return NextResponse.json({ success: false, error: e.msg, nextPlayAt: limited.nextPlayAt }, { status: e.status })
+  }
+
+  // Deduct slot cost before spin
+  if (gameMode === 'slot777') {
+    const { loadGameConfig: lgc } = await import('@/lib/db/game')
+    const cfg = await lgc(slug)
+    const slotCost = cfg.slotPointCost ?? 10
+    if (cfg.slotEnabled) {
+      // Deduct points via loyalty API
+      const { createServiceRoleClient } = await import('@/lib/supabase/server')
+      const sb: any = await createServiceRoleClient()
+      const { data: biz } = await sb.from('businesses').select('id').eq('slug', slug).maybeSingle()
+      if (biz) {
+        const { data: prog } = await sb.from('loyalty_programs').select('id').eq('business_id', biz.id).eq('active', true).maybeSingle()
+        if (prog) {
+          const { data: cust } = await sb.from('customers').select('id, balance').eq('phone', phone).eq('program_id', prog.id).maybeSingle()
+          if (cust && cust.balance < slotCost) {
+            return NextResponse.json({ success: false, error: `Points insuffisants — il vous faut ${slotCost} pts pour jouer.` }, { status: 402 })
+          }
+          if (cust) {
+            await sb.from('point_transactions').insert({ customer_id: cust.id, program_id: prog.id, delta: -slotCost, reason: 'slot_play', note: 'Partie de Slot Machine 777' })
+            await sb.from('customers').update({ balance: cust.balance - slotCost }).eq('id', cust.id)
+          }
+        }
+      }
+    }
   }
 
   const result = await playGame(slug, deviceId, phone)

@@ -178,7 +178,7 @@ export default function FidelityHub({
 
   function onAuthed(s: DinerSession) {
     setSession(s); setAuthMessage(null); setError(null); setPhase('ready'); loadAccount(s.phone, s.token)
-    if (pendingSpin) { setPendingSpin(false); setTabState('roue'); spin(s.token) }
+    if (pendingSpin) { setPendingSpin(false); setTabState('roue'); spin(s.token, undefined, gameMode) }
     // Fresh member at a roulette café → drop them on the wheel for their first spin.
     else if (hasRoulette) setTabState('roue')
   }
@@ -190,13 +190,13 @@ export default function FidelityHub({
     setSession(null); setSummary(EMPTY); setResult(null); setConfetti(false); setQrOpen(false); setError(null); setRedeemed(null); loadPublicRewards(); setTabState(hasRoulette ? 'roue' : 'carte'); setPhase('ready')
   }
 
-  async function spin(tokenOverride?: string, gatesOk?: boolean, gameMode?: string) {
+  async function spin(tokenOverride?: string, gatesOk?: boolean, gmMode?: string) {
     if (!gatesOk && gates.length > 0 && !gatesCleared) { setGatesModalOpen(true); return }
     const token = tokenOverride ?? session?.token
     if (!token) { setPendingSpin(true); requireLogin('Connectez-vous pour tourner la roue — vos gains et points sont gardés sur votre compte.'); return }
     setError(null); setRescan(null); setResult(null); setPhase('spinning')
     try {
-      const res = await fetch(`/api/game/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: deviceId(), token, gameMode: gameMode || 'roulette' }) })
+      const res = await fetch(`/api/game/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: deviceId(), token, gameMode: gmMode || gameMode || 'roulette' }) })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.success) {
         if (res.status === 401 || json.authRequired) { requireLogin('Votre session a expiré. Reconnectez-vous pour jouer.'); return }
@@ -352,7 +352,7 @@ export default function FidelityHub({
           <CarteTab session={session} businessName={businessName} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} welcomePoints={welcomePoints} onPlay={() => requireLogin()} onLogout={logout} />
         )}
         {hasRoulette && tab === 'roue' && (
-          <RoueTab prizes={prizes} prizeIcons={prizeIcons} prizeIsLose={prizeIsLose} slotEnabled={slotEnabled} slotPointCost={slotPointCost} rouletteEnabled={rouletteEnabled} rouletteSchedule={rouletteSchedule} gameMode={gameMode} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} balance={balance} onSpin={() => spin()} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
+          <RoueTab prizes={prizes} prizeIcons={prizeIcons} prizeIsLose={prizeIsLose} slotEnabled={slotEnabled} slotPointCost={slotPointCost} rouletteEnabled={rouletteEnabled} rouletteSchedule={rouletteSchedule} gameMode={gameMode} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} balance={balance} onSpin={() => spin(undefined, undefined, gameMode)} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
         )}
         {tab === 'boutique' && (
           <BoutiqueTab session={session} businessName={businessName} accent={accent} gradient={gradient} balance={balance} loyaltyActive={loyaltyActive} rewards={rewards} busyRewardId={busyRewardId} redeemed={redeemed} error={boutiqueError} rescan={boutiqueRescan} onRedeem={redeem} />
@@ -368,7 +368,7 @@ export default function FidelityHub({
       {gatesModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm" onClick={() => setGatesModalOpen(false)}>
           <div className="w-full max-w-[22rem]" onClick={(e) => e.stopPropagation()}>
-            <PlayGatesGate gates={gates} slug={slug} deviceId={deviceId()} accent={accent} gradient={gradient} onAllDone={() => { setGatesCleared(true); setGatesModalOpen(false); spin(undefined, true) }} />
+            <PlayGatesGate gates={gates} slug={slug} deviceId={deviceId()} accent={accent} gradient={gradient} onAllDone={() => { setGatesCleared(true); setGatesModalOpen(false); spin(undefined, true, gameMode) }} />
             <button type="button" onClick={() => setGatesModalOpen(false)} className="mt-3 block w-full rounded-2xl bg-white/10 py-3 text-sm font-medium text-white/90 backdrop-blur transition hover:bg-white/20">Plus tard</button>
           </div>
         </div>

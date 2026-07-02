@@ -1,221 +1,265 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
-const DEFAULT_SYMBOLS = ['💎', '👑', '🎰', '7️⃣', '🍒', '🎯', '🌟', '🔔']
+const DEFAULT_SYMBOLS = ['💎', '👑', '🎰', '7️⃣', '🍒', '🎯', '🌟', '🔔', '🍋', '🎪']
 
-interface SlotMachineProps {
+interface SlotProps {
   prizes: string[]
   prizeIcons?: (string | null | undefined)[]
+  prizeIsLose?: boolean[]
   spinning: boolean
   targetIndex: number | null
   onSpinEnd: () => void
 }
 
-function Reel({ symbols, targetSymbol, spinning, delay, onDone }: { symbols: string[], targetSymbol: string, spinning: boolean, delay: number, onDone?: () => void }) {
-  const [offset, setOffset] = useState(0)
-  const [stopped, setStopped] = useState(true)
-  const ITEM_H = 100
-  const VISIBLE = 3
+function ReelColumn({ symbols, target, spinning, stopDelay, onStopped }: {
+  symbols: string[]
+  target: string
+  spinning: boolean
+  stopDelay: number
+  onStopped?: () => void
+}) {
+  const CELL = 110
+  const N = symbols.length || 1
+  const [pos, setPos] = useState(0)
+  const [locked, setLocked] = useState(false)
+  const rafRef = useRef<number>(0)
+  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const speedRef = useRef(0)
 
   useEffect(() => {
-    if (!spinning) { setStopped(true); return }
-    setStopped(false)
-    let startTime = performance.now()
-    let animId: number
-    
-    // We create an infinite loop array by duplicating symbols
-    const totalHeight = symbols.length * ITEM_H
-    
-    const spin = (time: number) => {
-      const elapsed = time - startTime
-      if (elapsed > delay) {
-        // Snap to target
-        const idx = symbols.indexOf(targetSymbol)
-        const snapOffset = (idx >= 0 ? idx : 0) * ITEM_H
-        setOffset(snapOffset)
-        setStopped(true)
-        onDone?.()
-        return
-      }
-      
-      // Fast spin
-      setOffset(prev => (prev + 35) % totalHeight)
-      animId = requestAnimationFrame(spin)
-    }
-    animId = requestAnimationFrame(spin)
-    
-    return () => cancelAnimationFrame(animId)
-  }, [spinning, targetSymbol, delay, symbols, onDone])
+    if (!spinning) { setLocked(false); return }
+    setLocked(false)
+    speedRef.current = 0
+    let p = pos
+    const total = N * CELL
 
-  // Quadruple symbols to ensure smooth wrapping visually when translating
-  const extSymbols = [...symbols, ...symbols, ...symbols, ...symbols]
+    function frame() {
+      speedRef.current = Math.min(speedRef.current + 4, 60)
+      p = (p + speedRef.current) % total
+      setPos(p)
+      rafRef.current = requestAnimationFrame(frame)
+    }
+    rafRef.current = requestAnimationFrame(frame)
+
+    timerRef.current = setTimeout(() => {
+      cancelAnimationFrame(rafRef.current)
+      const idx = symbols.indexOf(target)
+      const snap = (idx >= 0 ? idx : 0) * CELL
+      setPos(snap)
+      setLocked(true)
+      onStopped?.()
+    }, stopDelay)
+
+    return () => {
+      cancelAnimationFrame(rafRef.current)
+      clearTimeout(timerRef.current)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spinning])
+
+  const repeated = [...symbols, ...symbols, ...symbols, ...symbols]
 
   return (
     <div style={{
-      width: 90,
-      height: ITEM_H * VISIBLE,
-      position: 'relative',
-      background: '#F9F9F9',
-      borderRadius: '8px',
-      overflow: 'hidden',
-      boxShadow: 'inset 0 15px 25px rgba(0,0,0,0.6), inset 0 -15px 25px rgba(0,0,0,0.6), 0 0 10px rgba(0,0,0,0.8)',
+      width: 88, height: CELL * 3, overflow: 'hidden', position: 'relative',
+      background: 'linear-gradient(180deg, #0a0a14 0%, #121226 100%)',
+      borderRadius: 10,
+      boxShadow: 'inset 0 0 30px rgba(0,0,0,0.9), inset 0 0 0 1.5px rgba(255,255,255,0.07)',
     }}>
-      {/* 3D Cylinder shading overlay */}
-      <div style={{
-        position: 'absolute', inset: 0, zIndex: 10,
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.05) 70%, rgba(0,0,0,0.85) 100%)',
-        pointerEvents: 'none'
+      {/* Cylinder shading */}
+      <div style={{ position:'absolute', inset:0, zIndex:5, pointerEvents:'none',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, transparent 25%, rgba(255,255,255,0.04) 50%, transparent 75%, rgba(0,0,0,0.9) 100%)'
       }} />
+      {/* Reel strip */}
       <div style={{
-        // Align the target symbol to the middle of the 3 visible items
-        transform: `translateY(-${offset + ITEM_H}px)`,
-        // The bounce-back effect (cubic-bezier) when stopped
-        transition: stopped ? 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)' : 'none',
-        willChange: 'transform'
+        transform: `translateY(-${pos + CELL}px)`,
+        transition: locked ? 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
+        willChange: 'transform',
       }}>
-        {extSymbols.map((sym, i) => (
+        {repeated.map((sym, i) => (
           <div key={i} style={{
-            height: ITEM_H,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '56px',
-            filter: !stopped ? 'blur(1px)' : 'none',
-            textShadow: '0 4px 6px rgba(0,0,0,0.2)'
-          }}>
-            {sym}
-          </div>
+            height: CELL, display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize: 52, lineHeight:1,
+            filter: spinning && !locked ? 'blur(3px) brightness(0.7)' : 'none',
+            transition: locked ? 'filter 0.3s' : 'none',
+          }}>{sym}</div>
         ))}
       </div>
     </div>
   )
 }
 
-export default function SlotMachine777({ prizes, prizeIcons, spinning, targetIndex, onSpinEnd }: SlotMachineProps) {
-  const [r1Done, setR1] = useState(false)
-  const [r2Done, setR2] = useState(false)
-  const [r3Done, setR3] = useState(false)
-  const [jackpot, setJackpot] = useState(false)
+export default function SlotMachine777({ prizes, prizeIcons, prizeIsLose, spinning, targetIndex, onSpinEnd }: SlotProps) {
+  const [r1, setR1] = useState(false)
+  const [r2, setR2] = useState(false)
+  const [r3, setR3] = useState(false)
+  const [outcome, setOutcome] = useState<'idle'|'win'|'lose'>('idle')
+  const [lightPhase, setLightPhase] = useState(0)
 
-  // Map prizes to symbols (use icon if available, else default symbols)
   let symbols = prizes.map((p, i) => prizeIcons?.[i] || DEFAULT_SYMBOLS[i % DEFAULT_SYMBOLS.length])
-  if (symbols.length < 3) symbols = [...symbols, ...DEFAULT_SYMBOLS].slice(0, 5)
+  if (symbols.length < 3) symbols = [...DEFAULT_SYMBOLS].slice(0, 8)
 
-  const targetSymbol = targetIndex !== null ? (symbols[targetIndex] ?? symbols[0]) : symbols[0]
+  const targetSym = targetIndex !== null ? (symbols[targetIndex] ?? symbols[0]) : symbols[0]
+  const isLoseOutcome = targetIndex !== null && (prizeIsLose?.[targetIndex] === true)
 
   useEffect(() => {
-    if (!spinning) { setR1(false); setR2(false); setR3(false); setJackpot(false) }
+    if (!spinning) { setR1(false); setR2(false); setR3(false); setOutcome('idle') }
   }, [spinning])
 
   useEffect(() => {
-    if (r1Done && r2Done && r3Done) {
-      setJackpot(true)
-      const t = setTimeout(() => onSpinEnd(), 1000)
+    if (r1 && r2 && r3) {
+      setOutcome(isLoseOutcome ? 'lose' : 'win')
+      const t = setTimeout(() => onSpinEnd(), 1200)
       return () => clearTimeout(t)
     }
-  }, [r1Done, r2Done, r3Done, onSpinEnd])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [r1, r2, r3])
+
+  // Blinking lights
+  useEffect(() => {
+    if (outcome !== 'win') return
+    const id = setInterval(() => setLightPhase(p => p + 1), 150)
+    return () => clearInterval(id)
+  }, [outcome])
+
+  const NUM_LIGHTS = 16
+  const isWin = outcome === 'win'
+  const isLose = outcome === 'lose'
+  const borderColor = isWin ? '#FFD700' : isLose ? '#FF3333' : '#5a3a00'
+  const glowColor = isWin ? 'rgba(255,215,0,0.6)' : isLose ? 'rgba(255,50,50,0.5)' : 'rgba(0,0,0,0)'
 
   return (
-    <div className="flex flex-col items-center select-none w-full max-w-sm mx-auto">
+    <div className="select-none flex flex-col items-center w-full" style={{ fontFamily: 'Georgia, serif' }}>
       <style jsx>{`
-        @keyframes sm-jackpot { 0%, 100% { transform: scale(1); box-shadow: 0 0 30px #FFD700; } 50% { transform: scale(1.02); box-shadow: 0 0 60px #FFD700, 0 0 100px #FF8C00; } }
-        @keyframes sm-light { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        @keyframes marquee { 0% { background-position: 0 0; } 100% { background-position: -40px 0; } }
-        .jackpot-anim { animation: sm-jackpot 0.8s ease-in-out infinite; }
+        @keyframes jackpot-pulse { 0%,100%{transform:scale(1)} 40%{transform:scale(1.025)} }
+        @keyframes lose-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
+        @keyframes lose-flash { 0%{opacity:0} 30%{opacity:0.7} 100%{opacity:0} }
+        @keyframes marquee-txt { from{transform:translateX(100%)} to{transform:translateX(-100%)} }
+        .jackpot-anim { animation: jackpot-pulse 0.6s ease-in-out infinite; }
+        .lose-shake-anim { animation: lose-shake 0.5s ease-in-out; }
+        .lose-overlay { animation: lose-flash 1.5s ease-out forwards; }
+        .marquee { overflow:hidden; white-space:nowrap; }
+        .marquee span { display:inline-block; animation: marquee-txt 2s linear infinite; }
       `}</style>
 
-      {/* Main Machine Body - Professional Metallic & Casino theme */}
+      {/* Machine body */}
       <div
-        className={jackpot ? 'jackpot-anim' : ''}
+        className={isWin ? 'jackpot-anim' : isLose ? 'lose-shake-anim' : ''}
         style={{
-          background: `linear-gradient(145deg, #2b0404 0%, #1a0202 50%, #3d0505 100%)`,
-          borderRadius: 28,
-          padding: '24px 20px',
-          border: '4px solid #B8860B',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.8), inset 0 2px 2px rgba(255,255,255,0.2), inset 0 -4px 10px rgba(0,0,0,0.6)',
-          position: 'relative',
           width: '100%',
+          maxWidth: 340,
+          background: 'linear-gradient(160deg, #1c0a00 0%, #0d0608 60%, #1a0505 100%)',
+          borderRadius: 28,
+          border: `3px solid ${borderColor}`,
+          boxShadow: `0 0 0 1px rgba(255,255,255,0.04), 0 20px 60px rgba(0,0,0,0.8), 0 0 40px ${glowColor}`,
+          padding: '20px 16px 24px',
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'border-color 0.4s, box-shadow 0.4s',
         }}
       >
-        {/* Lights Border */}
-        <div style={{
-          position: 'absolute', inset: 8, border: '2px dotted #FFD700', borderRadius: 20, opacity: 0.5, pointerEvents: 'none'
-        }} />
+        {/* Lose flash overlay */}
+        {isLose && (
+          <div className="lose-overlay" style={{
+            position:'absolute', inset:0, background:'rgba(255,0,0,0.3)', borderRadius:25, zIndex:20, pointerEvents:'none'
+          }} />
+        )}
 
-        {/* Top Casino Banner */}
-        <div style={{ textAlign: 'center', marginBottom: 20, position: 'relative', zIndex: 2 }}>
-          <div style={{
-            background: 'linear-gradient(180deg, #FFD700 0%, #DAA520 40%, #B8860B 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            fontFamily: '"Georgia", serif',
-            fontSize: '32px',
-            fontWeight: '900',
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
-          }}>
-            LUCKY 777
-          </div>
-          {jackpot && (
-            <div style={{ color: '#FFD700', fontSize: 14, fontWeight: 'bold', marginTop: 4, textShadow: '0 0 10px #FFD700' }}>
-              JACKPOT WINNER!
+        {/* Decorative border dots */}
+        <div style={{ position:'absolute', inset:8, border:'1.5px dashed rgba(255,215,0,0.15)', borderRadius:22, pointerEvents:'none' }} />
+
+        {/* Top lights row */}
+        <div style={{ display:'flex', justifyContent:'center', gap:8, marginBottom:14 }}>
+          {Array.from({length: NUM_LIGHTS}).map((_, i) => {
+            const on = isWin ? (lightPhase + i) % 3 === 0 : isLose ? true : false
+            const col = isWin ? '#FFD700' : isLose ? '#FF4444' : '#2a1500'
+            return <div key={i} style={{
+              width:9, height:9, borderRadius:'50%',
+              background: on ? col : '#2a1500',
+              boxShadow: on ? `0 0 8px ${col}` : 'none',
+              transition:'background 0.1s, box-shadow 0.1s'
+            }} />
+          })}
+        </div>
+
+        {/* Banner */}
+        <div style={{ textAlign:'center', marginBottom:16 }}>
+          {isLose ? (
+            <div style={{ color:'#FF4444', fontSize:22, fontWeight:900, letterSpacing:'0.1em', textShadow:'0 0 15px rgba(255,0,0,0.7)' }}>😢 DÉSOLÉ !</div>
+          ) : (
+            <div style={{
+              background: isWin
+                ? 'linear-gradient(90deg,#FFD700,#FFF8DC,#FFD700)'
+                : 'linear-gradient(90deg,#8B6914,#C9A227,#8B6914)',
+              WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+              fontSize:26, fontWeight:900, letterSpacing:'0.12em',
+            }}>
+              {isWin ? '🎊 JACKPOT !' : '⭐ LUCKY 777'}
             </div>
           )}
         </div>
 
-        {/* Reels Container */}
+        {/* Reels */}
         <div style={{
-          position: 'relative',
-          background: '#0a0a0a',
-          borderRadius: 12,
-          padding: '16px 12px',
-          border: '3px solid #666',
-          boxShadow: 'inset 0 0 20px rgba(0,0,0,1)',
-          display: 'flex',
-          justifyContent: 'center',
-          gap: 12,
-          zIndex: 2
+          background:'#080810', borderRadius:16, padding:'14px 10px',
+          border:'2px solid rgba(255,255,255,0.07)',
+          boxShadow:'inset 0 0 30px rgba(0,0,0,1)',
+          display:'flex', gap:10, justifyContent:'center',
+          position:'relative',
         }}>
-          {/* Winning Line Glow */}
+          {/* Payline */}
           <div style={{
-            position: 'absolute', top: '50%', left: 0, right: 0, height: 4, background: 'rgba(255, 0, 0, 0.7)',
-            transform: 'translateY(-50%)', zIndex: 11, boxShadow: '0 0 15px 4px rgba(255,0,0,0.5)'
+            position:'absolute', top:'50%', left:0, right:0, height:3,
+            transform:'translateY(-50%)',
+            background: isWin ? 'linear-gradient(90deg,transparent,#FFD700,transparent)'
+              : isLose ? 'linear-gradient(90deg,transparent,#FF4444,transparent)'
+              : 'linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent)',
+            zIndex:10,
           }} />
+          {/* Payline arrows */}
+          <div style={{ position:'absolute', top:'50%', left:-12, transform:'translateY(-50%)', width:0, height:0, borderTop:'9px solid transparent', borderBottom:'9px solid transparent', borderLeft:`12px solid ${isWin ? '#FFD700' : isLose ? '#FF4444' : 'rgba(255,255,255,0.2)'}`, zIndex:11 }} />
+          <div style={{ position:'absolute', top:'50%', right:-12, transform:'translateY(-50%)', width:0, height:0, borderTop:'9px solid transparent', borderBottom:'9px solid transparent', borderRight:`12px solid ${isWin ? '#FFD700' : isLose ? '#FF4444' : 'rgba(255,255,255,0.2)'}`, zIndex:11 }} />
 
-          {/* Triangles for the winning line */}
-          <div style={{ position: 'absolute', top: '50%', left: -10, transform: 'translateY(-50%)', borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '12px solid #FF0000', zIndex: 12 }} />
-          <div style={{ position: 'absolute', top: '50%', right: -10, transform: 'translateY(-50%)', borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderRight: '12px solid #FF0000', zIndex: 12 }} />
-
-          <Reel symbols={symbols} targetSymbol={targetSymbol} spinning={spinning} delay={2000} onDone={() => setR1(true)} />
-          <Reel symbols={symbols} targetSymbol={targetSymbol} spinning={spinning} delay={3000} onDone={() => setR2(true)} />
-          <Reel symbols={symbols} targetSymbol={targetSymbol} spinning={spinning} delay={4000} onDone={() => setR3(true)} />
+          <ReelColumn symbols={symbols} target={targetSym} spinning={spinning} stopDelay={1800} onStopped={() => setR1(true)} />
+          <ReelColumn symbols={symbols} target={targetSym} spinning={spinning} stopDelay={2800} onStopped={() => setR2(true)} />
+          <ReelColumn symbols={symbols} target={targetSym} spinning={spinning} stopDelay={3800} onStopped={() => setR3(true)} />
         </div>
 
-        {/* Bottom Decorative Panel */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, padding: '0 10px', position: 'relative', zIndex: 2 }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} style={{
-                width: 12, height: 12, borderRadius: '50%', background: jackpot ? '#00FF00' : '#FF0000',
-                boxShadow: `0 0 10px ${jackpot ? '#00FF00' : '#FF0000'}`, animation: spinning ? `sm-light 0.5s infinite ${i * 0.1}s` : 'none'
-              }} />
-            ))}
-          </div>
-          <div style={{
-            background: '#111', border: '2px solid #444', borderRadius: 6, padding: '4px 16px', color: '#0f0', fontFamily: 'monospace', fontSize: 16, fontWeight: 'bold', boxShadow: 'inset 0 0 10px rgba(0,255,0,0.2)'
-          }}>
-            {spinning ? 'SPINNING...' : (jackpot ? 'WINNER !!!' : 'INSERT COIN')}
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} style={{
-                width: 12, height: 12, borderRadius: '50%', background: jackpot ? '#00FF00' : '#FF0000',
-                boxShadow: `0 0 10px ${jackpot ? '#00FF00' : '#FF0000'}`, animation: spinning ? `sm-light 0.5s infinite ${i * 0.1}s` : 'none'
-              }} />
-            ))}
-          </div>
+        {/* Bottom LCD display */}
+        <div style={{
+          marginTop:16, background:'#050f05', border:'2px solid #1a3a1a',
+          borderRadius:8, padding:'8px 14px', textAlign:'center',
+          boxShadow:'inset 0 0 15px rgba(0,100,0,0.3)',
+        }}>
+          {spinning ? (
+            <div className="marquee">
+              <span style={{ color:'#00dd00', fontFamily:'monospace', fontSize:13, fontWeight:'bold' }}>
+                ✦ BONNE CHANCE ✦ BONNE CHANCE ✦ BONNE CHANCE ✦
+              </span>
+            </div>
+          ) : isWin ? (
+            <span style={{ color:'#00FF00', fontFamily:'monospace', fontSize:14, fontWeight:'bold', textShadow:'0 0 8px #00FF00' }}>★ VOUS AVEZ GAGNÉ ★</span>
+          ) : isLose ? (
+            <span style={{ color:'#FF4444', fontFamily:'monospace', fontSize:14, fontWeight:'bold' }}>✗ PAS DE CHANCE ✗</span>
+          ) : (
+            <span style={{ color:'#00cc00', fontFamily:'monospace', fontSize:13 }}>▶ INSÉREZ POINTS ◀</span>
+          )}
+        </div>
+
+        {/* Bottom lights row */}
+        <div style={{ display:'flex', justifyContent:'center', gap:8, marginTop:14 }}>
+          {Array.from({length: NUM_LIGHTS}).map((_, i) => {
+            const on = isWin ? (lightPhase + i + 2) % 3 === 0 : isLose ? true : false
+            const col = isWin ? '#FFD700' : isLose ? '#FF4444' : '#2a1500'
+            return <div key={i} style={{
+              width:9, height:9, borderRadius:'50%',
+              background: on ? col : '#2a1500',
+              boxShadow: on ? `0 0 8px ${col}` : 'none',
+              transition:'background 0.1s, box-shadow 0.1s'
+            }} />
+          })}
         </div>
       </div>
     </div>

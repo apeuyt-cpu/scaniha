@@ -65,6 +65,13 @@ export default function FidelityHub({
   const [hasRoulette, setHasRoulette] = useState(false)
   const [gameMode, setGameMode] = useState('roulette')
   const [prizeIcons, setPrizeIcons] = useState<(string | null)[]>([])
+
+  const [prizeIsLose, setPrizeIsLose] = useState<boolean[]>([])
+  const [slotEnabled, setSlotEnabled] = useState(false)
+  const [slotPointCost, setSlotPointCost] = useState(10)
+  const [rouletteEnabled, setRouletteEnabled] = useState(true)
+  const [rouletteSchedule, setRouletteSchedule] = useState<any>(null)
+
   // Welcome bonus credited at signup — surfaced as the join hook (0 = none).
   const [welcomePoints, setWelcomePoints] = useState(0)
   const [session, setSession] = useState<DinerSession | null>(null)
@@ -127,6 +134,13 @@ export default function FidelityHub({
         if (!roulette && !loyalty) { setPhase('inactive'); return }
         setHasRoulette(roulette); setLoyaltyActive(loyalty); setWelcomePoints(Number(json.welcomePoints) || 0)
         const loadedPrizes = Array.isArray(json.prizes) ? json.prizes : []; setPrizes(loadedPrizes); setPrizeIcons(loadedPrizes.map((p: any) => p.config?.icon || null)); setGameMode(json.config?.mode || 'roulette'); setGates(Array.isArray(json.gates) ? json.gates : [])
+
+        setPrizeIsLose(json.prizeIsLose || [])
+        setSlotEnabled(Boolean(json.slotEnabled))
+        setSlotPointCost(Number(json.slotPointCost) || 10)
+        setRouletteEnabled(json.rouletteEnabled !== false)
+        setRouletteSchedule(json.rouletteSchedule || null)
+
 
         const token = readToken(slug)
         let authed: DinerSession | null = null
@@ -338,7 +352,7 @@ export default function FidelityHub({
           <CarteTab session={session} businessName={businessName} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} welcomePoints={welcomePoints} onPlay={() => requireLogin()} onLogout={logout} />
         )}
         {hasRoulette && tab === 'roue' && (
-          <RoueTab prizes={prizes} prizeIcons={prizeIcons} gameMode={gameMode} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} balance={balance} onSpin={() => spin()} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
+          <RoueTab prizes={prizes} prizeIcons={prizeIcons} prizeIsLose={prizeIsLose} slotEnabled={slotEnabled} slotPointCost={slotPointCost} rouletteEnabled={rouletteEnabled} rouletteSchedule={rouletteSchedule} gameMode={gameMode} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} balance={balance} onSpin={() => spin()} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
         )}
         {tab === 'boutique' && (
           <BoutiqueTab session={session} businessName={businessName} accent={accent} gradient={gradient} balance={balance} loyaltyActive={loyaltyActive} rewards={rewards} busyRewardId={busyRewardId} redeemed={redeemed} error={boutiqueError} rescan={boutiqueRescan} onRedeem={redeem} />
@@ -517,14 +531,25 @@ function CarteTab(props: {
 }
 
 /* ── Games Arcade Tab ─────────────────────────────────────────────────────── */
-function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; gameMode: string; accent: string; gradient: string; phase: Phase; played: boolean; result: SpinResult | null; error: string | null; rescan: string | null; nextPlayAt: string | null; balance: number; onSpin: () => void; onSpinEnd: () => void; onReview: () => void }) {
-  const { prizes, prizeIcons, accent, gradient, phase, played, result, error, rescan, nextPlayAt, balance, onSpin, onSpinEnd, onReview } = props
+
+function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; prizeIsLose?: boolean[]; slotEnabled?: boolean; slotPointCost?: number; rouletteEnabled?: boolean; rouletteSchedule?: any; gameMode: string; accent: string; gradient: string; phase: Phase; played: boolean; result: SpinResult | null; error: string | null; rescan: string | null; nextPlayAt: string | null; balance: number; onSpin: () => void; onSpinEnd: () => void; onReview: () => void }) {
+  const { prizes, prizeIcons, prizeIsLose, slotEnabled, slotPointCost = 10, rouletteEnabled = true, rouletteSchedule, accent, gradient, phase, played, result, error, rescan, nextPlayAt, balance, onSpin, onSpinEnd, onReview } = props
   const [selectedGame, setSelectedGame] = useState<'roulette' | 'slot777' | null>(null)
   const blocked = phase === 'blocked'
   const spinning = phase === 'spinning' && result !== null
 
-  const GAME_COST = 10 // points per play
-  const canPlay = balance >= GAME_COST || played // if already played once in session, show result
+  // Check schedule
+  const now = new Date()
+  const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0')
+  let rAvailable = rouletteEnabled
+  if (rAvailable && rouletteSchedule?.enabled) {
+    if (rouletteSchedule.startTime && timeStr < rouletteSchedule.startTime) rAvailable = false
+    if (rouletteSchedule.endTime && timeStr > rouletteSchedule.endTime) rAvailable = false
+  }
+
+  const isSlot = selectedGame === 'slot777'
+  const GAME_COST = isSlot ? slotPointCost : 10
+  const canPlay = balance >= GAME_COST || played
 
   if (!selectedGame) {
     return (
@@ -550,94 +575,98 @@ function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; gameM
           <div className="shimmer-text" style={{ fontSize: 28, fontWeight: 900, fontFamily: 'Georgia, serif', letterSpacing: '0.05em' }}>
             🎰 Casino Games
           </div>
-          <p style={{ color: MUT, fontSize: 13, marginTop: 4 }}>Utilisez vos points pour jouer</p>
+          <p style={{ color: '#71695F', fontSize: 13, marginTop: 4 }}>Utilisez vos points pour jouer</p>
           {/* Points balance badge */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10,
-            background: balance >= GAME_COST ? 'linear-gradient(135deg, #1a6b1a, #2d9e2d)' : 'linear-gradient(135deg, #8B0000, #c00)',
+            background: 'linear-gradient(135deg, #1a6b1a, #2d9e2d)',
             borderRadius: 20, padding: '6px 16px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
           }}>
             <span style={{ fontSize: 16 }}>🪙</span>
             <span style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{balance} pts</span>
-            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>• {GAME_COST} pts/jeu</span>
           </div>
-          {!canPlay && (
-            <p style={{ color: '#ef4444', fontSize: 12, marginTop: 8, fontWeight: 600 }}>
-              ⚠️ Cumulez encore {GAME_COST - balance} points pour jouer
-            </p>
-          )}
         </div>
 
         {/* Game Cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* Roulette Card */}
-          <button
-            type="button"
-            disabled={!canPlay && !played}
-            onClick={() => setSelectedGame('roulette')}
-            className="game-card"
-            style={{
-              background: 'linear-gradient(145deg, #1a0002, #3d0000)',
-              border: '2px solid #B8860B',
-              borderRadius: 20,
-              padding: '20px 18px',
-              textAlign: 'left',
-              boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,215,0,0.15)',
-              opacity: (!canPlay && !played) ? 0.6 : 1,
-              cursor: (!canPlay && !played) ? 'not-allowed' : 'pointer',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,215,0,0.12) 0%, transparent 70%)' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div className="float-anim" style={{ fontSize: 50, lineHeight: 1, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>🎡</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: '#FFD700', fontWeight: 900, fontSize: 20, fontFamily: 'Georgia, serif', textShadow: '0 0 15px rgba(255,215,0,0.5)' }}>Roulette Casino</div>
-                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4 }}>Tournez la roue — tout le monde gagne !</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                  <span style={{ background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.4)', color: '#FFD700', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>🪙 {GAME_COST} pts</span>
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>Classique</span>
+          {rAvailable ? (
+            <button
+              type="button"
+              disabled={balance < 10 && !played}
+              onClick={() => setSelectedGame('roulette')}
+              className="game-card"
+              style={{
+                background: 'linear-gradient(145deg, #1a0002, #3d0000)',
+                border: '2px solid #B8860B',
+                borderRadius: 20,
+                padding: '20px 18px',
+                textAlign: 'left',
+                boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,215,0,0.15)',
+                opacity: (balance < 10 && !played) ? 0.6 : 1,
+                cursor: (balance < 10 && !played) ? 'not-allowed' : 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,215,0,0.12) 0%, transparent 70%)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div className="float-anim" style={{ fontSize: 50, lineHeight: 1, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>🎡</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: '#FFD700', fontWeight: 900, fontSize: 20, fontFamily: 'Georgia, serif', textShadow: '0 0 15px rgba(255,215,0,0.5)' }}>Roulette Casino</div>
+                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4 }}>Tournez la roue — tout le monde gagne !</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                    <span style={{ background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.4)', color: '#FFD700', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>🪙 10 pts</span>
+                    <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>Classique</span>
+                  </div>
                 </div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,215,0,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
               </div>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,215,0,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          ) : (
+            <div style={{ background: 'rgba(0,0,0,0.05)', borderRadius: 20, padding: '20px 18px', textAlign: 'center' }}>
+              <span style={{ fontSize: 24, filter: 'grayscale(1)', opacity: 0.5 }}>🎡</span>
+              <div style={{ color: '#71695F', fontWeight: 600, fontSize: 14, marginTop: 8 }}>La roulette n'est pas disponible actuellement</div>
             </div>
-          </button>
+          )}
 
           {/* Slot 777 Card */}
-          <button
-            type="button"
-            disabled={!canPlay && !played}
-            onClick={() => setSelectedGame('slot777')}
-            className="game-card"
-            style={{
-              background: 'linear-gradient(145deg, #000d2e, #001a5c)',
-              border: '2px solid #7B68EE',
-              borderRadius: 20,
-              padding: '20px 18px',
-              textAlign: 'left',
-              boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(123,104,238,0.2)',
-              opacity: (!canPlay && !played) ? 0.6 : 1,
-              cursor: (!canPlay && !played) ? 'not-allowed' : 'pointer',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'radial-gradient(circle, rgba(123,104,238,0.15) 0%, transparent 70%)' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div className="float-anim" style={{ fontSize: 50, lineHeight: 1, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))', animationDelay: '0.5s' }}>🎰</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: '#A78BFA', fontWeight: 900, fontSize: 20, fontFamily: 'Georgia, serif', textShadow: '0 0 15px rgba(167,139,250,0.5)' }}>Slot Machine 777</div>
-                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4 }}>3 rouleaux — alignez vos symboles !</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                  <span style={{ background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.4)', color: '#A78BFA', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>🪙 {GAME_COST} pts</span>
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>Jackpot !</span>
+          {slotEnabled && (
+            <button
+              type="button"
+              disabled={balance < slotPointCost && !played}
+              onClick={() => setSelectedGame('slot777')}
+              className="game-card"
+              style={{
+                background: 'linear-gradient(145deg, #000d2e, #001a5c)',
+                border: '2px solid #7B68EE',
+                borderRadius: 20,
+                padding: '20px 18px',
+                textAlign: 'left',
+                boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(123,104,238,0.2)',
+                opacity: (balance < slotPointCost && !played) ? 0.6 : 1,
+                cursor: (balance < slotPointCost && !played) ? 'not-allowed' : 'pointer',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'radial-gradient(circle, rgba(123,104,238,0.15) 0%, transparent 70%)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div className="float-anim" style={{ fontSize: 50, lineHeight: 1, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))', animationDelay: '0.5s' }}>🎰</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: '#A78BFA', fontWeight: 900, fontSize: 20, fontFamily: 'Georgia, serif', textShadow: '0 0 15px rgba(167,139,250,0.5)' }}>Slot Machine 777</div>
+                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4 }}>3 rouleaux — alignez vos symboles !</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                    <span style={{ background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.4)', color: '#A78BFA', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>🪙 {slotPointCost} pts</span>
+                    <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>Jackpot !</span>
+                  </div>
                 </div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(167,139,250,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
               </div>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(167,139,250,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-            </div>
-          </button>
+            </button>
+          )}
+
         </div>
 
         {blocked && <Cooldown accent={accent} until={nextPlayAt} />}
@@ -648,26 +677,18 @@ function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; gameM
   }
 
   // ── Game is selected, show it ──────────────────────────────────────────────
-  const isSlot = selectedGame === 'slot777'
   const gameColor = isSlot ? '#A78BFA' : '#FFD700'
   const gameBg = isSlot ? 'linear-gradient(145deg, #000d2e, #001a5c)' : 'linear-gradient(145deg, #1a0002, #3d0000)'
   const gameName = isSlot ? 'Slot Machine 777' : 'Roulette Casino'
 
   return (
     <div className="pt-3 flex flex-col gap-4">
-      <style jsx>{`
-        @keyframes sm-jackpot { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
-        @keyframes sm-light { 0%,100%{opacity:1} 50%{opacity:0.3} }
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-        .jackpot-pulse { animation: sm-jackpot 0.8s ease-in-out infinite; }
-      `}</style>
-
       {/* Back + Game Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button
           type="button"
           onClick={() => { if (phase !== 'spinning') setSelectedGame(null) }}
-          style={{ background: 'rgba(0,0,0,0.06)', border: 'none', borderRadius: 10, padding: '6px 10px', cursor: 'pointer', color: INK, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600 }}
+          style={{ background: 'rgba(0,0,0,0.06)', border: 'none', borderRadius: 10, padding: '6px 10px', cursor: 'pointer', color: '#1A1410', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600 }}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           Jeux
@@ -675,7 +696,7 @@ function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; gameM
         <div style={{ flex: 1, textAlign: 'center' }}>
           <span style={{ fontWeight: 800, fontSize: 16, color: gameColor, fontFamily: 'Georgia, serif', textShadow: `0 0 10px ${gameColor}44` }}>{gameName}</span>
         </div>
-        <div style={{ background: 'rgba(0,0,0,0.06)', borderRadius: 10, padding: '4px 10px', fontSize: 13, fontWeight: 700, color: INK }}>
+        <div style={{ background: 'rgba(0,0,0,0.06)', borderRadius: 10, padding: '4px 10px', fontSize: 13, fontWeight: 700, color: '#1A1410' }}>
           🪙 {balance}
         </div>
       </div>
@@ -687,6 +708,7 @@ function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; gameM
             <SlotMachine777
               prizes={prizes}
               prizeIcons={prizeIcons}
+              prizeIsLose={prizeIsLose}
               spinning={spinning}
               targetIndex={result ? result.prizeIndex : null}
               onSpinEnd={onSpinEnd}
@@ -719,18 +741,20 @@ function RoueTab(props: { prizes: string[]; prizeIcons: (string | null)[]; gameM
             >
               {phase === 'spinning' ? '⏳ En cours...' : `🎮 Jouer — ${GAME_COST} pts`}
             </button>
-            {rescan !== null ? <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour jouer" /> : error ? <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p> : <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: FAINT_TEXT }}>Vos gains et vos points sont gardés sur votre compte.</p>}
+            {rescan !== null ? <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour jouer" /> : error ? <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p> : <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: '#6E665C' }}>Vos gains et vos points sont gardés sur votre compte.</p>}
           </>
         ) : (
           <div className="space-y-2.5">
             <button type="button" onClick={onSpin} className="block w-full rounded-[18px] py-3.5 text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -14px ${accent}` }}>Rejouer</button>
-            {result && <button type="button" onClick={onReview} className="flex w-full items-center justify-center gap-2 rounded-[18px] bg-white py-3.5 text-sm font-semibold transition active:scale-[0.99]" style={{ color: INK, boxShadow: SOFT }}>🎁 Revoir mon gain</button>}
+            {result && <button type="button" onClick={onReview} className="flex w-full items-center justify-center gap-2 rounded-[18px] bg-white py-3.5 text-sm font-semibold transition active:scale-[0.99]" style={{ color: '#1A1410', boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 12px 30px -20px rgba(0,0,0,0.3)' }}>🎁 Revoir mon gain</button>}
           </div>
         )}
       </div>
     </div>
   )
 }
+
+
 /* ── Boutique ────────────────────────────────────────────────────────────────── */
 function BoutiqueTab(props: { session: DinerSession | null; businessName: string; accent: string; gradient: string; balance: number; loyaltyActive: boolean; rewards: Reward[]; busyRewardId: string | null; redeemed: { code: string; rewardLabel: string } | null; error: string | null; rescan: string | null; onRedeem: (r: Reward) => void }) {
   const { session, businessName, accent, gradient, balance, loyaltyActive, rewards, busyRewardId, redeemed, error, rescan, onRedeem } = props

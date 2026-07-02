@@ -212,6 +212,72 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
         </div>
       </div>
 
+
+      {/* Slot Machine 777 Settings */}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-lg">🎰</span>
+          <h4 className="font-semibold text-zinc-900">Slot Machine 777</h4>
+        </div>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-zinc-700">Activer le Slot Machine</span>
+          <Toggle
+            checked={Boolean(game.config?.slotEnabled)}
+            onChange={(v) => updateGame({ config: { ...game.config, slotEnabled: v } })}
+            id="slot-enabled"
+          />
+        </div>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-zinc-700">Coût par partie (points)</span>
+          <input
+            type="number" min={1} max={500}
+            value={game.config?.slotPointCost ?? 10}
+            onChange={(e) => updateGame({ config: { ...game.config, slotPointCost: Number(e.target.value) } })}
+            className="w-24 rounded-lg border border-zinc-200 px-2 py-1.5 text-sm text-right"
+          />
+        </div>
+        <p className="text-xs text-zinc-400">Les joueurs dépensent ces points pour faire tourner la machine.</p>
+      </div>
+
+      {/* Roulette Schedule */}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-lg">🎡</span>
+          <h4 className="font-semibold text-zinc-900">Disponibilité de la Roulette</h4>
+        </div>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-zinc-700">Toujours disponible</span>
+          <Toggle
+            checked={game.config?.rouletteEnabled !== false}
+            onChange={(v) => updateGame({ config: { ...game.config, rouletteEnabled: v } })}
+            id="roulette-enabled"
+          />
+        </div>
+        {game.config?.rouletteEnabled !== false && (
+          <>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-xs text-zinc-500">Heure de début</label>
+              <input
+                type="time"
+                value={game.config?.rouletteSchedule?.startTime || ''}
+                onChange={(e) => updateGame({ config: { ...game.config, rouletteSchedule: { ...(game.config?.rouletteSchedule || {}), startTime: e.target.value, enabled: true } } })}
+                className="w-32 rounded-lg border border-zinc-200 px-2 py-1.5 text-sm"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="text-xs text-zinc-500">Heure de fin</label>
+              <input
+                type="time"
+                value={game.config?.rouletteSchedule?.endTime || ''}
+                onChange={(e) => updateGame({ config: { ...game.config, rouletteSchedule: { ...(game.config?.rouletteSchedule || {}), endTime: e.target.value, enabled: true } } })}
+                className="w-32 rounded-lg border border-zinc-200 px-2 py-1.5 text-sm"
+              />
+            </div>
+            <p className="mt-2 text-xs text-zinc-400">Laissez vide pour toujours disponible. Ex: 12:00 → 22:00</p>
+          </>
+        )}
+      </div>
+
       {/* Prizes */}
       <div className="rounded-2xl border border-zinc-200 bg-white p-5">
         <div className="flex items-center justify-between gap-3">
@@ -258,6 +324,21 @@ export default function GameManager({ businessId, slug }: { businessId: string; 
                     updatePrize(p.id, { config: nextConfig } as any)
                   }}
                 />
+
+                
+                <div className="flex items-center gap-1.5">
+                  <Toggle
+                    checked={Boolean((p as any).config?.isLose)}
+                    onChange={(v) => {
+                      const nextConfig = { ...((p as any).config || {}), isLose: v }
+                      setPrizes(cur => cur.map(x => x.id === p.id ? { ...x, config: nextConfig } as any : x))
+                      persistPrize(p.id, { config: nextConfig } as any)
+                    }}
+                    id={"prize-lose-"+p.id}
+                    size="sm"
+                  />
+                  <span className="text-xs text-zinc-500 w-12">{(p as any).config?.isLose ? '💀 Perte' : '🎁 Gain'}</span>
+                </div>
 
                 <input
                   value={p.label}

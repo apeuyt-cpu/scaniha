@@ -86,17 +86,28 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
       .maybeSingle()
 
     let prizes: string[] = []
+    let prizeIsLose: boolean[] = []
+    let slotEnabled = false
+    let slotPointCost = 10
+    let rouletteEnabled = true
+    let rouletteSchedule: any = null
     let gates: GameGate[] = []
     let qrGate: QrGateSummary = { enabled: false }
     if (game) {
       const { data: rows } = await supabase
         .from('prizes')
-        .select('label')
+        .select('label, config')
         .eq('game_id', game.id)
         .eq('active', true)
         .order('position', { ascending: true })
         .order('created_at', { ascending: true })
       prizes = (rows || []).map((p: any) => p.label)
+      prizeIsLose = (rows || []).map((p: any) => Boolean(p.config?.isLose))
+      const gConf = (game as any).config || {}
+      slotEnabled = Boolean(gConf.slotEnabled)
+      slotPointCost = Number(gConf.slotPointCost) || 10
+      rouletteEnabled = gConf.rouletteEnabled !== false
+      rouletteSchedule = gConf.rouletteSchedule || null
 
       // Only enabled gates with usable config reach the player (no answers/keys).
       const g = (game as any).config?.gates
@@ -139,6 +150,11 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
       loyaltyActive: loyaltyOn,
       businessName: business.name,
       prizes,
+      prizeIsLose,
+      slotEnabled,
+      slotPointCost,
+      rouletteEnabled,
+      rouletteSchedule,
       welcomePoints: loyaltyOn ? Number(program.welcome_points) || 0 : 0,
       accent,
       gradient,

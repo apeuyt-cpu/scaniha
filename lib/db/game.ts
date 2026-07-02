@@ -94,6 +94,7 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
 
     let prizes: string[] = []
     let prizeIsLose: boolean[] = []
+    let prizeIcons: (string | null)[] = []
     let slotEnabled = false
     let slotPointCost = 10
     let rouletteEnabled = true
@@ -109,9 +110,9 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
         .order('position', { ascending: true })
         .order('created_at', { ascending: true })
       prizes = (rows || []).map((p: any) => p.label)
-      prizeIsLose = (rows || []).map((p: any) => Boolean(gConf.prizeConfig?.[p.id]?.isLose))
-      const prizeIcons = (rows || []).map((p: any) => gConf.prizeConfig?.[p.id]?.icon || null)
       const gConf = (game as any).config || {}
+      prizeIsLose = (rows || []).map((p: any) => Boolean(gConf.prizeConfig?.[p.id]?.isLose))
+      prizeIcons = (rows || []).map((p: any) => gConf.prizeConfig?.[p.id]?.icon || null)
       slotEnabled = Boolean(gConf.slotEnabled)
       slotPointCost = Number(gConf.slotPointCost) || 10
       rouletteEnabled = gConf.rouletteEnabled !== false

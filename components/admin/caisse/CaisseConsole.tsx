@@ -57,6 +57,7 @@ export default function CaisseConsole() {
 /* ── Customer console — identify, credit, redeem (the merged main card) ─── */
 function CustomerConsole() {
   const [phone, setPhone] = useState('')
+  const [countryCode, setCountryCode] = useState('+216')
   const [data, setData] = useState<(CustomerSummary & { phone: string }) | null>(null)
   const [loadingCust, setLoadingCust] = useState(false)
   const [custErr, setCustErr] = useState<string | null>(null)
@@ -78,7 +79,9 @@ function CustomerConsole() {
   }, [])
 
   async function loadCustomer(p?: string) {
-    const ph = (p ?? phone).trim()
+    const raw = (p ?? phone).trim()
+    // If p is passed from QR scan it's already a full number; if typed, prepend country code if no + prefix
+    const ph = raw.startsWith('+') ? raw : countryCode + raw.replace(/^0/, '')
     if (!ph) return
     setLoadingCust(true); setCustErr(null); setMsg(null); setRedeemConfirmId(null)
     const { ok, json } = await caisse('lookup', { phone: ph })
@@ -131,16 +134,40 @@ function CustomerConsole() {
 
       {/* Identify bar — always visible */}
       <div className="mt-4 flex gap-2">
-        <input
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && loadCustomer()}
-          placeholder="+216 …"
-          aria-label="Numéro de téléphone du client"
-          inputMode="tel"
-          autoComplete="off"
-          className={`${inputClass} flex-1`}
-        />
+        <div className="flex flex-1 overflow-hidden rounded-xl border border-zinc-200 bg-white focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100">
+          <select
+            value={countryCode}
+            onChange={(e) => setCountryCode(e.target.value)}
+            aria-label="Indicatif pays"
+            className="border-r border-zinc-200 bg-zinc-50 px-2 py-2.5 text-sm font-medium text-zinc-700 focus:outline-none"
+          >
+            <option value="+216">🇹🇳 +216</option>
+            <option value="+213">🇩🇿 +213</option>
+            <option value="+212">🇲🇦 +212</option>
+            <option value="+218">🇱🇾 +218</option>
+            <option value="+33">🇫🇷 +33</option>
+            <option value="+32">🇧🇪 +32</option>
+            <option value="+41">🇨🇭 +41</option>
+            <option value="+49">🇩🇪 +49</option>
+            <option value="+44">🇬🇧 +44</option>
+            <option value="+1">🇺🇸 +1</option>
+            <option value="+39">🇮🇹 +39</option>
+            <option value="+34">🇪🇸 +34</option>
+            <option value="+971">🇦🇪 +971</option>
+            <option value="+966">🇸🇦 +966</option>
+            <option value="+974">🇶🇦 +974</option>
+          </select>
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && loadCustomer()}
+            placeholder="12 345 678"
+            aria-label="Numéro de téléphone du client"
+            inputMode="tel"
+            autoComplete="off"
+            className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm focus:outline-none"
+          />
+        </div>
         <QrScanButton onScan={onScan} />
         <Button variant="primary" onClick={() => loadCustomer()} disabled={loadingCust || !phone.trim()} className="shrink-0">
           {loadingCust ? '…' : 'Ouvrir'}

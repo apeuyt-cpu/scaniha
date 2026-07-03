@@ -320,6 +320,7 @@ function StatTile({ label, value }: { label: string; value: number }) {
 /* ── Post-spin phone capture popup ────────────────────────────────────── */
 function PhonePrompt({ prizeLabel, onSave, onCancel }: { prizeLabel: string; onSave: (phone: string, name: string) => void | Promise<void>; onCancel: () => void }) {
   const [phone, setPhone] = useState('')
+  const [countryCode, setCountryCode] = useState('+216')
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -334,7 +335,8 @@ function PhonePrompt({ prizeLabel, onSave, onCancel }: { prizeLabel: string; onS
   async function submit() {
     if (phone.replace(/[^\d]/g, '').length < 8) return
     setBusy(true)
-    await onSave(phone.trim(), name.trim())
+    const fullPhone = phone.trim().startsWith('+') ? phone.trim() : countryCode + phone.trim().replace(/^0/, '')
+    await onSave(fullPhone, name.trim())
     setBusy(false)
   }
 
@@ -357,15 +359,26 @@ function PhonePrompt({ prizeLabel, onSave, onCancel }: { prizeLabel: string; onS
         <div className="mt-5 space-y-3 text-left">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-zinc-700">Téléphone du client</label>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && submit()}
-              placeholder="+216 …"
-              inputMode="tel"
-              autoFocus
-              className={inputClass}
-            />
+            <div className="flex overflow-hidden rounded-xl border border-zinc-200 bg-white focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100">
+              <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} aria-label="Indicatif" className="border-r border-zinc-200 bg-zinc-50 px-2 py-2.5 text-sm font-medium text-zinc-700 focus:outline-none">
+                <option value="+216">🇹🇳 +216</option>
+                <option value="+213">🇩🇿 +213</option>
+                <option value="+212">🇲🇦 +212</option>
+                <option value="+218">🇱🇾 +218</option>
+                <option value="+33">🇫🇷 +33</option>
+                <option value="+32">🇧🇪 +32</option>
+                <option value="+41">🇨🇭 +41</option>
+                <option value="+49">🇩🇪 +49</option>
+                <option value="+44">🇬🇧 +44</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+39">🇮🇹 +39</option>
+                <option value="+34">🇪🇸 +34</option>
+                <option value="+971">🇦🇪 +971</option>
+                <option value="+966">🇸🇦 +966</option>
+                <option value="+974">🇶🇦 +974</option>
+              </select>
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder="12 345 678" inputMode="tel" autoFocus className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm focus:outline-none" />
+            </div>
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-zinc-700">Nom <span className="font-normal text-zinc-400">(optionnel)</span></label>
@@ -418,6 +431,7 @@ function LookupCard({
   onSetStatus: (winId: string, status: 'claimed' | 'cancelled' | 'pending') => Promise<boolean>
 }) {
   const [phone, setPhone] = useState('')
+  const [countryCode, setCountryCode] = useState('+216')
   const [busy, setBusy] = useState(false)
   const [wins, setWins] = useState<Win[] | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -425,10 +439,11 @@ function LookupCard({
 
   async function search() {
     if (!phone.trim()) return
+    const fullPhone = phone.trim().startsWith('+') ? phone.trim() : countryCode + phone.trim().replace(/^0/, '')
     setBusy(true)
     setErr(null)
     setWins(null)
-    const { ok, json } = await onLookup(phone.trim())
+    const { ok, json } = await onLookup(fullPhone)
     setBusy(false)
     if (!ok) { setErr(json.error || 'Erreur.'); return }
     setWins(json.wins || [])
@@ -449,14 +464,26 @@ function LookupCard({
       <h2 className="font-bold text-zinc-900">Rechercher un gain</h2>
       <p className="mt-0.5 text-sm text-zinc-500">Entrez le numéro du client pour retrouver ses lots et les remettre.</p>
       <div className="mt-4 flex gap-2">
-        <input
-          value={phone}
-          onChange={(e) => { setPhone(e.target.value); setWins(null); setErr(null) }}
-          onKeyDown={(e) => e.key === 'Enter' && search()}
-          placeholder="+216 …"
-          inputMode="tel"
-          className={inputClass}
-        />
+        <div className="flex flex-1 overflow-hidden rounded-xl border border-zinc-200 bg-white focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100">
+          <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} aria-label="Indicatif" className="border-r border-zinc-200 bg-zinc-50 px-2 py-2.5 text-sm font-medium text-zinc-700 focus:outline-none">
+            <option value="+216">🇹🇳 +216</option>
+            <option value="+213">🇩🇿 +213</option>
+            <option value="+212">🇲🇦 +212</option>
+            <option value="+218">🇱🇾 +218</option>
+            <option value="+33">🇫🇷 +33</option>
+            <option value="+32">🇧🇪 +32</option>
+            <option value="+41">🇨🇭 +41</option>
+            <option value="+49">🇩🇪 +49</option>
+            <option value="+44">🇬🇧 +44</option>
+            <option value="+1">🇺🇸 +1</option>
+            <option value="+39">🇮🇹 +39</option>
+            <option value="+34">🇪🇸 +34</option>
+            <option value="+971">🇦🇪 +971</option>
+            <option value="+966">🇸🇦 +966</option>
+            <option value="+974">🇶🇦 +974</option>
+          </select>
+          <input value={phone} onChange={(e) => { setPhone(e.target.value); setWins(null); setErr(null) }} onKeyDown={(e) => e.key === 'Enter' && search()} placeholder="12 345 678" inputMode="tel" className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm focus:outline-none" />
+        </div>
         <Button variant="neutral" onClick={search} disabled={busy || !phone.trim()} className="shrink-0">
           {busy ? '…' : 'Chercher'}
         </Button>

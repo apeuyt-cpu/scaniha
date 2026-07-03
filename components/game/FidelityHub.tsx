@@ -206,7 +206,10 @@ export default function FidelityHub({
       }
       const w: SpinResult = json
       setResult(w); setNextPlayAt(typeof json.nextPlayAt === 'string' ? json.nextPlayAt : null)
-      try { localStorage.setItem(`scaniha_win_${slug}`, JSON.stringify(w)) } catch {}
+      // Only persist win to localStorage if it's NOT a lose — so page refresh doesn't re-show the lose popup
+      if (!json.isLose) {
+        try { localStorage.setItem(`scaniha_win_${slug}`, JSON.stringify(w)) } catch {}
+      }
     } catch { setPhase('ready'); setError('Connexion impossible. Vérifiez votre réseau.') }
   }
 
@@ -352,7 +355,7 @@ export default function FidelityHub({
           <CarteTab session={session} businessName={businessName} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} welcomePoints={welcomePoints} onPlay={() => requireLogin()} onLogout={logout} />
         )}
         {hasRoulette && tab === 'roue' && (
-          <RoueTab prizes={prizes} prizeIcons={prizeIcons} prizeIsLose={prizeIsLose} slotEnabled={slotEnabled} slotPointCost={slotPointCost} rouletteEnabled={rouletteEnabled} rouletteSchedule={rouletteSchedule} gameMode={gameMode} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} balance={balance} onSpin={(gm) => spin(undefined, undefined, gm || gameMode)} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
+          <RoueTab prizes={prizes} prizeIcons={prizeIcons} prizeIsLose={prizeIsLose} slotEnabled={slotEnabled} slotPointCost={slotPointCost} rouletteEnabled={rouletteEnabled} rouletteSchedule={rouletteSchedule} gameMode={gameMode} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} balance={balance} onSpin={(gm) => spin(undefined, undefined, gm || gameMode)} onSpinEnd={() => { if (result) { const isLoseResult = Boolean(prizeIsLose[result.prizeIndex]); if (!isLoseResult) setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
         )}
         {tab === 'boutique' && (
           <BoutiqueTab session={session} businessName={businessName} accent={accent} gradient={gradient} balance={balance} loyaltyActive={loyaltyActive} rewards={rewards} busyRewardId={busyRewardId} redeemed={redeemed} error={boutiqueError} rescan={boutiqueRescan} onRedeem={redeem} />

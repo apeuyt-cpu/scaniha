@@ -107,12 +107,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ success: false, error: e.msg, nextPlayAt: result.nextPlayAt ?? null }, { status: e.status })
   }
 
+  // Check if the won prize is a "perte" (lose) prize — suppress ticket code
+  const gameCfg = await loadGameConfig(slug)
+  const isLosePrize = Boolean(gameCfg.prizeIsLose?.[result.prizeIndex ?? -1])
+
   return NextResponse.json({
     success: true,
     prizeIndex: result.prizeIndex,
     prizeLabel: result.prizeLabel,
-    code: result.code,
-    expiresAt: result.expiresAt,
+    isLose: isLosePrize,
+    // No code or expiry for a losing spin — player lost, no ticket needed
+    code: isLosePrize ? null : result.code,
+    expiresAt: isLosePrize ? null : result.expiresAt,
     pointsEarned: result.pointsEarned,
     balance: result.balance,
     nextPlayAt: result.nextPlayAt ?? null,

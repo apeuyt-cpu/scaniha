@@ -6,6 +6,13 @@ import { generateSlug } from '@/lib/utils/slug'
 import { useLocale } from '@/lib/i18n/LocaleContext'
 import { PAYMENT_PLANS } from '@/lib/payment-config'
 import { seedDemoMenu } from '@/lib/demo-menu-seed'
+import { ISO_CURRENCIES } from '@/lib/currency/iso-currencies'
+
+const COMMON_COUNTRIES = [
+  'Tunisia', 'France', 'United States', 'United Kingdom', 'Canada', 
+  'Algeria', 'Morocco', 'Egypt', 'Saudi Arabia', 'United Arab Emirates', 
+  'Qatar', 'Kuwait', 'Bahrain', 'Oman'
+]
 
 const MIN_PASSWORD_LENGTH = 8
 
@@ -21,6 +28,8 @@ export default function SignupForm({ plan }: { plan?: string }) {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [businessName, setBusinessName] = useState('')
+  const [country, setCountry] = useState('Tunisia')
+  const [currency, setCurrency] = useState('TND')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -295,6 +304,8 @@ export default function SignupForm({ plan }: { plan?: string }) {
             expires_at: null,
             status: 'pending',
             theme_id: 'design12',
+            country,
+            currency,
             design_settings: { loyaltyEnabled: false },
           })
           .select()
@@ -322,6 +333,8 @@ export default function SignupForm({ plan }: { plan?: string }) {
             expires_at: expirationDate.toISOString(),
             status: 'active',
             theme_id: 'design12',
+            country,
+            currency,
             design_settings: { loyaltyEnabled: false },
           })
           .select()
@@ -540,6 +553,40 @@ export default function SignupForm({ plan }: { plan?: string }) {
             onChange={(e) => { setBusinessName(e.target.value); if (fieldErrors.businessName) setFieldErrors(prev => ({ ...prev, businessName: '' })) }}
           />
           {fieldErrors.businessName && <p id="business-error" className="mt-1.5 text-sm text-red-600">{fieldErrors.businessName}</p>}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="country" className="block text-sm font-medium text-zinc-700 mb-2">
+              {t('auth.country') || 'Pays'} <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className={inputClass('country')}
+            >
+              {COMMON_COUNTRIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="currency" className="block text-sm font-medium text-zinc-700 mb-2">
+              {t('auth.currency') || 'Devise'} <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="currency"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className={inputClass('currency')}
+              dir="ltr"
+            >
+              {ISO_CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>{c.code} - {c.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

@@ -83,6 +83,8 @@ export interface Database {
           wheel_enabled: boolean
           wheel_visible: boolean
           design_settings: Json | null
+          country: string | null
+          currency: string | null
           created_at: string
         }
         Insert: {
@@ -103,6 +105,8 @@ export interface Database {
           wheel_enabled?: boolean
           wheel_visible?: boolean
           design_settings?: Json | null
+          country?: string | null
+          currency?: string | null
           created_at?: string
         }
         Update: {
@@ -123,6 +127,8 @@ export interface Database {
           wheel_enabled?: boolean
           wheel_visible?: boolean
           design_settings?: Json | null
+          country?: string | null
+          currency?: string | null
           created_at?: string
         }
       }

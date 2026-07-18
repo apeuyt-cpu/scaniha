@@ -1,4 +1,4 @@
-export const SUPPORTED_LOCALES = ['fr'] as const
+export const SUPPORTED_LOCALES = ['fr', 'en', 'ar'] as const
 export type Locale = (typeof SUPPORTED_LOCALES)[number]
 
 export const DEFAULT_LOCALE: Locale = 'fr'
@@ -14,6 +14,8 @@ export interface LocaleConfig {
 
 export const LOCALE_CONFIGS: Record<Locale, LocaleConfig> = {
   fr: { code: 'fr', label: 'Français', dir: 'ltr', dateFormat: 'DD/MM/YYYY', timeFormat: 'HH:mm', flag: '🇫🇷' },
+  en: { code: 'en', label: 'English', dir: 'ltr', dateFormat: 'MM/DD/YYYY', timeFormat: 'h:mm A', flag: '🇬🇧' },
+  ar: { code: 'ar', label: 'العربية', dir: 'rtl', dateFormat: 'DD/MM/YYYY', timeFormat: 'HH:mm', flag: '🇹🇳' },
 }
 
 export function getLocaleFromPath(_pathname: string): Locale {

@@ -1,8 +1,16 @@
 'use client'
 
-import React, { createContext, useContext, useCallback } from 'react'
+import React, { createContext, useContext, useCallback, useState, useEffect } from 'react'
 import { DEFAULT_LOCALE, LOCALE_CONFIGS, type Locale } from './config'
 import frTranslations from '../../public/locales/fr/common.json'
+import enTranslations from '../../public/locales/en/common.json'
+import arTranslations from '../../public/locales/ar/common.json'
+
+const ALL_TRANSLATIONS: Record<Locale, Translations> = {
+  fr: frTranslations as Translations,
+  en: enTranslations as Translations,
+  ar: arTranslations as Translations,
+}
 
 interface Translations {
   [key: string]: any
@@ -33,36 +41,62 @@ function interpolate(text: string, params?: Record<string, string | number>): st
   )
 }
 
-// The app is French-only, so the translations are bundled and available
-// synchronously on both the server and the client — no runtime fetch, no
-// flash of raw translation keys.
-const translations = frTranslations as Translations
+// Initial synchronous state for SSR / default
+const initialTranslations = ALL_TRANSLATIONS[DEFAULT_LOCALE]
 
-function translate(key: string, params?: Record<string, string | number>): string {
-  return interpolate(resolveNested(translations, key), params)
+function translate(key: string, localeTranslations: Translations, params?: Record<string, string | number>): string {
+  return interpolate(resolveNested(localeTranslations, key), params)
 }
 
 const LocaleContext = createContext<LocaleContextType>({
   locale: DEFAULT_LOCALE,
   dir: LOCALE_CONFIGS[DEFAULT_LOCALE].dir,
-  translations,
+  translations: initialTranslations,
   setLocale: () => {},
-  t: translate,
+  t: (key, params) => translate(key, initialTranslations, params),
 })
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const t = useCallback(translate, [])
+  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE)
+
+  // On client mount, check localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('scaniha-locale') as Locale
+      if (stored && ALL_TRANSLATIONS[stored]) {
+        setLocaleState(stored)
+      }
+    } catch (e) {}
+  }, [])
+
+  const setLocale = useCallback((newLocale: Locale) => {
+    setLocaleState(newLocale)
+    try {
+      localStorage.setItem('scaniha-locale', newLocale)
+      document.documentElement.lang = newLocale
+      document.documentElement.dir = LOCALE_CONFIGS[newLocale].dir
+    } catch (e) {}
+  }, [])
+
+  const currentTranslations = ALL_TRANSLATIONS[locale] || ALL_TRANSLATIONS[DEFAULT_LOCALE]
+
+  const t = useCallback((key: string, params?: Record<string, string | number>) => {
+    return translate(key, currentTranslations, params)
+  }, [currentTranslations])
+
   return (
     <LocaleContext.Provider
       value={{
-        locale: DEFAULT_LOCALE,
-        dir: LOCALE_CONFIGS[DEFAULT_LOCALE].dir,
-        translations,
-        setLocale: () => {},
+        locale,
+        dir: LOCALE_CONFIGS[locale].dir,
+        translations: currentTranslations,
+        setLocale,
         t,
       }}
     >
-      {children}
+      <div dir={LOCALE_CONFIGS[locale].dir}>
+        {children}
+      </div>
     </LocaleContext.Provider>
   )
 }

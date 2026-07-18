@@ -15,30 +15,41 @@ interface CurrencyContextType {
   availableCurrencies: CurrencyInfo[]
 }
 
-// App is TND-only.
-const FIXED_CURRENCY = 'TND'
-const TND_ONLY = ISO_CURRENCIES.filter((c) => c.code === FIXED_CURRENCY)
+// Default to TND but allow dynamic switching
+const DEFAULT_CURRENCY = 'TND'
 
 const CurrencyContext = createContext<CurrencyContextType>({
-  currency: getCurrencyInfo(FIXED_CURRENCY),
-  currencyCode: FIXED_CURRENCY,
+  currency: getCurrencyInfo(DEFAULT_CURRENCY),
+  currencyCode: DEFAULT_CURRENCY,
   setCurrency: () => {},
   formatPrice: () => '',
   convertFromTnd: (a) => a,
-  availableCurrencies: TND_ONLY,
+  availableCurrencies: ISO_CURRENCIES,
 })
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   const { locale } = useLocale()
-  const [currencyCode] = useState<string>(FIXED_CURRENCY)
+  const [currencyCode, setCurrencyCode] = useState<string>(DEFAULT_CURRENCY)
   const [dbLoaded, setDbLoaded] = useState(false)
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem('scaniha-currency')
+      if (stored && ISO_CURRENCIES.some((c) => c.code === stored)) {
+        setCurrencyCode(stored)
+      }
+    } catch (e) {}
     setDbLoaded(true)
   }, [])
 
-  // Currency is fixed to TND; selector is a no-op kept for API compatibility.
-  const setCurrency = useCallback((_code: string) => {}, [])
+  const setCurrency = useCallback((code: string) => {
+    if (ISO_CURRENCIES.some((c) => c.code === code)) {
+      setCurrencyCode(code)
+      try {
+        localStorage.setItem('scaniha-currency', code)
+      } catch (e) {}
+    }
+  }, [])
 
   const formatPrice = useCallback(
     (amount: number | null | undefined) => {
@@ -66,7 +77,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
         setCurrency,
         formatPrice,
         convertFromTnd,
-        availableCurrencies: TND_ONLY,
+        availableCurrencies: ISO_CURRENCIES,
       }}
     >
       {children}

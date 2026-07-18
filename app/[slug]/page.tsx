@@ -15,6 +15,7 @@ import ServiceCallButton from '@/components/order/ServiceCallButton'
 import CheckoutSheet from '@/components/order/CheckoutSheet'
 import LogView from '@/components/LogView'
 import QrScanMint from '@/components/game/QrScanMint'
+import { CurrencyProvider } from '@/lib/i18n/CurrencyContext'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Metadata, Viewport } from 'next'
 

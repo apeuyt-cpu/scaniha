@@ -207,7 +207,9 @@
     "required": "Ce champ est requis",
     "errorGeneric": "Une erreur est survenue. Veuillez réessayer.",
     "menuCurrency": "Devise du menu",
-    "menuCurrencyDesc": "Choisissez la devise pour les prix de votre menu"
+    "menuCurrencyDesc": "Choisissez la devise pour les prix de votre menu",
+    "country": "Pays",
+    "currency": "Devise"
   },
   "common": {
     "loading": "Chargement...",

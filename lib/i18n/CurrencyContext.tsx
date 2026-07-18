@@ -15,42 +15,38 @@ interface CurrencyContextType {
   availableCurrencies: CurrencyInfo[]
 }
 
-// Default to TND but allow dynamic switching
-const DEFAULT_CURRENCY = 'TND'
+// App is TND-only.
+const FIXED_CURRENCY = 'TND'
+const TND_ONLY = ISO_CURRENCIES.filter((c) => c.code === FIXED_CURRENCY)
 
 const CurrencyContext = createContext<CurrencyContextType>({
-  currency: getCurrencyInfo(DEFAULT_CURRENCY),
-  currencyCode: DEFAULT_CURRENCY,
+  currency: getCurrencyInfo(FIXED_CURRENCY),
+  currencyCode: FIXED_CURRENCY,
   setCurrency: () => {},
   formatPrice: () => '',
   convertFromTnd: (a) => a,
-  availableCurrencies: ISO_CURRENCIES,
+  availableCurrencies: TND_ONLY,
 })
 
 export function CurrencyProvider({ children, initialCurrency }: { children: React.ReactNode, initialCurrency?: string }) {
   const { locale } = useLocale()
-  const [currencyCode, setCurrencyCode] = useState<string>(initialCurrency || DEFAULT_CURRENCY)
+  
+  // Default to initialCurrency if provided and valid, otherwise TND
+  const startCurrency = initialCurrency && ISO_CURRENCIES.find(c => c.code === initialCurrency)
+    ? initialCurrency
+    : 'TND'
+    
+  const [currencyCode, setCurrencyCode] = useState<string>(startCurrency)
   const [dbLoaded, setDbLoaded] = useState(false)
 
   useEffect(() => {
-    if (!initialCurrency) {
-      try {
-        const stored = localStorage.getItem('scaniha-currency')
-        if (stored && ISO_CURRENCIES.some((c) => c.code === stored)) {
-          setCurrencyCode(stored)
-        }
-      } catch (e) {}
-    }
+    // If there's a locally saved currency preference that differs, we could load it here
+    // But since the menu currency is dictated by the business settings, we stick to initialCurrency.
     setDbLoaded(true)
-  }, [initialCurrency])
+  }, [])
 
   const setCurrency = useCallback((code: string) => {
-    if (ISO_CURRENCIES.some((c) => c.code === code)) {
-      setCurrencyCode(code)
-      try {
-        localStorage.setItem('scaniha-currency', code)
-      } catch (e) {}
-    }
+    setCurrencyCode(code)
   }, [])
 
   const formatPrice = useCallback(

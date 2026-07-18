@@ -64,7 +64,7 @@ export default async function PublicMenuPage({
   // (Skips menu loading + menu SEO entirely; legacy cafés never hit this.)
   if (!isPaused && resolveMode(business) === 'fidelity') {
     return (
-      <CurrencyProvider initialCurrency={business.currency || undefined}>
+      <CurrencyProvider initialCurrency={(business as any).currency || undefined}>
         <FidelityHub
           slug={business.slug}
           businessName={business.name}
@@ -150,7 +150,7 @@ export default async function PublicMenuPage({
   }
 
   return (
-    <CurrencyProvider initialCurrency={business.currency || undefined}>
+    <CurrencyProvider initialCurrency={(business as any).currency || undefined}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

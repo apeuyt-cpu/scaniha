@@ -15,7 +15,7 @@ import ServiceCallButton from '@/components/order/ServiceCallButton'
 import CheckoutSheet from '@/components/order/CheckoutSheet'
 import LogView from '@/components/LogView'
 import QrScanMint from '@/components/game/QrScanMint'
-import SetBusinessCurrency from '@/components/menu/SetBusinessCurrency'
+import { CurrencyProvider } from '@/lib/i18n/CurrencyContext'
 import type { Database } from '@/lib/supabase/database.types'
 import type { Metadata, Viewport } from 'next'
 
@@ -64,8 +64,7 @@ export default async function PublicMenuPage({
   // (Skips menu loading + menu SEO entirely; legacy cafés never hit this.)
   if (!isPaused && resolveMode(business) === 'fidelity') {
     return (
-      <>
-        <SetBusinessCurrency currency={business.currency} />
+      <CurrencyProvider initialCurrency={business.currency}>
         <FidelityHub
           slug={business.slug}
           businessName={business.name}
@@ -76,7 +75,7 @@ export default async function PublicMenuPage({
         <LogView businessId={business.id} slug={business.slug} />
         {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
         <QrScanMint slug={business.slug} />
-      </>
+      </CurrencyProvider>
     )
   }
 
@@ -142,7 +141,7 @@ export default async function PublicMenuPage({
             offers: item.price ? {
               '@type': 'Offer',
               price: item.price,
-              priceCurrency: 'TND',
+              priceCurrency: business.currency || 'TND',
             } : undefined,
           })),
         })),
@@ -151,7 +150,7 @@ export default async function PublicMenuPage({
   }
 
   return (
-    <>
+    <CurrencyProvider initialCurrency={business.currency}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -165,7 +164,6 @@ export default async function PublicMenuPage({
             .replace(/\u2029/g, '\\u2029'),
         }}
       />
-      <SetBusinessCurrency currency={business.currency} />
       {/* Owner-set time-bound announcement, above everything. */}
       {!isPaused && isPromoLive(business) && (
         <PromoBanner slug={business.slug} message={promoConfig(business).message} emoji={promoConfig(business).emoji} accent={businessAccent(business)} />
@@ -197,7 +195,7 @@ export default async function PublicMenuPage({
       <LogView businessId={business.id} slug={business.slug} />
       {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
       <QrScanMint slug={business.slug} />
-    </>
+    </CurrencyProvider>
   )
 }
 

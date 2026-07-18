@@ -27,20 +27,22 @@ const CurrencyContext = createContext<CurrencyContextType>({
   availableCurrencies: ISO_CURRENCIES,
 })
 
-export function CurrencyProvider({ children }: { children: React.ReactNode }) {
+export function CurrencyProvider({ children, initialCurrency }: { children: React.ReactNode, initialCurrency?: string }) {
   const { locale } = useLocale()
-  const [currencyCode, setCurrencyCode] = useState<string>(DEFAULT_CURRENCY)
+  const [currencyCode, setCurrencyCode] = useState<string>(initialCurrency || DEFAULT_CURRENCY)
   const [dbLoaded, setDbLoaded] = useState(false)
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('scaniha-currency')
-      if (stored && ISO_CURRENCIES.some((c) => c.code === stored)) {
-        setCurrencyCode(stored)
-      }
-    } catch (e) {}
+    if (!initialCurrency) {
+      try {
+        const stored = localStorage.getItem('scaniha-currency')
+        if (stored && ISO_CURRENCIES.some((c) => c.code === stored)) {
+          setCurrencyCode(stored)
+        }
+      } catch (e) {}
+    }
     setDbLoaded(true)
-  }, [])
+  }, [initialCurrency])
 
   const setCurrency = useCallback((code: string) => {
     if (ISO_CURRENCIES.some((c) => c.code === code)) {

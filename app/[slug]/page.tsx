@@ -194,7 +194,7 @@ export default async function PublicMenuPage({
       <LogView businessId={business.id} slug={business.slug} />
       {/* Mints the QR scan-session cookie when opened via `/{slug}?s=<key>`. */}
       <QrScanMint slug={business.slug} />
-    </>
+    </CurrencyProvider>
   )
 }
 

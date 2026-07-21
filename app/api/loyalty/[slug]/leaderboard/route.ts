@@ -31,8 +31,8 @@ export async function GET(req: NextRequest, context: any) {
     }
 
     // 2. Fetch the leaderboard via RPC
-    const { data, error } = await supabase.rpc('get_loyalty_leaderboard', {
-      p_business: business.id,
+    const { data, error } = await (supabase as any).rpc('get_loyalty_leaderboard', {
+      p_business: (business as any).id,
       p_limit: 50
     })
 

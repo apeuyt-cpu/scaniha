@@ -68,7 +68,7 @@ export async function getAuthUser() {
  * Get user profile with role information
  * Redirects to login if profile not found
  */
-export async function getUserProfile(userId: string, supabase: SupabaseClientType): Promise<Profile> {
+export async function getUserProfile(userId: string, supabase: SupabaseClientType) {
   let lastError: any = null
   for (let attempt = 0; attempt < 3; attempt++) {
     const { data: profile, error } = await supabase
@@ -114,14 +114,8 @@ export function getDashboardUrl(role: UserRole | null): string {
  */
 export async function requireAuth(): Promise<AuthResult> {
   const { user, supabase } = await getAuthUser()
-  const profile: Profile = await getUserProfile(user.id, supabase)
-
-  // Block unverified users from accessing protected routes
-  if (!profile.email_verified) {
-    const email = user.email || profile.email || ''
-    redirect(`/verify-email?email=${encodeURIComponent(email)}`)
-  }
-
+  const profile = await getUserProfile(user.id, supabase)
+  
   return { user, supabase, profile }
 }
 

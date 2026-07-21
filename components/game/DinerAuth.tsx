@@ -1,11 +1,13 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import PhoneInput from '@/components/ui/PhoneInput'
 
 export interface DinerSession {
   token: string
   phone: string
   name: string | null
+  age?: number | null
 }
 
 const phoneValid = (p: string) => p.replace(/[^\d]/g, '').length >= 8
@@ -180,7 +182,7 @@ export default function DinerAuth({
           {mode === 'signup' && (
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Votre prénom (optionnel)" aria-label="Prénom (optionnel)" autoComplete="given-name" disabled={busy} className={input} style={inputStyle} />
           )}
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Numéro de téléphone" aria-label="Numéro de téléphone" inputMode="tel" autoComplete="tel" disabled={busy} aria-invalid={!!error} aria-describedby={error ? 'auth-error' : undefined} className={input} style={inputStyle} />
+          <PhoneInput id="phone" value={phone} onChange={(val) => setPhone(val)} error={error ? error : undefined} onBlurValidate={() => {}} />
         </div>
 
         <p className="mb-3 mt-5 text-center text-xs font-semibold uppercase tracking-wide" style={{ color: MUT }}>

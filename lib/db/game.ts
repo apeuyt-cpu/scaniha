@@ -47,11 +47,18 @@ export function businessGradient(business: any): string {
   return `linear-gradient(135deg, ${c}, ${c})`
 }
 
+
 export interface GameConfig {
   active: boolean
   loyaltyActive: boolean
   businessName: string
   prizes: string[]
+  prizeIsLose?: boolean[]
+  prizeIcons?: (string | null)[]
+  slotEnabled?: boolean
+  slotPointCost?: number
+  rouletteEnabled?: boolean
+  rouletteSchedule?: any
   /** Welcome bonus credited at signup (0 when loyalty is off) — shown as the join hook. */
   welcomePoints: number
   accent: string
@@ -64,7 +71,7 @@ export interface GameConfig {
 
 /** Public wheel config for /[slug]/jeu and the menu FAB. Tolerates missing tables. */
 export async function loadGameConfig(slug: string): Promise<GameConfig> {
-  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], welcomePoints: 0, accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', gates: [], qrGate: { enabled: false } }
+  const off: GameConfig = { active: false, loyaltyActive: false, businessName: '', prizes: [], prizeIsLose: [], prizeIcons: [], slotEnabled: false, slotPointCost: 10, rouletteEnabled: true, rouletteSchedule: null, welcomePoints: 0, accent: FALLBACK_ACCENT, gradient: 'linear-gradient(135deg, #F47B20, #F5B82E)', gates: [], qrGate: { enabled: false } }
   try {
     const supabase: any = await createServiceRoleClient()
     const { data: business } = await supabase
@@ -86,17 +93,30 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
       .maybeSingle()
 
     let prizes: string[] = []
+    let prizeIsLose: boolean[] = []
+    let prizeIcons: (string | null)[] = []
+    let slotEnabled = false
+    let slotPointCost = 10
+    let rouletteEnabled = true
+    let rouletteSchedule: any = null
     let gates: GameGate[] = []
     let qrGate: QrGateSummary = { enabled: false }
     if (game) {
       const { data: rows } = await supabase
         .from('prizes')
-        .select('label')
+        .select('id, label')
         .eq('game_id', game.id)
         .eq('active', true)
         .order('position', { ascending: true })
         .order('created_at', { ascending: true })
       prizes = (rows || []).map((p: any) => p.label)
+      const gConf = (game as any).config || {}
+      prizeIsLose = (rows || []).map((p: any) => Boolean(gConf.prizeConfig?.[p.id]?.isLose))
+      prizeIcons = (rows || []).map((p: any) => gConf.prizeConfig?.[p.id]?.icon || null)
+      slotEnabled = Boolean(gConf.slotEnabled)
+      slotPointCost = Number(gConf.slotPointCost) || 10
+      rouletteEnabled = gConf.rouletteEnabled !== false
+      rouletteSchedule = gConf.rouletteSchedule || null
 
       // Only enabled gates with usable config reach the player (no answers/keys).
       const g = (game as any).config?.gates
@@ -139,6 +159,12 @@ export async function loadGameConfig(slug: string): Promise<GameConfig> {
       loyaltyActive: loyaltyOn,
       businessName: business.name,
       prizes,
+      prizeIsLose,
+      prizeIcons,
+      slotEnabled,
+      slotPointCost,
+      rouletteEnabled,
+      rouletteSchedule,
       welcomePoints: loyaltyOn ? Number(program.welcome_points) || 0 : 0,
       accent,
       gradient,

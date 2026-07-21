@@ -11,10 +11,10 @@ import { isMissingRpc } from '@/lib/db/game'
 import { normPhone } from '@/lib/db/loyalty'
 
 export type AccountResult =
-  | { ok: true; token: string; phone: string; name: string | null }
+  | { ok: true; token: string; phone: string; name: string | null; age: number | null }
   | { ok: false; error: string; suggestLogin?: boolean }
 
-export type SessionResult = { ok: true; phone: string; name: string | null } | { ok: false }
+export type SessionResult = { ok: true; phone: string; name: string | null; age: number | null } | { ok: false }
 
 /** Map an RPC error key to a French message for the diner. */
 const SIGNUP_MSG: Record<string, string> = {
@@ -27,6 +27,22 @@ const LOGIN_MSG: Record<string, string> = {
   invalid: 'Numéro ou code incorrect.',
   locked: 'Trop de tentatives. Réessayez dans quelques minutes.',
   no_business: 'Établissement introuvable.',
+}
+
+/** Update the global diner profile (name, age) */
+export async function updateDinerProfile(phone: string, name: string | null, age: number | null): Promise<boolean> {
+  try {
+    const supabase: any = await createServiceRoleClient()
+    const { error } = await supabase.from('diner_accounts').update({ name, age }).eq('phone', phone)
+    if (error) {
+      console.error('updateDinerProfile db error:', error.message)
+      return false
+    }
+    return true
+  } catch (e: any) {
+    console.error('updateDinerProfile:', e?.message)
+    return false
+  }
 }
 
 /**
@@ -47,7 +63,7 @@ export async function dinerSignup(phoneRaw: string, password: string, name?: str
       return { ok: false, error: 'Une erreur est survenue. Réessayez.' }
     }
     if (!data?.ok) return { ok: false, error: SIGNUP_MSG[data?.error] || 'Inscription impossible.', ...(data?.error === 'exists' ? { suggestLogin: true } : {}) }
-    return { ok: true, token: data.token, phone: data.phone, name: data.name ?? null }
+    return { ok: true, token: data.token, phone: data.phone, name: data.name ?? null, age: data.age ?? null }
   } catch (e: any) {
     console.error('dinerSignup:', e?.message)
     return { ok: false, error: 'Connexion impossible. Vérifiez votre réseau.' }
@@ -67,23 +83,23 @@ export async function dinerLogin(phoneRaw: string, password: string): Promise<Ac
       return { ok: false, error: 'Une erreur est survenue. Réessayez.' }
     }
     if (!data?.ok) return { ok: false, error: LOGIN_MSG[data?.error] || LOGIN_MSG.invalid }
-    return { ok: true, token: data.token, phone: data.phone, name: data.name ?? null }
+    return { ok: true, token: data.token, phone: data.phone, name: data.name ?? null, age: data.age ?? null }
   } catch (e: any) {
     console.error('dinerLogin:', e?.message)
     return { ok: false, error: 'Connexion impossible. Vérifiez votre réseau.' }
   }
 }
 
-/** Validate a session token → the account's phone/name, or {ok:false}. */
+/** Validate a session token → the account's phone/name/age, or {ok:false}. */
 export async function dinerSession(token: string | null | undefined): Promise<SessionResult> {
   if (!token || typeof token !== 'string') return { ok: false }
   try {
     const supabase: any = await createServiceRoleClient()
     const { data, error } = await supabase.rpc('diner_session', { p_token: token })
     if (error || !data?.ok) return { ok: false }
-    // Global identity — the token resolves the customer's phone/name regardless of
+    // Global identity — the token resolves the customer's phone/name/age regardless of
     // café. Per-café data access is scoped by the slug's business at each route.
-    return { ok: true, phone: data.phone, name: data.name ?? null }
+    return { ok: true, phone: data.phone, name: data.name ?? null, age: data.age ?? null }
   } catch {
     return { ok: false }
   }

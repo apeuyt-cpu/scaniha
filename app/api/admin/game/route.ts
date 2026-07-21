@@ -5,21 +5,49 @@ import { DEFAULT_PRIZES } from '@/lib/game'
 import { newQrKey } from '@/lib/qr-session'
 
 /**
- * GET → the owner's roulette game id + config (+ slug). Used by the QR-gate
- * admin panel and the Partage page to read/embed the current qrKey.
+ * GET → the owner's roulette game (full row) + prizes + today's stats (+ slug).
+ * Read server-side with the service role because the game tables are RLS-gated:
+ * a super-admin impersonating an owner (or staff) can't see the owner's rows via
+ * their own browser session, which used to make the UI think no game existed and
+ * then try to re-create it (→ UNIQUE(business_id,type) violation → "Erreur serveur.").
+ * Used by useRoueGame (config screens) and, for slug/config.qrGate only, by the
+ * QR-gate admin panel and the Partage page — adding fields is backward-compatible.
  * page.fidelite (every staff who can see Partage also has Fidélité in presets).
  */
 export const GET = withStaff('page.fidelite', async (_req, { business }) => {
   const supabase: any = await createServiceRoleClient()
   const { data } = await supabase
     .from('games')
-    .select('id, config')
+    .select('*')
     .eq('business_id', business.id)
     .eq('type', 'roulette')
     .order('created_at', { ascending: true })
     .limit(1)
-  const game = data?.[0]
-  return NextResponse.json({ slug: business.slug, gameId: game?.id || null, config: game?.config || {} })
+  const game = data?.[0] || null
+
+  let prizes: any[] = []
+  let stats = { plays: 0, pending: 0, redeemed: 0 }
+  if (game) {
+    const midnight = new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
+    const now = new Date().toISOString()
+    const [{ data: p }, playsR, pendingR, redeemedR] = await Promise.all([
+      supabase.from('prizes').select('*').eq('game_id', game.id).order('position').order('created_at'),
+      supabase.from('plays').select('id', { count: 'exact', head: true }).eq('game_id', game.id).gte('created_at', midnight),
+      supabase.from('wins').select('id', { count: 'exact', head: true }).eq('business_id', business.id).eq('status', 'pending').gt('expires_at', now),
+      supabase.from('wins').select('id', { count: 'exact', head: true }).eq('business_id', business.id).eq('status', 'redeemed').gte('redeemed_at', midnight),
+    ])
+    prizes = p || []
+    stats = { plays: playsR.count ?? 0, pending: pendingR.count ?? 0, redeemed: redeemedR.count ?? 0 }
+  }
+
+  return NextResponse.json({
+    slug: business.slug,
+    gameId: game?.id || null,
+    config: game?.config || {},
+    game,
+    prizes,
+    stats,
+  })
 })
 
 /**
@@ -64,6 +92,17 @@ export const POST = withStaff('loyalty.manage', async (request, { business }) =>
     }
 
     if (action === 'createGame') {
+      // Idempotent: if a roulette game already exists for this business, return it
+      // instead of hitting the UNIQUE(business_id, type) constraint. The caller may
+      // not have seen it (RLS-gated browser read while impersonating / as staff).
+      const { data: existing } = await supabase
+        .from('games')
+        .select('id')
+        .eq('business_id', business.id)
+        .eq('type', 'roulette')
+        .maybeSingle()
+      if (existing) return NextResponse.json({ ok: true, gameId: existing.id })
+
       const { data: g, error: gErr } = await supabase
         .from('games')
         .insert({ business_id: business.id, type: 'roulette', active: false })

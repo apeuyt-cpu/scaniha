@@ -59,11 +59,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   if (action === 'me') {
     const r = await dinerSession(typeof body.token === 'string' ? body.token : null)
     if (!r.ok) return NextResponse.json({ ok: false }, { status: 401 })
-    return NextResponse.json({ ok: true, phone: r.phone, name: r.name }, { status: 200 })
+    return NextResponse.json({ ok: true, phone: r.phone, name: r.name, age: r.age }, { status: 200 })
   }
   if (action === 'logout') {
     await dinerLogout(typeof body.token === 'string' ? body.token : null)
     return NextResponse.json({ ok: true })
+  }
+  if (action === 'update_profile') {
+    const r = await dinerSession(typeof body.token === 'string' ? body.token : null)
+    if (!r.ok) return NextResponse.json({ ok: false }, { status: 401 })
+    
+    const { updateDinerProfile } = require('@/lib/db/account')
+    
+    const name = typeof body.name === 'string' && body.name.trim() !== '' ? body.name.trim() : null
+    const age = typeof body.age === 'number' && body.age >= 1 && body.age <= 120 ? body.age : null
+    
+    const success = await updateDinerProfile(r.phone, name, age)
+    if (success) {
+      return NextResponse.json({ ok: true, name, age }, { status: 200 })
+    }
+    return NextResponse.json({ ok: false, error: 'Impossible de mettre à jour le profil.' }, { status: 500 })
   }
 
   return NextResponse.json({ ok: false, error: 'Action inconnue.' }, { status: 400 })

@@ -802,8 +802,6 @@ export default function BusinessManager({ businesses: initial }: BusinessManager
                       <Row label="Nom"><span className="text-zinc-900">{b.name}</span></Row>
                       <Row label="E-mail">{b.profiles?.email ? <span dir="ltr" className="text-zinc-900">{b.profiles.email}</span> : <span className="text-zinc-400">Non disponible</span>}</Row>
                       <Row label="Téléphone">{b.profiles?.phone_number ? <span dir="ltr" className="text-zinc-900">{b.profiles.phone_number}</span> : <span className="text-zinc-400">Non disponible</span>}</Row>
-                      <Row label="Pays"><span className="text-zinc-900">{b.country || 'Non défini'}</span></Row>
-                      <Row label="Devise"><span className="text-zinc-900">{b.currency || 'Non défini'}</span></Row>
                       <Row label="Lien"><a href={`/${b.slug}`} target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:underline" dir="ltr">/{b.slug}</a></Row>
                       <button onClick={() => startEditProfile(b)} className="pt-1 text-xs font-semibold text-orange-600 hover:text-orange-700">Modifier le profil</button>
                     </div>

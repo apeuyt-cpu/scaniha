@@ -24,8 +24,13 @@ export default function DemandesQueue({ initial }: { initial: BusinessRequest[] 
   const [filter, setFilter] = useState<Filter>('active')
   const [busyId, setBusyId] = useState<string | null>(null)
 
-  // Approve dialog state.
+  // Create dialog state. approveRow is the request being converted, or null for a
+  // direct (from-scratch) account creation. dialogOpen drives the modal; saving
+  // is the in-flight flag for the create request itself (decoupled from busyId,
+  // which tracks per-row reject/contacted/reopen actions).
   const [approveRow, setApproveRow] = useState<BusinessRequest | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [fName, setFName] = useState('')
   const [fEmail, setFEmail] = useState('')
   const [fPhone, setFPhone] = useState('')
@@ -50,28 +55,37 @@ export default function DemandesQueue({ initial }: { initial: BusinessRequest[] 
   function openApprove(r: BusinessRequest) {
     setApproveRow(r); setCreated(null); setDlgErr(null)
     setFName(r.business_name); setFEmail(r.email || ''); setFPhone(r.phone || '')
+    setDialogOpen(true)
   }
-  function closeApprove() { setApproveRow(null); setCreated(null); setDlgErr(null) }
+  // Direct creation — no originating request; blank form.
+  function openCreate() {
+    setApproveRow(null); setCreated(null); setDlgErr(null)
+    setFName(''); setFEmail(''); setFPhone('')
+    setDialogOpen(true)
+  }
+  function closeDialog() { setDialogOpen(false); setApproveRow(null); setCreated(null); setDlgErr(null) }
 
-  async function submitApprove() {
-    if (!approveRow) return
+  async function submitCreate() {
     if (!fName.trim()) { setDlgErr("Le nom de l'établissement est requis."); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fEmail.trim())) { setDlgErr('Une adresse e-mail propriétaire valide est requise.'); return }
-    setBusyId(approveRow.id); setDlgErr(null)
+    setSaving(true); setDlgErr(null)
     try {
       const res = await fetch('/api/super-admin/businesses', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessName: fName.trim(), ownerEmail: fEmail.trim(), ownerPhone: fPhone.trim() || undefined, product: approveRow.product || undefined, requestId: approveRow.id }),
+        // requestId/plan only when converting an existing request (omitted on direct create).
+        body: JSON.stringify({ businessName: fName.trim(), ownerEmail: fEmail.trim(), ownerPhone: fPhone.trim() || undefined, plan: approveRow?.plan || undefined, requestId: approveRow?.id }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json?.success) { setDlgErr(json?.error || 'Échec de la création du compte.'); return }
-      setRows((cur) => cur.map((r) => (r.id === approveRow.id ? { ...r, status: 'converted', business_id: json.business?.id ?? null } : r)))
+      if (approveRow) {
+        setRows((cur) => cur.map((r) => (r.id === approveRow.id ? { ...r, status: 'converted', business_id: json.business?.id ?? null } : r)))
+      }
       setCreated({ email: json.owner?.email || fEmail.trim(), tempPassword: json.tempPassword ?? null, isNewUser: !!json.isNewUser, slug: json.business?.slug || '' })
       toast(`Compte créé — « ${fName.trim()} ».`, 'success')
     } catch {
       setDlgErr('Connexion impossible. Réessayez.')
     } finally {
-      setBusyId(null)
+      setSaving(false)
     }
   }
 
@@ -107,13 +121,19 @@ export default function DemandesQueue({ initial }: { initial: BusinessRequest[] 
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        {FILTERS.map((f) => (
-          <button key={f.key} type="button" onClick={() => setFilter(f.key)}
-            className={`rounded-xl px-3 py-1.5 text-sm transition ${filter === f.key ? 'bg-orange-50 font-semibold text-orange-700 ring-1 ring-orange-200' : 'font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'}`}>
-            {f.label}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          {FILTERS.map((f) => (
+            <button key={f.key} type="button" onClick={() => setFilter(f.key)}
+              className={`rounded-xl px-3 py-1.5 text-sm transition ${filter === f.key ? 'bg-orange-50 font-semibold text-orange-700 ring-1 ring-orange-200' : 'font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <button type="button" onClick={openCreate}
+          className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700">
+          + Créer un compte
+        </button>
       </div>
 
       {visible.length === 0 ? (
@@ -181,9 +201,9 @@ export default function DemandesQueue({ initial }: { initial: BusinessRequest[] 
         </div>
       )}
 
-      {/* ── Approve / create dialog ── */}
-      {approveRow && (
-        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" onClick={() => busyId === null && closeApprove()}>
+      {/* ── Approve / create dialog (shared by "Approuver & créer" and "+ Créer un compte") ── */}
+      {dialogOpen && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" onClick={() => !saving && closeDialog()}>
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             {created ? (
               <>
@@ -198,7 +218,7 @@ export default function DemandesQueue({ initial }: { initial: BusinessRequest[] 
                   <CredRow label="Connexion" value="scaniha.com/login" onCopy={() => copy('https://scaniha.com/login')} />
                 </div>
                 <div className="mt-6 flex justify-end">
-                  <button onClick={closeApprove} className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700">Terminé</button>
+                  <button onClick={closeDialog} className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700">Terminé</button>
                 </div>
               </>
             ) : (
@@ -212,9 +232,9 @@ export default function DemandesQueue({ initial }: { initial: BusinessRequest[] 
                 </div>
                 {dlgErr && <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{dlgErr}</p>}
                 <div className="mt-6 flex justify-end gap-2">
-                  <button onClick={closeApprove} disabled={busyId !== null} className="rounded-xl px-4 py-2 text-sm font-semibold text-zinc-600 hover:text-zinc-800 disabled:opacity-50">Annuler</button>
-                  <button onClick={submitApprove} disabled={busyId !== null} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
-                    {busyId !== null ? 'Création…' : 'Créer le compte'}
+                  <button onClick={closeDialog} disabled={saving} className="rounded-xl px-4 py-2 text-sm font-semibold text-zinc-600 hover:text-zinc-800 disabled:opacity-50">Annuler</button>
+                  <button onClick={submitCreate} disabled={saving} className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+                    {saving ? 'Création…' : 'Créer le compte'}
                   </button>
                 </div>
               </>

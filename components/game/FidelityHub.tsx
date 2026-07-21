@@ -12,6 +12,8 @@ const RouletteWheel = dynamic(() => import('./RouletteWheel'), {
   ssr: false,
   loading: () => <div className="aspect-square w-full" aria-hidden="true" />,
 })
+const SlotMachine777 = dynamic(() => import('./SlotMachine777'), { ssr: false, loading: () => <div className="aspect-square w-full" aria-hidden="true" /> })
+const BaristaNightmare = dynamic(() => import('./barista/index'), { ssr: false, loading: () => <div className="aspect-square w-full" aria-hidden="true" /> })
 const QRCodeSVG = dynamic(() => import('qrcode.react').then((m) => m.QRCodeSVG), { ssr: false })
 import DinerAuth, { type DinerSession } from './DinerAuth'
 import PlayGatesGate from './PlayGatesGate'
@@ -62,6 +64,15 @@ export default function FidelityHub({
   // Whether the roulette is on for this café. When OFF but loyalty is ON, the hub
   // runs in "points-only" mode (no Roue tab/CTA). true → identical to before.
   const [hasRoulette, setHasRoulette] = useState(false)
+  const [gameMode, setGameMode] = useState('roulette')
+  const [prizeIcons, setPrizeIcons] = useState<(string | null)[]>([])
+
+  const [prizeIsLose, setPrizeIsLose] = useState<boolean[]>([])
+  const [slotEnabled, setSlotEnabled] = useState(false)
+  const [slotPointCost, setSlotPointCost] = useState(10)
+  const [rouletteEnabled, setRouletteEnabled] = useState(true)
+  const [rouletteSchedule, setRouletteSchedule] = useState<any>(null)
+
   // Welcome bonus credited at signup — surfaced as the join hook (0 = none).
   const [welcomePoints, setWelcomePoints] = useState(0)
   const [session, setSession] = useState<DinerSession | null>(null)
@@ -123,7 +134,14 @@ export default function FidelityHub({
         // Active if EITHER the roulette OR the points program is on (points-only allowed).
         if (!roulette && !loyalty) { setPhase('inactive'); return }
         setHasRoulette(roulette); setLoyaltyActive(loyalty); setWelcomePoints(Number(json.welcomePoints) || 0)
-        setPrizes(Array.isArray(json.prizes) ? json.prizes : []); setGates(Array.isArray(json.gates) ? json.gates : [])
+        const loadedPrizes = Array.isArray(json.prizes) ? json.prizes : []; setPrizes(loadedPrizes); setPrizeIcons(Array.isArray(json.prizeIcons) ? json.prizeIcons : []); setGameMode(json.config?.mode || 'roulette'); setGates(Array.isArray(json.gates) ? json.gates : [])
+
+        setPrizeIsLose(json.prizeIsLose || [])
+        setSlotEnabled(Boolean(json.slotEnabled))
+        setSlotPointCost(Number(json.slotPointCost) || 10)
+        setRouletteEnabled(json.rouletteEnabled !== false)
+        setRouletteSchedule(json.rouletteSchedule || null)
+
 
         const token = readToken(slug)
         let authed: DinerSession | null = null
@@ -161,7 +179,7 @@ export default function FidelityHub({
 
   function onAuthed(s: DinerSession) {
     setSession(s); setAuthMessage(null); setError(null); setPhase('ready'); loadAccount(s.phone, s.token)
-    if (pendingSpin) { setPendingSpin(false); setTabState('roue'); spin(s.token) }
+    if (pendingSpin) { setPendingSpin(false); setTabState('roue'); spin(s.token, undefined, gameMode) }
     // Fresh member at a roulette café → drop them on the wheel for their first spin.
     else if (hasRoulette) setTabState('roue')
   }
@@ -173,13 +191,13 @@ export default function FidelityHub({
     setSession(null); setSummary(EMPTY); setResult(null); setConfetti(false); setQrOpen(false); setError(null); setRedeemed(null); loadPublicRewards(); setTabState(hasRoulette ? 'roue' : 'carte'); setPhase('ready')
   }
 
-  async function spin(tokenOverride?: string, gatesOk?: boolean) {
+  async function spin(tokenOverride?: string, gatesOk?: boolean, gmMode?: string) {
     if (!gatesOk && gates.length > 0 && !gatesCleared) { setGatesModalOpen(true); return }
     const token = tokenOverride ?? session?.token
     if (!token) { setPendingSpin(true); requireLogin('Connectez-vous pour tourner la roue — vos gains et points sont gardés sur votre compte.'); return }
     setError(null); setRescan(null); setResult(null); setPhase('spinning')
     try {
-      const res = await fetch(`/api/game/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: deviceId(), token }) })
+      const res = await fetch(`/api/game/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: deviceId(), token, gameMode: gmMode || gameMode || 'roulette' }) })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.success) {
         if (res.status === 401 || json.authRequired) { requireLogin('Votre session a expiré. Reconnectez-vous pour jouer.'); return }
@@ -189,7 +207,10 @@ export default function FidelityHub({
       }
       const w: SpinResult = json
       setResult(w); setNextPlayAt(typeof json.nextPlayAt === 'string' ? json.nextPlayAt : null)
-      try { localStorage.setItem(`scaniha_win_${slug}`, JSON.stringify(w)) } catch {}
+      // Only persist win to localStorage if it's NOT a lose — so page refresh doesn't re-show the lose popup
+      if (!json.isLose) {
+        try { localStorage.setItem(`scaniha_win_${slug}`, JSON.stringify(w)) } catch {}
+      }
     } catch { setPhase('ready'); setError('Connexion impossible. Vérifiez votre réseau.') }
   }
 
@@ -315,7 +336,7 @@ export default function FidelityHub({
   const pct = nextReward ? Math.min(100, Math.round((balance / nextReward.points_cost) * 100)) : 100
   const activeCodes = [...summary.activeWins.map((c) => ({ ...c, kind: 'Lot' })), ...summary.activeRedemptions.map((c) => ({ ...c, kind: 'Récompense' }))]
   const cardCode = session ? `SCANIHA:${slug}:${session.phone}` : '' // Phase 6: signed rotating token
-  const tabTitle = tab === 'carte' ? 'Ma carte' : tab === 'roue' ? 'Roue de la chance' : 'Boutique'
+  const tabTitle = tab === 'carte' ? 'Ma carte' : tab === 'roue' ? '🎰 Games' : 'Boutique'
 
   return (
     <div className="mx-auto min-h-[100svh] max-w-md pb-28" style={{ background: BG }}>
@@ -332,10 +353,38 @@ export default function FidelityHub({
 
       <div className="px-[18px] pt-1">
         {tab === 'carte' && (
-          <CarteTab session={session} businessName={businessName} accent={accent} gradient={gradient} greeting={greeting} balance={balance} nextReward={nextReward} pct={pct} loyaltyActive={loyaltyActive} rewards={rewards} activeCodes={activeCodes} recent={summary.recent} cardCode={cardCode} qrOpen={qrOpen} setQrOpen={setQrOpen} hasRoulette={hasRoulette} welcomePoints={welcomePoints} onPlay={() => requireLogin()} onLogout={logout} />
+          <CarteTab 
+            slug={slug}
+            session={session} 
+            businessName={businessName} 
+            accent={accent} 
+            gradient={gradient} 
+            greeting={greeting} 
+            balance={balance} 
+            nextReward={nextReward} 
+            pct={pct} 
+            loyaltyActive={loyaltyActive} 
+            rewards={rewards} 
+            activeCodes={activeCodes} 
+            recent={summary.recent} 
+            cardCode={cardCode} 
+            qrOpen={qrOpen} 
+            setQrOpen={setQrOpen} 
+            hasRoulette={hasRoulette} 
+            welcomePoints={welcomePoints} 
+            onPlay={() => requireLogin()} 
+            onLogout={logout} 
+            onProfileUpdated={(name, age) => {
+              if (session) {
+                setSession({ ...session, name, age })
+                // Refresh account to get updated greeting/initials
+                loadAccount(session.phone, session.token)
+              }
+            }}
+          />
         )}
         {hasRoulette && tab === 'roue' && (
-          <RoueTab prizes={prizes} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} onSpin={() => spin()} onSpinEnd={() => { if (result) { setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
+          <RoueTab slug={slug} session={session} requireLogin={requireLogin} prizes={prizes} prizeIcons={prizeIcons} prizeIsLose={prizeIsLose} slotEnabled={slotEnabled} slotPointCost={slotPointCost} rouletteEnabled={rouletteEnabled} rouletteSchedule={rouletteSchedule} gameMode={gameMode} accent={accent} gradient={gradient} phase={phase} played={played} result={result} error={error} rescan={rescan} nextPlayAt={nextPlayAt} balance={balance} onSpin={(gm) => spin(undefined, undefined, gm || gameMode)} onSpinEnd={() => { if (result) { const isLoseResult = Boolean(prizeIsLose[result.prizeIndex]); if (!isLoseResult) setConfetti(true); setPhase('won'); setWinModalOpen(true); if (session) loadAccount(session.phone, session.token) } }} onReview={() => setWinModalOpen(true)} />
         )}
         {tab === 'boutique' && (
           <BoutiqueTab session={session} businessName={businessName} accent={accent} gradient={gradient} balance={balance} loyaltyActive={loyaltyActive} rewards={rewards} busyRewardId={busyRewardId} redeemed={redeemed} error={boutiqueError} rescan={boutiqueRescan} onRedeem={redeem} />
@@ -345,13 +394,13 @@ export default function FidelityHub({
       <FidelityNav tab={tab} setTab={setTab} hasMenu={hasMenu} hasRoulette={hasRoulette} slug={slug} accent={accent} />
 
       {phase === 'won' && result && winModalOpen && (
-        <WinModal result={result} accent={accent} gradient={gradient} copied={copied} onCopy={copyCode} onClose={() => setWinModalOpen(false)} onSeeCard={() => { setWinModalOpen(false); setTab('carte') }} />
+        <WinModal result={result} isLose={Boolean(prizeIsLose[result.prizeIndex])} accent={accent} gradient={gradient} copied={copied} onCopy={copyCode} onClose={() => setWinModalOpen(false)} onSeeCard={() => { setWinModalOpen(false); setTab('carte') }} />
       )}
 
       {gatesModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm" onClick={() => setGatesModalOpen(false)}>
           <div className="w-full max-w-[22rem]" onClick={(e) => e.stopPropagation()}>
-            <PlayGatesGate gates={gates} slug={slug} deviceId={deviceId()} accent={accent} gradient={gradient} onAllDone={() => { setGatesCleared(true); setGatesModalOpen(false); spin(undefined, true) }} />
+            <PlayGatesGate gates={gates} slug={slug} deviceId={deviceId()} accent={accent} gradient={gradient} onAllDone={() => { setGatesCleared(true); setGatesModalOpen(false); spin(undefined, true, gameMode) }} />
             <button type="button" onClick={() => setGatesModalOpen(false)} className="mt-3 block w-full rounded-2xl bg-white/10 py-3 text-sm font-medium text-white/90 backdrop-blur transition hover:bg-white/20">Plus tard</button>
           </div>
         </div>
@@ -377,7 +426,7 @@ function FidelityNav({ tab, setTab, hasMenu, hasRoulette, slug, accent }: { tab:
           <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h4" /></svg>
         </NavItem>
         {hasRoulette && (
-          <NavItem active={tab === 'roue'} onClick={() => setTab('roue')} label="Roue" pill={pill} lbl={lbl}>
+          <NavItem active={tab === 'roue'} onClick={() => setTab('roue')} label="Games" pill={pill} lbl={lbl}>
             <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4" /></svg>
           </NavItem>
         )}
@@ -397,12 +446,73 @@ function NavItem({ active, onClick, label, pill, lbl, children }: { active: bool
   )
 }
 
+/* ── Mon Profil Modal ───────────────────────────────────────────────────────── */
+function ProfileModal({ session, slug, accent, gradient, onClose, onSaved }: { session: DinerSession; slug: string; accent: string; gradient: string; onClose: () => void; onSaved: (name: string | null, age: number | null) => void }) {
+  const [name, setName] = useState(session.name || '')
+  const [age, setAge] = useState(session.age ? String(session.age) : '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    setError(null)
+    const n = name.trim() || null
+    const a = age.trim() ? parseInt(age.trim(), 10) : null
+
+    try {
+      const res = await fetch(`/api/account/${slug}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_profile', token: session.token, name: n, age: a })
+      })
+      const data = await res.json()
+      if (res.ok && data.ok) {
+        onSaved(data.name, data.age)
+      } else {
+        setError(data.error || 'Erreur lors de la sauvegarde.')
+      }
+    } catch {
+      setError('Erreur réseau.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-[22rem] bg-white rounded-[24px] overflow-hidden shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+        <h3 className="text-xl font-bold mb-4" style={{ color: INK }}>Mon Profil</h3>
+        {error && <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        <form onSubmit={handleSave} className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold mb-1" style={{ color: MUT }}>Nom ou pseudo</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Alex" maxLength={20} className="w-full rounded-xl border p-3 outline-none focus:ring-2" style={{ borderColor: LINE, color: INK }} />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1" style={{ color: MUT }}>Âge</label>
+            <input type="number" inputMode="numeric" pattern="[0-9]*" min={1} max={120} value={age} onChange={e => setAge(e.target.value)} placeholder="Ex: 25" className="w-full rounded-xl border p-3 outline-none focus:ring-2" style={{ borderColor: LINE, color: INK }} />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} disabled={saving} className="flex-1 rounded-xl py-3 text-sm font-bold bg-slate-100 text-slate-700 transition hover:bg-slate-200">Annuler</button>
+            <button type="submit" disabled={saving} className="flex-1 rounded-xl py-3 text-sm font-bold text-white transition active:scale-[0.98]" style={{ backgroundImage: gradient, boxShadow: `0 8px 20px -8px ${accent}` }}>
+              {saving ? 'En cours...' : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 /* ── Ma carte ────────────────────────────────────────────────────────────────── */
 function CarteTab(props: {
-  session: DinerSession | null; businessName: string; accent: string; gradient: string; greeting: string; balance: number; nextReward: Reward | null; pct: number; loyaltyActive: boolean
-  rewards: Reward[]; activeCodes: Array<{ code: string; label: string; expires_at: string }>; recent: CustomerSummary['recent']; cardCode: string; qrOpen: boolean; setQrOpen: (v: boolean) => void; hasRoulette: boolean; welcomePoints: number; onPlay: () => void; onLogout: () => void
+  slug: string; session: DinerSession | null; businessName: string; accent: string; gradient: string; greeting: string; balance: number; nextReward: Reward | null; pct: number; loyaltyActive: boolean
+  rewards: Reward[]; activeCodes: Array<{ code: string; label: string; expires_at: string }>; recent: CustomerSummary['recent']; cardCode: string; qrOpen: boolean; setQrOpen: (v: boolean) => void; hasRoulette: boolean; welcomePoints: number; onPlay: () => void; onLogout: () => void; onProfileUpdated: (name: string | null, age: number | null) => void
 }) {
-  const { session, businessName, accent, gradient, greeting, balance, nextReward, pct, loyaltyActive, rewards, activeCodes, recent, cardCode, qrOpen, setQrOpen, hasRoulette, welcomePoints, onPlay, onLogout } = props
+  const { slug, session, businessName, accent, gradient, greeting, balance, nextReward, pct, loyaltyActive, rewards, activeCodes, recent, cardCode, qrOpen, setQrOpen, hasRoulette, welcomePoints, onPlay, onLogout, onProfileUpdated } = props
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+
   if (!session) {
     const perks: Array<{ icon: string; title: string; sub: string }> = []
     if (welcomePoints > 0) perks.push({ icon: '🎁', title: `${welcomePoints} points offerts`, sub: 'rien qu’à l’inscription' })
@@ -437,9 +547,25 @@ function CarteTab(props: {
   return (
     <div className="pt-2">
       {/* Greeting */}
-      <div className="mb-4 flex items-center gap-3 px-0.5">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full text-base font-semibold" style={{ backgroundColor: `${accent}1f`, color: accent }}>{initial}</div>
-        <div className="leading-tight"><div className="text-[15px] font-semibold" style={{ color: INK }}>Bonjour, {greeting}</div><div className="text-xs" style={{ color: MUT }}>Membre fidèle</div></div>
+      <div className="mb-4 flex items-center justify-between px-0.5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full text-base font-semibold" style={{ backgroundColor: `${accent}1f`, color: accent }}>{initial}</div>
+          <div className="leading-tight">
+            <div className="text-[15px] font-semibold" style={{ color: INK }}>Bonjour, {greeting}</div>
+            <div className="text-xs" style={{ color: MUT }}>Membre fidèle</div>
+          </div>
+        </div>
+        <button 
+          type="button" 
+          onClick={() => setProfileModalOpen(true)} 
+          className="flex items-center justify-center h-9 w-9 rounded-full bg-slate-100 transition hover:bg-slate-200"
+          aria-label="Modifier mon profil"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: MUT }}>
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+        </button>
       </div>
 
       {/* Membership card */}
@@ -490,7 +616,7 @@ function CarteTab(props: {
           ))}
         </div>
       ) : (
-        <p className="rounded-[18px] bg-white px-4 py-6 text-center text-sm" style={{ color: MUT, boxShadow: SOFT }}>{hasRoulette ? 'Aucun bon pour le moment. Tournez la roue pour gagner !' : 'Aucun bon pour le moment. Cumulez des points à chaque visite !'}</p>
+        <p className="rounded-[18px] bg-white px-4 py-6 text-center text-sm" style={{ color: MUT, boxShadow: SOFT }}>{hasRoulette ? 'Aucun bon pour le moment. Jouez pour gagner !' : 'Aucun bon pour le moment. Cumulez des points à chaque visite !'}</p>
       )}
 
       {/* Historique */}
@@ -508,39 +634,464 @@ function CarteTab(props: {
         <p className="rounded-[18px] bg-white px-4 py-6 text-center text-sm" style={{ color: MUT, boxShadow: SOFT }}>Aucune activité pour le moment.</p>
       )}
 
-      <div className="pt-6 text-center"><button type="button" onClick={onLogout} className="text-xs font-medium underline-offset-2 hover:underline" style={{ color: FAINT_TEXT }}>Se déconnecter</button></div>
+      <div className="pt-6 text-center flex flex-col items-center gap-3">
+        <button type="button" onClick={onLogout} className="text-xs font-medium underline-offset-2 hover:underline" style={{ color: FAINT_TEXT }}>Se déconnecter</button>
+      </div>
+
+      {profileModalOpen && (
+        <ProfileModal 
+          session={session} 
+          slug={slug}
+          accent={accent} 
+          gradient={gradient} 
+          onClose={() => setProfileModalOpen(false)} 
+          onSaved={(name, age) => {
+            setProfileModalOpen(false)
+            onProfileUpdated(name, age)
+          }} 
+        />
+      )}
     </div>
   )
 }
 
-/* ── Roue ────────────────────────────────────────────────────────────────────── */
-function RoueTab(props: { prizes: string[]; accent: string; gradient: string; phase: Phase; played: boolean; result: SpinResult | null; error: string | null; rescan: string | null; nextPlayAt: string | null; onSpin: () => void; onSpinEnd: () => void; onReview: () => void }) {
-  const { prizes, accent, gradient, phase, played, result, error, rescan, nextPlayAt, onSpin, onSpinEnd, onReview } = props
+/* ── Games Arcade Tab ─────────────────────────────────────────────────────── */
+
+function RoueTab(props: { slug: string; session: DinerSession | null; requireLogin: (msg?: string) => void; prizes: string[]; prizeIcons: (string | null)[]; prizeIsLose?: boolean[]; slotEnabled?: boolean; slotPointCost?: number; rouletteEnabled?: boolean; rouletteSchedule?: any; gameMode: string; accent: string; gradient: string; phase: Phase; played: boolean; result: SpinResult | null; error: string | null; rescan: string | null; nextPlayAt: string | null; balance: number; onSpin: (gm?: string) => void; onSpinEnd: () => void; onReview: () => void }) {
+  const { slug, session, requireLogin, prizes, prizeIcons, prizeIsLose, slotEnabled, slotPointCost = 10, rouletteEnabled = true, rouletteSchedule, accent, gradient, phase, played, result, error, rescan, nextPlayAt, balance, onSpin, onSpinEnd, onReview } = props
+  const [selectedGame, setSelectedGame] = useState<'roulette' | 'slot777' | 'barista' | null>(null)
   const blocked = phase === 'blocked'
-  return (
-    <div className="flex flex-col items-center gap-6 pt-3">
-      {!played && <p className="mx-auto max-w-[18rem] text-center text-sm leading-relaxed" style={{ color: MUT }}>Tournez la roue — tout le monde gagne quelque chose.</p>}
-      <div className="w-full transition-all" style={blocked ? { opacity: 0.4, filter: 'grayscale(0.25)', pointerEvents: 'none' } : undefined}>
-        <RouletteWheel prizes={prizes} accent={accent} spinning={phase === 'spinning' && result !== null} targetIndex={result ? result.prizeIndex : null} onSpinEnd={onSpinEnd} />
+  const spinning = phase === 'spinning' && result !== null
+
+  const [activeView, setActiveView] = useState<'games' | 'ranking'>('games')
+
+  const [leaderboard, setLeaderboard] = useState<any[]>([])
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    async function fetchLeaderboard() {
+      setLoadingLeaderboard(true)
+      try {
+        const res = await fetch(`/api/loyalty/${slug}/leaderboard`)
+        const data = await res.json()
+        if (active && data.leaderboard) {
+          setLeaderboard(data.leaderboard)
+        }
+      } catch (e) {
+        console.error('Failed to fetch leaderboard', e)
+      } finally {
+        if (active) setLoadingLeaderboard(false)
+      }
+    }
+    fetchLeaderboard()
+    return () => { active = false }
+  }, [slug])
+
+  // Check schedule
+  const now = new Date()
+  const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0')
+  let rAvailable = rouletteEnabled
+  if (rAvailable && rouletteSchedule?.enabled) {
+    if (rouletteSchedule.startTime && timeStr < rouletteSchedule.startTime) rAvailable = false
+    if (rouletteSchedule.endTime && timeStr > rouletteSchedule.endTime) rAvailable = false
+  }
+
+  const isSlot = selectedGame === 'slot777'
+  const GAME_COST = isSlot ? slotPointCost : 10
+  const canPlay = balance >= GAME_COST || played
+  const currentGameMode = isSlot ? 'slot777' : 'roulette'
+  void currentGameMode
+
+  if (selectedGame === 'barista' && session) {
+    return (
+      <div className="pt-2" style={{ height: 'calc(100svh - 140px)' }}>
+        <BaristaNightmare
+          slug={slug}
+          accent={accent}
+          gradient={gradient}
+          token={session.token}
+          phone={session.phone}
+          name={session.name || session.phone}
+          onClose={() => setSelectedGame(null)}
+        />
       </div>
+    )
+  }
+
+  if (!selectedGame) {
+    return (
+      <div className="pt-2">
+        <style jsx>{`
+          @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+          @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+          .game-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+          .game-card:hover { transform: translateY(-4px); }
+          .game-card:active { transform: scale(0.97); }
+          .float-anim { animation: float 3s ease-in-out infinite; }
+          .shimmer-text {
+            background: linear-gradient(90deg, #FFD700 0%, #FFF8DC 40%, #FFD700 60%, #B8860B 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s linear infinite;
+          }
+          .segment-btn {
+            flex: 1; text-align: center; padding: 10px 0; border-radius: 14px; font-weight: 700; font-size: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; border: none;
+          }
+          .segment-btn.active {
+            background: #1A1410; color: #FFD700; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+          }
+          .segment-btn.inactive {
+            background: transparent; color: #71695F;
+          }
+          .podium-item {
+            display: flex; flex-direction: column; items: center; justify-content: flex-end; transition: transform 0.3s ease;
+          }
+          .podium-item:hover { transform: translateY(-5px); }
+        `}</style>
+
+        {/* View Toggle */}
+        <div style={{ display: 'flex', background: 'rgba(0,0,0,0.05)', borderRadius: 16, padding: 4, marginBottom: 24 }}>
+          <button 
+            type="button" 
+            className={`segment-btn ${activeView === 'games' ? 'active' : 'inactive'}`}
+            onClick={() => setActiveView('games')}
+          >
+            🎰 Jeux
+          </button>
+          <button 
+            type="button" 
+            className={`segment-btn ${activeView === 'ranking' ? 'active' : 'inactive'}`}
+            onClick={() => setActiveView('ranking')}
+          >
+            🏆 Classement
+          </button>
+        </div>
+
+        {activeView === 'games' && (
+          <div>
+            {/* Header */}
+            <div className="mb-6 text-center">
+              <div className="shimmer-text" style={{ fontSize: 28, fontWeight: 900, fontFamily: 'Georgia, serif', letterSpacing: '0.05em' }}>
+                Casino Games
+              </div>
+              <p style={{ color: '#71695F', fontSize: 13, marginTop: 4 }}>Utilisez vos points pour jouer</p>
+              {/* Points balance badge */}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10,
+                background: 'linear-gradient(135deg, #1a6b1a, #2d9e2d)',
+                borderRadius: 20, padding: '6px 16px', boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+              }}>
+                <span style={{ fontSize: 16 }}>🪙</span>
+                <span style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{balance} pts</span>
+              </div>
+            </div>
+
+            {/* Game Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Roulette Card */}
+              {rAvailable ? (
+                <button
+                  type="button"
+                  disabled={balance < 10 && !played}
+                  onClick={() => setSelectedGame('roulette')}
+                  className="game-card"
+                  style={{
+                    background: 'linear-gradient(145deg, #1a0002, #3d0000)',
+                    border: '2px solid #B8860B',
+                    borderRadius: 20,
+                    padding: '20px 18px',
+                    textAlign: 'left',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,215,0,0.15)',
+                    opacity: (balance < 10 && !played) ? 0.6 : 1,
+                    cursor: (balance < 10 && !played) ? 'not-allowed' : 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,215,0,0.12) 0%, transparent 70%)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div className="float-anim" style={{ fontSize: 50, lineHeight: 1, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>🎡</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: '#FFD700', fontWeight: 900, fontSize: 20, fontFamily: 'Georgia, serif', textShadow: '0 0 15px rgba(255,215,0,0.5)' }}>Roulette Casino</div>
+                      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4 }}>Tournez la roue — tout le monde gagne !</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                        <span style={{ background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.4)', color: '#FFD700', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>🪙 10 pts</span>
+                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>Classique</span>
+                      </div>
+                    </div>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,215,0,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                  </div>
+                </button>
+              ) : (
+                <div style={{ background: 'rgba(0,0,0,0.05)', borderRadius: 20, padding: '20px 18px', textAlign: 'center' }}>
+                  <span style={{ fontSize: 24, filter: 'grayscale(1)', opacity: 0.5 }}>🎡</span>
+                  <div style={{ color: '#71695F', fontWeight: 600, fontSize: 14, marginTop: 8 }}>La roulette n'est pas disponible actuellement</div>
+                </div>
+              )}
+
+              {/* Slot 777 Card */}
+              {slotEnabled && (
+                <button
+                  type="button"
+                  disabled={balance < slotPointCost && !played}
+                  onClick={() => setSelectedGame('slot777')}
+                  className="game-card"
+                  style={{
+                    background: 'linear-gradient(145deg, #000d2e, #001a5c)',
+                    border: '2px solid #7B68EE',
+                    borderRadius: 20,
+                    padding: '20px 18px',
+                    textAlign: 'left',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(123,104,238,0.2)',
+                    opacity: (balance < slotPointCost && !played) ? 0.6 : 1,
+                    cursor: (balance < slotPointCost && !played) ? 'not-allowed' : 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'radial-gradient(circle, rgba(123,104,238,0.15) 0%, transparent 70%)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div className="float-anim" style={{ fontSize: 50, lineHeight: 1, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))', animationDelay: '0.5s' }}>🎰</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: '#A78BFA', fontWeight: 900, fontSize: 20, fontFamily: 'Georgia, serif', textShadow: '0 0 15px rgba(167,139,250,0.5)' }}>Slot Machine 777</div>
+                      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4 }}>3 rouleaux — alignez vos symboles !</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                        <span style={{ background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.4)', color: '#A78BFA', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>🪙 {slotPointCost} pts</span>
+                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>Jackpot !</span>
+                      </div>
+                    </div>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(167,139,250,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                  </div>
+                </button>
+              )}
+              {/* Barista's Nightmare Card */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!session) {
+                    requireLogin('Connectez-vous pour jouer à Sparkle Party 🌟.')
+                    return
+                  }
+                  setSelectedGame('barista')
+                }}
+                className="game-card"
+                style={{
+                  background: 'linear-gradient(145deg, #1A1410, #3A2F25)',
+                  border: '2px solid #D2B48C',
+                  borderRadius: 20,
+                  padding: '20px 18px',
+                  textAlign: 'left',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(210,180,140,0.2)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
+                <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'radial-gradient(circle, rgba(210,180,140,0.15) 0%, transparent 70%)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div className="float-anim" style={{ fontSize: 50, lineHeight: 1, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))', animationDelay: '1s' }}>🧠☕</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#D2B48C', fontWeight: 900, fontSize: 18, fontFamily: 'Georgia, serif', textShadow: '0 0 15px rgba(210,180,140,0.5)' }}>Sparkle Party 🌟</div>
+                    <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4 }}>Mémorisez la commande, tapez vite, ne vous trompez pas !</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                      <span style={{ background: 'rgba(210,180,140,0.15)', border: '1px solid rgba(210,180,140,0.4)', color: '#D2B48C', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>🪙 10 pts</span>
+                      <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>Multijoueur</span>
+                    </div>
+                  </div>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(210,180,140,0.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </div>
+              </button>
+
+            </div>
+
+            {blocked && <Cooldown accent={accent} until={nextPlayAt} />}
+            {!blocked && error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p>}
+            {!blocked && rescan !== null && <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour jouer" />}
+          </div>
+        )}
+
+        {activeView === 'ranking' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Crown Icon Header */}
+            <div className="flex flex-col items-center justify-center mb-8">
+              <div className="relative mb-2">
+                <span className="absolute -top-3 -right-3 text-2xl animate-pulse">✨</span>
+                <span className="text-5xl drop-shadow-xl" style={{ filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))' }}>👑</span>
+                <span className="absolute -bottom-1 -left-2 text-xl animate-pulse delay-150">✨</span>
+              </div>
+              <h2 className="text-3xl font-black text-center shimmer-text leading-none mt-2">
+                Hall of Fame
+              </h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] mt-3" style={{ color: MUT }}>Top 50 Meilleurs Clients</p>
+            </div>
+            
+            {loadingLeaderboard ? (
+              <div className="flex flex-col items-center justify-center p-12 gap-4">
+                <div className="w-12 h-12 rounded-full border-[5px] border-t-transparent animate-spin" style={{ borderColor: `${accent}30`, borderTopColor: accent }} />
+                <p className="text-sm font-semibold" style={{ color: MUT }}>Chargement du classement...</p>
+              </div>
+            ) : leaderboard.length > 0 ? (
+              <>
+                {/* Top 3 Podium (Premium Design) */}
+                {leaderboard.length >= 3 && (
+                  <div className="flex items-end justify-center gap-2 mb-8 h-48 px-2">
+                    {/* 2nd Place */}
+                    <div className="podium-item flex-1 flex flex-col items-center z-10">
+                      <div className="relative">
+                        <div className="w-14 h-14 rounded-full border-4 flex items-center justify-center text-2xl bg-white shadow-xl z-20" style={{ borderColor: '#E3E4E5' }}>🥈</div>
+                        <div className="absolute -bottom-2 -right-2 bg-[#E3E4E5] text-white text-[10px] font-black px-1.5 rounded-sm">#2</div>
+                      </div>
+                      <div className="mt-3 truncate w-full text-center font-bold text-sm" style={{ color: INK }}>{leaderboard[1].name}</div>
+                      <div className="text-[11px] font-black tabular-nums mt-1" style={{ color: '#8b92a5' }}>{leaderboard[1].points} pts</div>
+                      <div className="w-full mt-3 rounded-t-xl" style={{ height: '80px', background: 'linear-gradient(180deg, #E3E4E5 0%, #B2B5B9 100%)', boxShadow: '0 -4px 10px rgba(0,0,0,0.1)' }} />
+                    </div>
+
+                    {/* 1st Place */}
+                    <div className="podium-item flex-[1.2] flex flex-col items-center z-20" style={{ marginBottom: '-10px' }}>
+                      <div className="relative">
+                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-2xl animate-bounce">👑</div>
+                        <div className="w-20 h-20 rounded-full border-[5px] flex items-center justify-center text-3xl bg-white shadow-2xl z-20" style={{ borderColor: '#FFD700' }}>🏆</div>
+                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[#FFD700] text-[#1A1410] text-[12px] font-black px-3 py-0.5 rounded-full shadow-md">#1</div>
+                      </div>
+                      <div className="mt-4 truncate w-full text-center font-black text-[16px]" style={{ color: '#D4AF37' }}>{leaderboard[0].name}</div>
+                      <div className="text-xs font-black tabular-nums mt-1" style={{ color: INK }}>{leaderboard[0].points} pts</div>
+                      <div className="w-full mt-3 rounded-t-2xl relative overflow-hidden" style={{ height: '110px', background: 'linear-gradient(180deg, #FFD700 0%, #F5B82E 100%)', boxShadow: '0 -8px 20px rgba(255, 215, 0, 0.4)' }}>
+                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.5) 10px, rgba(255,255,255,0.5) 20px)' }} />
+                      </div>
+                    </div>
+
+                    {/* 3rd Place */}
+                    <div className="podium-item flex-1 flex flex-col items-center z-10">
+                      <div className="relative">
+                        <div className="w-14 h-14 rounded-full border-4 flex items-center justify-center text-2xl bg-white shadow-xl z-20" style={{ borderColor: '#CD7F32' }}>🥉</div>
+                        <div className="absolute -bottom-2 -right-2 bg-[#CD7F32] text-white text-[10px] font-black px-1.5 rounded-sm">#3</div>
+                      </div>
+                      <div className="mt-3 truncate w-full text-center font-bold text-sm" style={{ color: INK }}>{leaderboard[2].name}</div>
+                      <div className="text-[11px] font-black tabular-nums mt-1" style={{ color: '#A0522D' }}>{leaderboard[2].points} pts</div>
+                      <div className="w-full mt-3 rounded-t-xl" style={{ height: '60px', background: 'linear-gradient(180deg, #CD7F32 0%, #8B4513 100%)', boxShadow: '0 -4px 10px rgba(0,0,0,0.1)' }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Remaining List */}
+                <div className="bg-white rounded-[24px] p-2 shadow-xl border" style={{ borderColor: LINE, boxShadow: '0 20px 40px -15px rgba(0,0,0,0.05)' }}>
+                  <div className="space-y-1.5">
+                    {leaderboard.slice(leaderboard.length >= 3 ? 3 : 0).map((p, index) => {
+                      const actualRank = (leaderboard.length >= 3 ? 3 : 0) + index + 1
+                      return (
+                        <div key={actualRank} className="flex items-center justify-between p-3.5 rounded-2xl transition hover:bg-slate-50 border border-transparent hover:border-slate-100">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full font-black text-xs" style={{ background: '#F8F9FA', color: '#8b92a5', border: '1px solid #E5E7EB' }}>
+                              {actualRank}
+                            </div>
+                            <div className="flex flex-col leading-tight">
+                              <span className="font-bold text-sm" style={{ color: INK }}>{p.name}</span>
+                              {p.age && <span className="text-[10px] font-semibold" style={{ color: MUT }}>{p.age} ans</span>}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="font-black text-[15px] tabular-nums" style={{ color: accent }}>{p.points}</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#8b92a5' }}>points</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center p-10 bg-white rounded-[24px] border border-dashed shadow-sm" style={{ borderColor: LINE }}>
+                <div className="text-4xl mb-3 opacity-50">🏆</div>
+                <p className="text-sm font-semibold" style={{ color: INK }}>Le classement est vide !</p>
+                <p className="text-xs mt-2" style={{ color: MUT }}>Soyez le premier à gagner des points et à dominer le Hall of Fame.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Game is selected, show it ──────────────────────────────────────────────
+  const gameColor = isSlot ? '#A78BFA' : '#FFD700'
+  const gameBg = isSlot ? 'linear-gradient(145deg, #000d2e, #001a5c)' : 'linear-gradient(145deg, #1a0002, #3d0000)'
+  const gameName = isSlot ? 'Slot Machine 777' : 'Roulette Casino'
+
+  return (
+    <div className="pt-3 flex flex-col gap-4">
+      {/* Back + Game Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button
+          type="button"
+          onClick={() => { if (phase !== 'spinning') setSelectedGame(null) }}
+          style={{ background: 'rgba(0,0,0,0.06)', border: 'none', borderRadius: 10, padding: '6px 10px', cursor: 'pointer', color: '#1A1410', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600 }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          Jeux
+        </button>
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <span style={{ fontWeight: 800, fontSize: 16, color: gameColor, fontFamily: 'Georgia, serif', textShadow: `0 0 10px ${gameColor}44` }}>{gameName}</span>
+        </div>
+        <div style={{ background: 'rgba(0,0,0,0.06)', borderRadius: 10, padding: '4px 10px', fontSize: 13, fontWeight: 700, color: '#1A1410' }}>
+          🪙 {balance}
+        </div>
+      </div>
+
+      {/* Game Machine */}
+      <div style={{ borderRadius: 20, overflow: 'hidden', background: gameBg, border: `2px solid ${gameColor}55`, boxShadow: `0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px ${gameColor}22` }}>
+        <div style={{ padding: '16px 12px' }}>
+          {isSlot ? (
+            <SlotMachine777
+              prizes={prizes}
+              prizeIcons={prizeIcons}
+              prizeIsLose={prizeIsLose}
+              spinning={spinning}
+              targetIndex={result ? result.prizeIndex : null}
+              onSpinEnd={onSpinEnd}
+            />
+          ) : (
+            <RouletteWheel
+              prizes={prizes}
+              prizeIcons={prizeIcons}
+              spinning={spinning}
+              targetIndex={result ? result.prizeIndex : null}
+              onSpinEnd={onSpinEnd}
+              accent={accent}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* CTA */}
       <div className="w-full">
         {blocked ? (
           <Cooldown accent={accent} until={nextPlayAt} />
         ) : !played ? (
           <>
-            <button type="button" onClick={onSpin} disabled={phase === 'spinning'} aria-busy={phase === 'spinning'} className="block w-full rounded-[18px] py-[17px] text-base font-semibold text-white transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -14px ${accent}` }}>{phase === 'spinning' ? 'La roue tourne…' : 'Tourner la roue'}</button>
-            {rescan !== null ? <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour jouer" /> : error ? <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p> : <p className="mt-3.5 text-center text-[11px] leading-relaxed" style={{ color: FAINT_TEXT }}>Vos gains et vos points sont gardés sur votre compte.</p>}
+            <button
+              type="button"
+              onClick={() => onSpin(currentGameMode)}
+              disabled={phase === 'spinning' || !canPlay}
+              className="block w-full rounded-[18px] py-[17px] text-base font-semibold text-white transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ background: gameBg, border: `2px solid ${gameColor}`, boxShadow: `0 14px 30px -14px ${gameColor}88`, color: gameColor }}
+            >
+              {phase === 'spinning' ? '⏳ En cours...' : `🎮 Jouer — ${GAME_COST} pts`}
+            </button>
+            {rescan !== null ? <ScanGateNotice message={rescan} accent={accent} heading="Scannez le QR du café pour jouer" /> : error ? <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">{error}</p> : <p className="mt-3 text-center text-[11px] leading-relaxed" style={{ color: '#6E665C' }}>Vos gains et vos points sont gardés sur votre compte.</p>}
           </>
         ) : (
           <div className="space-y-2.5">
-            <button type="button" onClick={onSpin} className="block w-full rounded-[18px] py-3.5 text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -14px ${accent}` }}>Rejouer</button>
-            {result && <button type="button" onClick={onReview} className="flex w-full items-center justify-center gap-2 rounded-[18px] bg-white py-3.5 text-sm font-semibold transition active:scale-[0.99]" style={{ color: INK, boxShadow: SOFT }}>🎁 Revoir mon gain</button>}
+            <button type="button" onClick={() => onSpin(currentGameMode)} className="block w-full rounded-[18px] py-3.5 text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -14px ${accent}` }}>Rejouer</button>
+            {result && <button type="button" onClick={onReview} className="flex w-full items-center justify-center gap-2 rounded-[18px] bg-white py-3.5 text-sm font-semibold transition active:scale-[0.99]" style={{ color: '#1A1410', boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 12px 30px -20px rgba(0,0,0,0.3)' }}>🎁 Revoir mon gain</button>}
           </div>
         )}
       </div>
     </div>
   )
 }
+
 
 /* ── Boutique ────────────────────────────────────────────────────────────────── */
 function BoutiqueTab(props: { session: DinerSession | null; businessName: string; accent: string; gradient: string; balance: number; loyaltyActive: boolean; rewards: Reward[]; busyRewardId: string | null; redeemed: { code: string; rewardLabel: string } | null; error: string | null; rescan: string | null; onRedeem: (r: Reward) => void }) {
@@ -632,7 +1183,7 @@ function Cooldown({ accent, until }: { accent: string; until: string | null }) {
 }
 
 /* ── Win popup ───────────────────────────────────────────────────────────────── */
-function WinModal({ result, accent, gradient, copied, onCopy, onClose, onSeeCard }: { result: SpinResult; accent: string; gradient: string; copied: boolean; onCopy: () => void; onClose: () => void; onSeeCard: () => void }) {
+function WinModal({ result, isLose, accent, gradient, copied, onCopy, onClose, onSeeCard }: { result: SpinResult; isLose?: boolean; accent: string; gradient: string; copied: boolean; onCopy: () => void; onClose: () => void; onSeeCard: () => void }) {
   const dialogRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const prevFocused = document.activeElement as HTMLElement | null
@@ -646,16 +1197,31 @@ function WinModal({ result, accent, gradient, copied, onCopy, onClose, onSeeCard
   }, [onClose])
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-5 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <Confetti accent={accent} />
-      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`Vous avez gagné ${result.prizeLabel}, code ${result.code}`} className="relative w-full max-w-[22rem] overflow-hidden rounded-[26px] bg-white px-6 pb-7 pt-8 text-center outline-none animate-[fhwin_.3s_cubic-bezier(0.16,0.84,0.3,1)]" style={{ boxShadow: '0 30px 60px -24px rgba(0,0,0,0.5)' }}>
+      {!isLose && <Confetti accent={accent} />}
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={isLose ? `Pas de chance : ${result.prizeLabel}` : `Vous avez gagné ${result.prizeLabel}, code ${result.code}`} className="relative w-full max-w-[22rem] overflow-hidden rounded-[26px] bg-white px-6 pb-7 pt-8 text-center outline-none animate-[fhwin_.3s_cubic-bezier(0.16,0.84,0.3,1)]" style={{ boxShadow: '0 30px 60px -24px rgba(0,0,0,0.5)' }}>
         <button type="button" onClick={onClose} aria-label="Fermer" className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[#FAF7F3]" style={{ color: MUT }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl" style={{ backgroundColor: `${accent}1a` }}>🎉</div>
-        <h2 className="mt-3 text-2xl font-bold" style={{ color: INK }}>Vous avez gagné&nbsp;!</h2>
-        <p className="mt-1 text-lg font-semibold" style={{ color: accent }}>{result.prizeLabel}</p>
-        <button type="button" onClick={onCopy} className="mx-auto mt-5 flex w-fit items-center gap-2.5 rounded-2xl px-6 py-3 font-mono text-2xl font-bold tracking-[0.2em] transition" style={{ background: '#FAF7F3', color: INK }} title="Copier le code">{result.code}<span className="font-sans text-xs font-medium tracking-normal" style={{ color: MUT }}>{copied ? 'copié ✓' : 'copier'}</span></button>
-        <p className="mt-3 text-xs leading-relaxed" style={{ color: MUT }}>Montrez ce code au personnel pour récupérer votre gain.<br />Valable jusqu’au {new Date(result.expiresAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.</p>
+        
+        {isLose ? (
+          <>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl" style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>😢</div>
+            <h2 className="mt-3 text-2xl font-bold" style={{ color: INK }}>Pas de chance !</h2>
+            <p className="mt-1 text-lg font-semibold" style={{ color: '#DC2626' }}>{result.prizeLabel}</p>
+            <p className="mt-3 text-sm leading-relaxed" style={{ color: MUT }}>Meilleure chance la prochaine fois !</p>
+          </>
+        ) : (
+          <>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl" style={{ backgroundColor: `${accent}1a` }}>🎉</div>
+            <h2 className="mt-3 text-2xl font-bold" style={{ color: INK }}>Vous avez gagné&nbsp;!</h2>
+            <p className="mt-1 text-lg font-semibold" style={{ color: accent }}>{result.prizeLabel}</p>
+            <button type="button" onClick={onCopy} className="mx-auto mt-5 flex w-fit items-center gap-2.5 rounded-2xl px-6 py-3 font-mono text-2xl font-bold tracking-[0.2em] transition" style={{ background: '#FAF7F3', color: INK }} title="Copier le code">{result.code}<span className="font-sans text-xs font-medium tracking-normal" style={{ color: MUT }}>{copied ? 'copié ✓' : 'copier'}</span></button>
+            <p className="mt-3 text-xs leading-relaxed" style={{ color: MUT }}>Montrez ce code au personnel pour récupérer votre gain.<br />Valable jusqu’au {new Date(result.expiresAt).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.</p>
+          </>
+        )}
+        
         <NextSpinCountdown accent={accent} until={result.nextPlayAt ?? null} />
-        <button type="button" onClick={onSeeCard} className="mt-5 block w-full rounded-[18px] py-3.5 text-center text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -16px ${accent}` }}>Voir ma carte</button>
+        {!isLose && (
+          <button type="button" onClick={onSeeCard} className="mt-5 block w-full rounded-[18px] py-3.5 text-center text-sm font-semibold text-white transition active:scale-[0.99]" style={{ backgroundImage: gradient, boxShadow: `0 14px 30px -16px ${accent}` }}>Voir ma carte</button>
+        )}
         <style jsx global>{`@keyframes fhwin { from { opacity: 0; transform: translateY(28px) scale(0.96) } to { opacity: 1; transform: translateY(0) scale(1) } }`}</style>
       </div>
     </div>

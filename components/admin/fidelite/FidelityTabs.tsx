@@ -3,18 +3,18 @@
 import { useState } from 'react'
 import PageHeader from '@/components/admin/kit/PageHeader'
 import Tabs, { useTabParam } from '@/components/admin/kit/Tabs'
-import { CardSkeleton } from '@/components/admin/kit/Skeleton'
 import FidelityToggle from '@/components/admin/game/FidelityToggle'
 import FidelityOverview from '@/components/admin/fidelite/FidelityOverview'
 import LoyaltyManager from '@/components/admin/LoyaltyManager'
 import GameManager from '@/components/admin/GameManager'
 import RoueReglages from '@/components/admin/fidelite/RoueReglages'
-import { useOwnerBusiness } from '@/components/admin/fidelite/useOwnerBusiness'
 import { IconGift, IconChevron } from '@/components/admin/shell/icons'
+import QuizQuestionsManager from '@/components/admin/game/QuizQuestionsManager'
 
 const TABS = [
   { id: 'programme', label: 'Programme & points' },
   { id: 'roue', label: 'La roue' },
+  { id: 'quiz', label: 'Questions Quiz' },
 ]
 
 /**
@@ -24,27 +24,29 @@ const TABS = [
  *                           (was /admin/fidelite + /admin/fidelite/recompenses)
  *   • La roue             = customer wheel (GameManager) + advanced settings
  *                           accordion (was /admin/fidelite/roue + .../roue/reglages)
+ *   • Questions Quiz      = QuizQuestionsManager for the manual question system
  * Daily-ops (caisse, comptoir) moved out to the Opérations group.
  */
-export default function FidelityTabs() {
-  const { business, loading } = useOwnerBusiness()
-  const [tab, setTab] = useTabParam(['programme', 'roue'], 'programme')
+export default function FidelityTabs({ business }: { business: { id: string; slug: string } }) {
+  const [tab, setTab] = useTabParam(['programme', 'roue', 'quiz'], 'programme')
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader title="Fidélité" subtitle="La roue, les points et les récompenses — tout au même endroit." icon={<IconGift width={20} height={20} />} />
-      {!loading && business && <FidelityOverview slug={business.slug} onConfigure={setTab} />}
+      <PageHeader title="Fidélité & Jeux" subtitle="La roue, les points, les récompenses et les questions du quiz — tout au même endroit." icon={<IconGift width={20} height={20} />} />
+      {business && <FidelityOverview slug={business.slug} onConfigure={setTab} />}
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
 
-      {loading ? (
-        <CardSkeleton rows={4} />
-      ) : !business ? (
+      {!business ? (
         <p className="text-[var(--muted)]">Aucun établissement trouvé.</p>
       ) : tab === 'programme' ? (
         <div className="space-y-5">
           <FidelityToggle businessId={business.id} />
           <LoyaltyManager businessId={business.id} />
+        </div>
+      ) : tab === 'quiz' ? (
+        <div className="space-y-5">
+          <QuizQuestionsManager businessId={business.id} />
         </div>
       ) : (
         <div className="space-y-5">

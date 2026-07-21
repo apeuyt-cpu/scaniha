@@ -9,11 +9,7 @@ export function formatPrice(
   if (amount === null || amount === undefined) return ''
 
   try {
-    const localeMap: Record<Locale, string> = { 
-      fr: 'fr-TN',
-      en: 'en-US',
-      ar: 'ar-TN'
-    }
+    const localeMap: Record<Locale, string> = { fr: 'fr-TN' }
     const localeStr = localeMap[locale] || 'fr-TN'
 
     const formatter = new Intl.NumberFormat(localeStr, {

@@ -6,13 +6,13 @@ type UserRole = 'owner' | 'super_admin' | null
 /**
  * Public routes that don't require authentication
  */
-const PUBLIC_ROUTES = ['/login', '/signup', '/verify-email', '/']
+const PUBLIC_ROUTES = ['/login', '/signup', '/']
 
 /**
  * Check if a path is a public route
  */
 function isPublicRoute(pathname: string): boolean {
-  if (pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/verify-email')) return true
+  if (pathname.startsWith('/login') || pathname.startsWith('/signup')) return true
   if (pathname === '/') return true
   // Public menu routes (slug routes)
   if (pathname.match(/^\/[^\/]+$/) && !pathname.startsWith('/admin') && !pathname.startsWith('/super-admin')) {
@@ -106,6 +106,10 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   let response = NextResponse.next({ request: { headers: req.headers } })
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return response
+  }
 
   const supabase = createSupabaseServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -226,6 +230,5 @@ export const config = {
     '/super-admin/:path*',
     '/login',
     '/signup',
-    '/verify-email',
   ],
 }

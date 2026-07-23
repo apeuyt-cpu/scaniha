@@ -263,8 +263,15 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
               <div className="grid" aria-live="polite">
                 {/* Slide 1 — Menu QR */}
                 <div aria-hidden={heroSlide !== 0} className={`transition-all duration-700 ease-out [grid-area:1/1] ${heroSlide === 0 ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}`}>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5">
-                    <span aria-hidden="true">🍽️</span>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 shadow-xs">
+                    <svg className="w-4 h-4 text-orange-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                      <rect x="14" y="14" width="3" height="3" fill="currentColor" stroke="none" />
+                      <rect x="18" y="18" width="3" height="3" fill="currentColor" stroke="none" />
+                      <rect x="14" y="18" width="3" height="3" fill="currentColor" stroke="none" />
+                    </svg>
                     <span className="text-sm font-semibold text-orange-700">Menu QR</span>
                   </div>
                   <h1 className="headline mt-6 text-4xl font-extrabold leading-[1.08] text-zinc-900 sm:text-5xl lg:text-6xl">
@@ -278,8 +285,12 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
 
                 {/* Slide 2 — Programme de fidélité */}
                 <div aria-hidden={heroSlide !== 1} className={`transition-all duration-700 ease-out [grid-area:1/1] ${heroSlide === 1 ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5">
-                    <span aria-hidden="true">🎯</span>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 shadow-xs">
+                    <svg className="w-4 h-4 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9" />
+                      <circle cx="12" cy="12" r="5" />
+                      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                    </svg>
                     <span className="text-sm font-semibold text-amber-700">Programme de fidélité</span>
                   </div>
                   <h2 className="headline mt-6 text-4xl font-extrabold leading-[1.08] text-zinc-900 sm:text-5xl lg:text-6xl">
@@ -611,8 +622,18 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
                 </>
               )}
             </div>
-            <p className="relative mt-7 text-sm font-medium text-white/90">
-              Rejoint par des restaurants et cafés en Tunisie 🇹🇳
+            <p className="relative mt-7 flex items-center justify-center gap-2 text-sm font-medium text-white/95">
+              <span>Rejoint par des restaurants et cafés en Tunisie</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-bold text-white shadow-xs backdrop-blur-xs">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" fill="#E70013" />
+                  <circle cx="12" cy="12" r="6" fill="#FFFFFF" />
+                  <circle cx="12.5" cy="12" r="4.5" fill="#E70013" />
+                  <circle cx="13.5" cy="12" r="3.6" fill="#FFFFFF" />
+                  <polygon points="12.5,9.5 13.2,11.2 15,11.2 13.5,12.3 14,14 12.5,13 11,14 11.5,12.3 10,11.2 11.8,11.2" fill="#E70013" />
+                </svg>
+                TN
+              </span>
             </p>
           </div>
         </div>

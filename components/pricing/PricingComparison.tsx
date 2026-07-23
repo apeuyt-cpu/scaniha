@@ -130,8 +130,11 @@ function PlanCard({ plan, features }: { plan: Plan; features: string[] }) {
 
       <div className="mt-4 h-7">
         {plan.save && (
-          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${savePill}`}>
-            <span aria-hidden="true">★</span> {plan.save}
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${savePill}`}>
+            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+              <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+            </svg>
+            <span>{plan.save}</span>
           </span>
         )}
       </div>
@@ -181,7 +184,11 @@ export default function PricingComparison() {
           ))}
         </div>
         <div className="mx-auto mt-8 flex max-w-2xl items-start gap-3 rounded-2xl border-2 border-orange-300 bg-orange-50 px-5 py-4 text-left shadow-sm">
-          <span aria-hidden="true" className="mt-0.5 text-lg leading-none">ℹ️</span>
+          <svg className="w-5 h-5 shrink-0 text-orange-600 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
           <p className="text-sm font-semibold leading-relaxed text-orange-900">
             Tarifs de la plateforme uniquement — <span className="font-extrabold underline decoration-orange-400 decoration-2 underline-offset-2">supports de table et stickers QR non inclus</span> (en option lors de l&apos;abonnement).
           </p>

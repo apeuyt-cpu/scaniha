@@ -104,7 +104,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     },
     // Competitor comparison pages (generateStaticParams in app/compare/[competitor]).
-    ...['menulog', 'qrmenu', 'menuly', 'restomenu'].map((c) => ({
+    ...['menulog', 'qrmenu', 'menuly', 'restomenu', 'gloriafood', 'mryum', 'finedine', 'linktree'].map((c) => ({
       url: `${baseUrl}/compare/${c}`,
       lastModified: new Date(),
       changeFrequency: 'monthly' as const,

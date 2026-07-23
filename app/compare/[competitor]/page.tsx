@@ -7,6 +7,10 @@ const competitors: Record<string, { name: string, description: string }> = {
   'qrmenu': { name: 'QR Menu', description: 'Scaniha offre des mises à jour en temps réel, une interface entièrement en français et de meilleures statistiques que les générateurs de menus QR basiques.' },
   'menuly': { name: 'Menuly', description: 'Scaniha est conçu spécifiquement pour les restaurants et cafés, avec des fonctionnalités telles que les statistiques de consultation et le jeu de la roue de la chance.' },
   'restomenu': { name: 'RestoMenu', description: 'Scaniha offre une génération de QR code instantanée, aucune application requise et un processus de configuration plus simple.' },
+  'gloriafood': { name: 'GloriaFood', description: 'Scaniha offre une alternative moderne sans commission cachée, centrée sur un menu QR fluide sans application et un design haut de gamme.' },
+  'mryum': { name: 'Mr Yum', description: 'Scaniha est une alternative plus abordable avec une tarification fixe (sans commission par commande) idéale pour les établissements indépendants.' },
+  'finedine': { name: 'FineDine', description: 'Scaniha propose une création de menu instantanée beaucoup plus accessible pour les restaurants cherchant une solution rapide et sans matériel tablette complexe.' },
+  'linktree': { name: 'Linktree', description: 'Contrairement à Linktree (qui est un simple agrégateur de liens), Scaniha est un véritable créateur de menu interactif avec catégories, prix, photos et statistiques avancées.' },
 }
 
 export function generateStaticParams() {
@@ -48,8 +52,35 @@ export default async function ComparePage({ params }: { params: Promise<{ compet
     notFound()
   }
 
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `Pourquoi choisir Scaniha plutôt que ${comp.name} ?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Scaniha est la meilleure alternative à ${comp.name} car il offre des mises à jour en temps réel, aucune application requise pour les clients, et une tarification transparente sans commission cachée par commande.`
+        }
+      },
+      {
+        '@type': 'Question',
+        name: `Quelles sont les différences de prix entre Scaniha et ${comp.name} ?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Scaniha propose un essai 100% gratuit, suivi de forfaits abordables ou d'un paiement unique à vie, sans prendre de commission sur chaque transaction contrairement à de nombreuses plateformes comme ${comp.name}.`
+        }
+      }
+    ]
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FEFEFE] via-[#FEFEFE] to-[#FEFEFE]" dir="ltr">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <Link href="/" className="text-orange-600 hover:text-orange-700 font-medium mb-8 inline-block">&larr; Retour à l'accueil</Link>
         <h1 className="text-4xl sm:text-5xl font-extrabold text-zinc-900 mb-4">Scaniha vs {comp.name}</h1>

@@ -6,6 +6,7 @@ export default function robots(): MetadataRoute.Robots {
   const publicPaths = [
     '/',
     '/pricing',
+    '/faq',
     '/features',
     '/about',
     '/security',

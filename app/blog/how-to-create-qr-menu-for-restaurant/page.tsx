@@ -12,8 +12,35 @@ export const metadata: Metadata = {
 }
 
 export default function Post() {
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: 'Comment créer un menu QR pour votre restaurant — Guide étape par étape',
+    description: 'Apprenez à créer un menu QR pour votre restaurant étape par étape. De l’inscription à l’impression des codes QR, ce guide complet vous accompagne à chaque étape.',
+    image: 'https://scaniha.com/og-scaniha.jpg',
+    datePublished: '2026-01-15T00:00:00+00:00',
+    dateModified: '2026-01-15T00:00:00+00:00',
+    author: {
+      '@type': 'Organization',
+      name: 'Scaniha',
+      url: 'https://scaniha.com'
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Scaniha',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://scaniha.com/logo.png'
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#FEFEFE]" dir="ltr">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
       <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <Link href="/blog" className="text-orange-600 hover:text-orange-700 font-medium mb-8 inline-block">&larr; Retour au blog</Link>
         <article>

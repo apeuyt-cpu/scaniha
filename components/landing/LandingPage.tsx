@@ -534,14 +534,74 @@ export default function LandingPage({ dashboardUrl }: { dashboardUrl?: string | 
 
           <FidelityShowcase />
 
-          <div className="reveal mt-20 flex justify-center">
-            <Image
-              src="/leprechaunhappywheel.png"
-              alt="Casino Games - Slot Machine and Lucky Wheel"
-              width={1000}
-              height={750}
-              className="h-auto w-full max-w-[1000px] drop-shadow-2xl hover:scale-[1.02] transition-transform duration-500 ease-out"
-            />
+          <div className="reveal mt-16 overflow-hidden rounded-3xl border border-orange-200/80 bg-gradient-to-br from-white via-orange-50/40 to-amber-50/60 p-6 sm:p-10 shadow-xl shadow-orange-900/5">
+            <div className="grid items-center gap-8 lg:grid-cols-12">
+              {/* Left Column: Copy & Interactive Feature Highlights (7 cols) */}
+              <div className="lg:col-span-7 space-y-6">
+                <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-100/70 px-3.5 py-1.5 text-xs font-bold text-orange-800">
+                  <svg className="w-4 h-4 text-orange-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 8v4l3 3" />
+                  </svg>
+                  <span>Jeu & Fidélisation Intégrés</span>
+                </div>
+
+                <h3 className="text-2xl font-extrabold text-zinc-900 sm:text-3xl lg:text-4xl leading-tight">
+                  Multipliez les retours clients grâce à la <span className="text-orange-500">Roue de la Chance</span>
+                </h3>
+
+                <p className="text-base text-zinc-600 leading-relaxed">
+                  Offrez une expérience ludique et mémorable. Chaque client qui scanne votre menu QR peut tenter sa chance pour gagner des cadeaux personnalisés définis par vos soins.
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-xs">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600 font-bold mb-3">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6" />
+                        <path d="M12 2v10M17 7l-5-5-5 5" />
+                      </svg>
+                    </div>
+                    <h4 className="font-bold text-zinc-900 text-sm">Gagnez des Cadeaux</h4>
+                    <p className="text-xs text-zinc-500 mt-1">Cafés offerts, réductions ou desserts pour faire plaisir à vos clients.</p>
+                  </div>
+
+                  <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-xs">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600 font-bold mb-3">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                      </svg>
+                    </div>
+                    <h4 className="font-bold text-zinc-900 text-sm">100% Personnalisable</h4>
+                    <p className="text-xs text-zinc-500 mt-1">Choisissez les taux de réussite, les lots et les conditions en 1 clic.</p>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Link
+                    href={dashboardUrl || '/business-request'}
+                    className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-500/25 hover:bg-orange-600 transition"
+                  >
+                    <span>Activer le jeu sur mon menu</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right Column: Compact 3D Graphic (5 cols) */}
+              <div className="lg:col-span-5 flex justify-center">
+                <div className="relative w-full max-w-[400px] transition-transform duration-500 hover:scale-105">
+                  <Image
+                    src="/leprechaunhappywheel.png"
+                    alt="Roue de la chance et Machine à sous interactive Scaniha"
+                    width={480}
+                    height={360}
+                    className="h-auto w-full drop-shadow-xl"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

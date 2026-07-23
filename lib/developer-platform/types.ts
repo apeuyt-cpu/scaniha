@@ -172,6 +172,8 @@ export interface ApiClient {
   custom_rate_limit_per_month: number | null
   custom_storage_limit_mb: number | null
   timezone: string
+  /** Links this developer client to a specific Scaniha business */
+  business_id: string | null
   created_at: string
   updated_at: string
   suspended_at: string | null

@@ -153,6 +153,8 @@ export const CreateApiClientSchema = z.object({
   custom_rate_limit_per_month:  z.number().int().min(-1).optional().nullable(),
   custom_storage_limit_mb:      z.number().int().min(-1).optional().nullable(),
   timezone: z.string().default('UTC'),
+  // Links this client to a specific Scaniha business (required for API gateway access)
+  business_id:   uuid.optional().nullable(),
   // Plan assignment on creation
   plan_id:       uuid.optional(),
   billing_cycle: z.enum(['monthly', 'yearly', 'lifetime', 'custom']).optional(),

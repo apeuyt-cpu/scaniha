@@ -64,6 +64,8 @@ export async function authenticateApiKey(
   key?: ApiKey
   client?: ApiClient
   clientId?: string
+  businessId?: string
+  businessSlug?: string
   error?: string
 }> {
   if (!rawKey || rawKey.length < 20) return { valid: false, error: 'Invalid key format' }
@@ -90,10 +92,31 @@ export async function authenticateApiKey(
       return { valid: false, error: 'API key has expired' }
     }
 
+    // Resolve the linked business (if any) — used by the API gateway to scope queries
+    let businessId: string | undefined
+    let businessSlug: string | undefined
+    if (client?.business_id) {
+      const { data: biz } = await (admin.from('businesses') as any)
+        .select('id, slug, status')
+        .eq('id', client.business_id)
+        .maybeSingle()
+      if (biz && biz.status === 'active') {
+        businessId = biz.id as string
+        businessSlug = biz.slug as string
+      }
+    }
+
     // Update last_used_at (fire-and-forget, don't await)
     ;(admin.from('dev_api_keys') as any).update({ last_used_at: new Date().toISOString() }).eq('id', key.id)
 
-    return { valid: true, key: key as ApiKey, client: client as ApiClient, clientId: key.client_id }
+    return {
+      valid: true,
+      key: key as ApiKey,
+      client: client as ApiClient,
+      clientId: key.client_id,
+      businessId,
+      businessSlug,
+    }
   } catch (err) {
     console.error('[API_KEY_AUTH]', err)
     return { valid: false, error: 'Authentication service error' }

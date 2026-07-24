@@ -253,12 +253,12 @@ export default function OrderingSettings({ onChange }: { onChange?: (c: Ordering
                       (error) => {
                         setSaving(false)
                         console.error("GPS error", error)
-                        alert("Impossible d'obtenir votre position. Assurez-vous d'avoir autorisé l'accès au GPS.")
+                        alert("Impossible d'obtenir votre position. Vérifiez que la localisation est activée (et autorisée) sur votre appareil.")
                       },
-                      { enableHighAccuracy: true }
+                      { enableHighAccuracy: true, timeout: 10000 }
                     )
                   } else {
-                    alert("La géolocalisation n'est pas supportée par votre navigateur.")
+                    alert("La géolocalisation n'est pas supportée par votre navigateur (nécessite HTTPS).")
                   }
                 }}
                 disabled={loading || saving}

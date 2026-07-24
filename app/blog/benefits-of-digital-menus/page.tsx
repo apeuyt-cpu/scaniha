@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import BlogPostingJsonLd from '@/components/seo/BlogPostingJsonLd'
 
 export const metadata: Metadata = {
   title: '7 avantages des menus numériques pour les restaurants en 2026 | Scaniha',
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 export default function Post() {
   return (
     <div className="min-h-screen bg-[#FEFEFE]" dir="ltr">
+      <BlogPostingJsonLd title="7 avantages des menus numériques pour les restaurants en 2026" description="Les principaux avantages opérationnels des menus numériques pour les restaurants." slug="benefits-of-digital-menus" datePublished="2026-01-22" />
       <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <Link href="/blog" className="text-orange-600 hover:text-orange-700 font-medium mb-8 inline-block">&larr; Retour au blog</Link>
         <article>

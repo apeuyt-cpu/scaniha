@@ -335,7 +335,20 @@ export function menuShowsFidelity(business: any): boolean {
   return business?.design_settings?.menuShowsFidelity !== false
 }
 
-export interface OrderingConfig { enabled: boolean; qrKey: string; ttlMin: number; tables: number }
+export interface OrderingConfig {
+  enabled: boolean
+  qrKey: string
+  ttlMin: number
+  tables: number
+  /** Reject orders unless the customer uses the café's configured Wi-Fi egress IP. */
+  wifiOnly: boolean
+  wifiCidrs: string[]
+  /** Reject orders unless the customer is physically near these coordinates (GPS). */
+  gpsOnly: boolean
+  gpsLat: number | null
+  gpsLng: number | null
+  gpsRadius: number
+}
 
 /**
  * Table-ordering config (business-wide sibling key in design_settings.ordering).
@@ -347,11 +360,19 @@ export function orderingConfig(business: any): OrderingConfig {
   const o = business?.design_settings?.ordering
   const ttl = Number(o?.ttlMin)
   const tables = Number(o?.tables)
+  const gpsLat = Number(o?.gpsLat)
+  const gpsLng = Number(o?.gpsLng)
   return {
     enabled: Boolean(o?.enabled),
     qrKey: typeof o?.qrKey === 'string' ? o.qrKey : '',
-    ttlMin: Number.isFinite(ttl) && ttl > 0 ? Math.min(1440, Math.round(ttl)) : 120,
+    ttlMin: Number.isFinite(ttl) && ttl > 0 ? Math.min(60, Math.max(5, Math.round(ttl))) : 15,
     tables: Number.isFinite(tables) && tables > 0 ? Math.min(200, Math.round(tables)) : 0,
+    wifiOnly: Boolean(o?.wifiOnly),
+    wifiCidrs: Array.isArray(o?.wifiCidrs) ? o.wifiCidrs.filter((v: unknown) => typeof v === 'string').slice(0, 12) : [],
+    gpsOnly: Boolean(o?.gpsOnly),
+    gpsLat: Number.isFinite(gpsLat) ? gpsLat : null,
+    gpsLng: Number.isFinite(gpsLng) ? gpsLng : null,
+    gpsRadius: Number.isFinite(Number(o?.gpsRadius)) ? Math.max(10, Math.round(Number(o.gpsRadius))) : 100,
   }
 }
 

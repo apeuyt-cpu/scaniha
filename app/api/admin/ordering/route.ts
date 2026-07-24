@@ -5,6 +5,7 @@ import { businessCacheTag } from '@/lib/db/business'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { orderingConfig } from '@/lib/design-settings'
 import { newQrKey } from '@/lib/qr-session'
+import { sanitizeIpRules } from '@/lib/order-network'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -32,7 +33,21 @@ export const POST = withStaff('settings.manage', async (request, { business }) =
   // Start from the CURRENTLY stored config so a partial POST keeps prior values.
   const current = orderingConfig(business)
   const tables = body?.tables === undefined ? current.tables : clamp(Number(body.tables), 1, 200, current.tables)
-  const ttlMin = body?.ttlMin === undefined ? current.ttlMin : clamp(Number(body.ttlMin), 5, 1440, 120)
+  const ttlMin = body?.ttlMin === undefined ? current.ttlMin : clamp(Number(body.ttlMin), 5, 60, 15)
+  const wifiOnly = body?.wifiOnly === undefined ? current.wifiOnly : Boolean(body.wifiOnly)
+  const wifiCidrs = body?.wifiCidrs === undefined ? current.wifiCidrs : sanitizeIpRules(body.wifiCidrs)
+  if (wifiOnly && wifiCidrs.length === 0) {
+    return NextResponse.json({ error: 'Ajoutez l’adresse IP publique du Wi-Fi avant d’activer ce verrou.' }, { status: 400 })
+  }
+
+  const gpsOnly = body?.gpsOnly === undefined ? current.gpsOnly : Boolean(body.gpsOnly)
+  const gpsLat = body?.gpsLat === undefined ? current.gpsLat : (Number.isFinite(Number(body.gpsLat)) ? Number(body.gpsLat) : null)
+  const gpsLng = body?.gpsLng === undefined ? current.gpsLng : (Number.isFinite(Number(body.gpsLng)) ? Number(body.gpsLng) : null)
+  const gpsRadius = body?.gpsRadius === undefined ? current.gpsRadius : clamp(Number(body.gpsRadius), 10, 5000, current.gpsRadius)
+  
+  if (gpsOnly && (gpsLat === null || gpsLng === null)) {
+    return NextResponse.json({ error: 'Vous devez définir la position de votre café avant d’activer le verrouillage GPS.' }, { status: 400 })
+  }
 
   // Re-read design_settings with the service-role client right before writing so
   // we merge over the freshest siblings (never clobber other keys).
@@ -47,7 +62,7 @@ export const POST = withStaff('settings.manage', async (request, { business }) =
   let qrKey = existingKey || (enabled ? newQrKey() : '')
   if (enabled && body?.regen === true) qrKey = newQrKey()
 
-  const ordering = { enabled, qrKey, ttlMin, tables }
+  const ordering = { enabled, qrKey, ttlMin, tables, wifiOnly, wifiCidrs, gpsOnly, gpsLat, gpsLng, gpsRadius }
   const { error } = await svc.from('businesses').update({ design_settings: { ...ds, ordering } }).eq('id', business.id)
   if (error) {
     console.error('[admin/ordering] update:', error.message)

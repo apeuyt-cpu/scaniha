@@ -20,8 +20,27 @@ const posts = [
 ]
 
 export default function BlogPage() {
+  const collectionSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    '@id': 'https://scaniha.com/blog#collection',
+    name: 'Blog Scaniha',
+    description: 'Guides et conseils sur les menus QR, les menus numériques et la digitalisation des restaurants.',
+    inLanguage: 'fr-TN',
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: posts.map((post, position) => ({
+        '@type': 'ListItem',
+        position: position + 1,
+        url: `https://scaniha.com/blog/${post.slug}`,
+        name: post.title,
+      })),
+    },
+  }
+
   return (
     <div className="min-h-screen bg-[#FEFEFE]" dir="ltr">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema).replace(/</g, '\\u003c') }} />
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <Link href="/" className="text-orange-600 hover:text-orange-700 font-medium mb-8 inline-block">&larr; Retour à Scaniha</Link>
         <div className="text-center mb-16">

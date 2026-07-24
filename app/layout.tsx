@@ -56,10 +56,7 @@ export const metadata: Metadata = {
     images: ['/og-scaniha.jpg'],
   },
   alternates: {
-    canonical: 'https://scaniha.com',
-    languages: {
-      fr: 'https://scaniha.com',
-    },
+    types: { 'application/rss+xml': 'https://scaniha.com/feed.xml' },
   },
 }
 

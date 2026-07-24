@@ -8,7 +8,7 @@ import { isSelfSignupEnabled } from '@/lib/db/platform-settings'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  alternates: { canonical: 'https://scaniha.com/signup' },
+  robots: { index: false, follow: true },
   title: 'Inscription | Scaniha - Créateur de menus QR',
   description: 'Créez votre compte Scaniha gratuit et commencez à concevoir de superbes menus numériques QR pour votre restaurant, café ou commerce alimentaire en quelques minutes.',
   openGraph: {

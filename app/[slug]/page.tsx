@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getBusinessBySlugCached, getMenuCached } from '@/lib/db/business'
+import { getBusinessBySlugCached, getMenuCached, isIndexableBusinessCandidate } from '@/lib/db/business'
 import { menuImageUrl } from '@/lib/image-url'
 import { getBusinessSeo } from '@/lib/seo/business-seo'
 import { getTheme } from '@/lib/themes'
@@ -239,7 +239,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
     const seo = getBusinessSeo(business)
     const menuUrl = `${baseUrl}/${business.slug}`
-    const isLive = business.status === 'active' && (!business.expires_at || new Date(business.expires_at) > new Date())
+    // Sitemap eligibility alone is not sufficient: a known URL can still be
+    // crawled directly. Keep incomplete restaurant profiles out of every index
+    // until they contain at least one real menu item.
+    const menu = await getMenuCached(business.id, business.slug).catch(() => [])
+    const hasMenuItems = (menu as Category[]).some((category) => Array.isArray(category.items) && category.items.length > 0)
+    const isLive = isIndexableBusinessCandidate(business) &&
+      hasMenuItems
     const ogImages = seo.shareImage ? [{ url: seo.shareImage, width: 1200, height: 630, alt: business.name }] : []
 
     return {

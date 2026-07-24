@@ -46,8 +46,8 @@ export default function CheckoutSheet({ slug, businessName, accent = '#F47B20' }
     return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', onKey) }
   }, [open, setOpen])
 
-  async function submit() {
-    if (submitting.current) return // block double-click before busy-state applies
+  async function submit(gpsCoords?: { lat: number; lng: number }) {
+    if (submitting.current && !gpsCoords) return // block double-click before busy-state applies
     if (!table.trim() || count === 0) { setError('Indiquez votre table et au moins un article.'); return }
     submitting.current = true
     setBusy(true); setError(null); setRescan(false)
@@ -62,12 +62,36 @@ export default function CheckoutSheet({ slug, businessName, accent = '#F47B20' }
         idem = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)
         try { localStorage.setItem(idemK, idem) } catch {}
       }
+      const payload: any = { table: table.trim(), name: name.trim() || undefined, note: note.trim() || undefined, items, idem }
+      if (gpsCoords) { payload.lat = gpsCoords.lat; payload.lng = gpsCoords.lng }
+
       const res = await fetch(`/api/order/${slug}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: table.trim(), name: name.trim() || undefined, note: note.trim() || undefined, items, idem }),
+        body: JSON.stringify(payload),
       })
       const j = await res.json().catch(() => ({}))
+      
       if (res.status === 403 && j?.rescanRequired) { setRescan(true); return }
+      
+      if (res.status === 403 && j?.gpsRequired && !gpsCoords) {
+        try {
+          const coords = await new Promise<{lat: number, lng: number}>((resolve, reject) => {
+            if (!navigator.geolocation) return reject(new Error('Not supported'))
+            navigator.geolocation.getCurrentPosition(
+              (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+              (e) => reject(e),
+              { enableHighAccuracy: true, timeout: 10000 }
+            )
+          })
+          return submit(coords)
+        } catch (e) {
+          setError('Vous devez autoriser la localisation pour commander depuis votre table.')
+          return
+        }
+      }
+      
+      if (res.status === 403 && j?.gpsRejected) { setError('Vous êtes trop loin du restaurant pour commander.'); return }
+      
       if (!res.ok || !j?.ok) { setError(j?.error || 'Commande momentanément indisponible.'); return }
       // Order is in — store its id and burn the idem key so the next cart is fresh.
       try { localStorage.setItem('scaniha_order_' + slug, j.orderId); localStorage.removeItem(idemK) } catch {}
@@ -163,7 +187,7 @@ export default function CheckoutSheet({ slug, businessName, accent = '#F47B20' }
           {lines.length > 0 && (
             <div className="absolute inset-x-0 bottom-0 flex gap-2 border-t bg-white p-3" style={{ borderColor: LINE }}>
               <button type="button" onClick={() => setOpen(false)} className="rounded-2xl border px-5 py-3.5 text-[15px] font-semibold" style={{ borderColor: LINE, color: INK }}>Menu</button>
-              <button type="button" onClick={submit} disabled={busy || count === 0} className="flex flex-1 items-center justify-between rounded-2xl px-5 py-3.5 text-[15px] font-bold text-white transition active:scale-[0.99] disabled:opacity-60" style={{ backgroundColor: accent }}><span>{busy ? 'Envoi…' : 'Passer la commande'}</span><span className="tabular-nums">{money(total)}</span></button>
+              <button type="button" onClick={() => submit()} disabled={busy || count === 0} className="flex flex-1 items-center justify-between rounded-2xl px-5 py-3.5 text-[15px] font-bold text-white transition active:scale-[0.99] disabled:opacity-60" style={{ backgroundColor: accent }}><span>{busy ? 'Envoi…' : 'Passer la commande'}</span><span className="tabular-nums">{money(total)}</span></button>
             </div>
           )}
         </>

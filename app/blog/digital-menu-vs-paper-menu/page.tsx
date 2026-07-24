@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import BlogPostingJsonLd from '@/components/seo/BlogPostingJsonLd'
 
 export const metadata: Metadata = {
   title: 'Menu numérique ou menu papier — Pourquoi le numérique l’emporte | Scaniha',
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 export default function Post() {
   return (
     <div className="min-h-screen bg-[#FEFEFE]" dir="ltr">
+      <BlogPostingJsonLd title="Menu numérique ou menu papier — Comparaison pour les restaurants" description="Une comparaison factuelle entre menus papier et menus numériques." slug="digital-menu-vs-paper-menu" datePublished="2026-02-19" />
       <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <Link href="/blog" className="text-orange-600 hover:text-orange-700 font-medium mb-8 inline-block">&larr; Retour au blog</Link>
         <article>

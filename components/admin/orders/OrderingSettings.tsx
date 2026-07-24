@@ -11,7 +11,13 @@ interface OrderingConfig {
   qrKey: string
   ttlMin: number
   tables: number
+  gpsOnly?: boolean
+  gpsLat?: number | null
+  gpsLng?: number | null
+  gpsRadius?: number
 }
+
+type TableTarget = { table: number; url: string }
 
 /**
  * Owner setup for "Commande à table": flip ordering on/off, choose how many
@@ -24,13 +30,14 @@ export default function OrderingSettings({ onChange }: { onChange?: (c: Ordering
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [config, setConfig] = useState<OrderingConfig>({ enabled: false, qrKey: '', ttlMin: 120, tables: 0 })
+  const [config, setConfig] = useState<OrderingConfig>({ enabled: false, qrKey: '', ttlMin: 120, tables: 0, gpsOnly: false, gpsLat: null, gpsLng: null, gpsRadius: 100 })
   const [tablesInput, setTablesInput] = useState('1')
   const [origin, setOrigin] = useState('')
   const [slug, setSlug] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [confirmingRotate, setConfirmingRotate] = useState(false)
   const [printing, setPrinting] = useState(false)
+  const [tableTargets, setTableTargets] = useState<TableTarget[]>([])
 
   useEffect(() => {
     try { setOrigin(window.location.origin) } catch {}
@@ -57,6 +64,11 @@ export default function OrderingSettings({ onChange }: { onChange?: (c: Ordering
             setConfig(c)
             setTablesInput(String(c.tables > 0 ? c.tables : 1))
           }
+          const targetRes = await fetch('/api/admin/ordering/qr-targets')
+          if (targetRes.ok) {
+            const payload = await targetRes.json()
+            if (alive && Array.isArray(payload?.targets)) setTableTargets(payload.targets)
+          }
         }
       } catch (e) {
         console.error(e)
@@ -68,11 +80,15 @@ export default function OrderingSettings({ onChange }: { onChange?: (c: Ordering
     return () => { alive = false }
   }, [error])
 
-  async function save(patch: { enabled?: boolean; tables?: number; regen?: boolean }) {
+  async function save(patch: { enabled?: boolean; tables?: number; regen?: boolean; gpsOnly?: boolean; gpsLat?: number | null; gpsLng?: number | null; gpsRadius?: number }) {
     const nextEnabled = patch.enabled !== undefined ? patch.enabled : config.enabled
-    const body: { enabled: boolean; tables?: number; regen?: boolean } = { enabled: nextEnabled }
+    const body: { enabled: boolean; tables?: number; regen?: boolean; gpsOnly?: boolean; gpsLat?: number | null; gpsLng?: number | null; gpsRadius?: number } = { enabled: nextEnabled }
     if (patch.tables !== undefined) body.tables = patch.tables
     if (patch.regen) body.regen = true
+    if (patch.gpsOnly !== undefined) body.gpsOnly = patch.gpsOnly
+    if (patch.gpsLat !== undefined) body.gpsLat = patch.gpsLat
+    if (patch.gpsLng !== undefined) body.gpsLng = patch.gpsLng
+    if (patch.gpsRadius !== undefined) body.gpsRadius = patch.gpsRadius
 
     setSaving(true)
     try {
@@ -85,6 +101,11 @@ export default function OrderingSettings({ onChange }: { onChange?: (c: Ordering
       const c = (await res.json()) as OrderingConfig
       setConfig(c)
       setTablesInput(String(c.tables > 0 ? c.tables : 1))
+      const targetRes = await fetch('/api/admin/ordering/qr-targets')
+      if (targetRes.ok) {
+        const payload = await targetRes.json()
+        if (Array.isArray(payload?.targets)) setTableTargets(payload.targets)
+      }
       onChange?.(c)
       success('Réglages enregistrés.')
     } catch (e) {
@@ -117,13 +138,15 @@ export default function OrderingSettings({ onChange }: { onChange?: (c: Ordering
   // Open a print-ready sheet with every table QR (one window.print for all).
   async function printAll() {
     if (!origin || !slug || !config.qrKey || config.tables < 1) return
+    const targets = new Map(tableTargets.map((target) => [target.table, target.url]))
+    if (targets.size < config.tables) { error('Les QR sont encore en préparation. Réessayez dans un instant.'); return }
     setPrinting(true)
     try {
       const nums = buildTableNumbers(config.tables)
       const qrs = await Promise.all(
         nums.map(async (n) => ({
           n,
-          src: await QRCode.toDataURL(`${origin}/${slug}?s=${config.qrKey}&t=${n}`, { width: 600, margin: 1, color: { dark: '#18181b', light: '#FFFFFF' } }),
+          src: await QRCode.toDataURL(targets.get(n)!, { width: 600, margin: 1, color: { dark: '#18181b', light: '#FFFFFF' } }),
         }))
       )
       const w = window.open('', '_blank')
@@ -175,6 +198,80 @@ export default function OrderingSettings({ onChange }: { onChange?: (c: Ordering
             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
             className="w-32 rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 text-sm font-semibold text-[var(--ink)] outline-none transition focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20 disabled:opacity-50"
           />
+        </div>
+
+        <div className="mt-5 border-t border-[var(--line)] pt-5">
+          <Toggle
+            checked={!!config.gpsOnly}
+            onChange={(checked) => save({ gpsOnly: checked })}
+            disabled={loading || saving}
+            label="Limiter aux clients sur place (GPS)"
+            hint="Empêche les commandes factices en exigeant que le client soit physiquement au restaurant."
+          />
+          {config.gpsOnly && (
+            <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <p className="text-sm text-zinc-600 mb-3">
+                Pour vérifier que le client est sur place, nous devons connaître la position GPS exacte de votre établissement.
+              </p>
+              
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Latitude</label>
+                  <input 
+                    type="number" step="any"
+                    value={config.gpsLat ?? ''}
+                    onChange={(e) => setConfig({...config, gpsLat: e.target.value ? parseFloat(e.target.value) : null})}
+                    onBlur={() => save({ gpsLat: config.gpsLat })}
+                    disabled={loading || saving}
+                    placeholder="Ex: 48.8566"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Longitude</label>
+                  <input 
+                    type="number" step="any"
+                    value={config.gpsLng ?? ''}
+                    onChange={(e) => setConfig({...config, gpsLng: e.target.value ? parseFloat(e.target.value) : null})}
+                    onBlur={() => save({ gpsLng: config.gpsLng })}
+                    disabled={loading || saving}
+                    placeholder="Ex: 2.3522"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  if ('geolocation' in navigator) {
+                    setSaving(true)
+                    navigator.geolocation.getCurrentPosition(
+                      (position) => {
+                        save({ gpsLat: position.coords.latitude, gpsLng: position.coords.longitude })
+                      },
+                      (error) => {
+                        setSaving(false)
+                        console.error("GPS error", error)
+                        alert("Impossible d'obtenir votre position. Assurez-vous d'avoir autorisé l'accès au GPS.")
+                      },
+                      { enableHighAccuracy: true }
+                    )
+                  } else {
+                    alert("La géolocalisation n'est pas supportée par votre navigateur.")
+                  }
+                }}
+                disabled={loading || saving}
+                className="w-full flex justify-center items-center gap-2 rounded-lg bg-white border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100"
+              >
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.242-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Définir ma position actuelle
+              </button>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -229,7 +326,7 @@ export default function OrderingSettings({ onChange }: { onChange?: (c: Ordering
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {buildTableNumbers(config.tables).map((n) => (
-              <TableQr key={n} n={n} url={origin && slug ? `${origin}/${slug}?s=${config.qrKey}&t=${n}` : ''} />
+              <TableQr key={n} n={n} url={tableTargets.find((target) => target.table === n)?.url || ''} />
             ))}
           </div>
         </Card>

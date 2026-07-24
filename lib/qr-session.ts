@@ -42,6 +42,14 @@ export function orderScanCookieName(businessId: string): string {
   return `ord_${businessId}`
 }
 
+/** Table QR URLs carry this derived key, never the business-wide ordering key. */
+export function tableOrderQrKey(orderingKey: string, table: number): string {
+  return crypto
+    .createHmac('sha256', `${SECRET}:${orderingKey}`)
+    .update(`table-order:${table}`)
+    .digest('base64url')
+}
+
 /** A fresh random key to embed in the QR (URL-safe, unambiguous, ~107 bits). */
 export function newQrKey(): string {
   const bytes = crypto.randomBytes(20)
@@ -60,6 +68,37 @@ function sign(businessId: string, qrKey: string, issuedAt: number): string {
 /** Mint a cookie value tying a scan to (business, current key, now). */
 export function signScan(businessId: string, qrKey: string, issuedAt: number): string {
   return `${issuedAt}.${sign(businessId, qrKey, issuedAt)}`
+}
+
+function signOrderScanValue(businessId: string, qrKey: string, table: number, issuedAt: number): string {
+  return crypto
+    .createHmac('sha256', `${SECRET}:${qrKey}`)
+    .update(`${businessId}.${table}.${issuedAt}`)
+    .digest('base64url')
+}
+
+/** A table-ordering session is signed for exactly one table. */
+export function signOrderScan(businessId: string, qrKey: string, table: number, issuedAt: number): string {
+  return `${table}.${issuedAt}.${signOrderScanValue(businessId, qrKey, table, issuedAt)}`
+}
+
+/** Returns the signed table number, or null for an invalid/expired session. */
+export function verifyOrderScan(
+  value: string | undefined,
+  businessId: string,
+  qrKey: string,
+  ttlMin: number,
+  maxTables: number
+): number | null {
+  if (!value || !qrKey) return null
+  const [tableRaw, issuedRaw, signature] = value.split('.')
+  const table = Number(tableRaw)
+  const issuedAt = Number(issuedRaw)
+  if (!Number.isInteger(table) || table < 1 || table > maxTables || !Number.isFinite(issuedAt) || !signature) return null
+  const expected = signOrderScanValue(businessId, qrKey, table, issuedAt)
+  if (signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null
+  const ageMin = (Date.now() - issuedAt) / 60000
+  return ageMin >= 0 && ageMin <= ttlMin ? table : null
 }
 
 /** True when `value` is authentic for the CURRENT qrKey and within ttlMin. */

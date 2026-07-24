@@ -8,6 +8,11 @@ import Design2 from '@/components/menu/designs/Design2'
 import Design6 from '@/components/menu/designs/Design6'
 import Design11 from '@/components/menu/designs/Design11'
 import Design12 from '@/components/menu/designs/Design12'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 const designs = {
   '1': Design1,

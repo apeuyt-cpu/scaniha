@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function Post() {
   const articleSchema = {
     '@context': 'https://schema.org',
-    '@type': 'Article',
+    '@type': 'BlogPosting',
     headline: 'Comment créer un menu QR pour votre restaurant — Guide étape par étape',
     description: 'Apprenez à créer un menu QR pour votre restaurant étape par étape. De l’inscription à l’impression des codes QR, ce guide complet vous accompagne à chaque étape.',
     image: 'https://scaniha.com/og-scaniha.jpg',

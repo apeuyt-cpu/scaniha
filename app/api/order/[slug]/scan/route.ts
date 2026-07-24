@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadOrderingGate } from '@/lib/db/ordering'
-import { orderScanCookieName, signScan } from '@/lib/qr-session'
+import { orderScanCookieName, signOrderScan, tableOrderQrKey } from '@/lib/qr-session'
+import { isNetworkAllowed } from '@/lib/order-network'
+import { clientIp } from '@/lib/api/client-ip'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,15 +17,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const { slug } = await params
   const body = await req.json().catch(() => ({}))
   const key = typeof body.key === 'string' ? body.key : ''
+  const table = Number(body.table)
 
   const gate = await loadOrderingGate(slug)
   if (!gate || !gate.enabled || !gate.qrKey) return NextResponse.json({ ok: true, gated: false })
-  if (!key || key !== gate.qrKey) return NextResponse.json({ ok: false, gated: true }, { status: 200 })
+  if (gate.wifiOnly && !isNetworkAllowed(clientIp(req), gate.wifiCidrs)) {
+    return NextResponse.json({ ok: false, gated: true, networkRequired: true }, { status: 403 })
+  }
+  const expectedKey = Number.isInteger(table) && table >= 1 && table <= gate.tables
+    ? tableOrderQrKey(gate.qrKey, table)
+    : ''
+  if (!key || !expectedKey || key !== expectedKey) return NextResponse.json({ ok: false, gated: true }, { status: 200 })
 
   const res = NextResponse.json({ ok: true, gated: true, ttlMin: gate.ttlMin })
   res.cookies.set({
     name: orderScanCookieName(gate.businessId),
-    value: signScan(gate.businessId, gate.qrKey, Date.now()),
+    value: signOrderScan(gate.businessId, gate.qrKey, table, Date.now()),
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

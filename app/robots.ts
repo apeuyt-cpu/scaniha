@@ -3,26 +3,11 @@ import { MetadataRoute } from 'next'
 export default function robots(): MetadataRoute.Robots {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://scaniha.com'
 
-  const publicPaths = [
-    '/',
-    '/pricing',
-    '/faq',
-    '/features',
-    '/about',
-    '/security',
-    '/resources',
-    '/compare/',
-    '/qr-menu-for-restaurants',
-    '/digital-menu-builder',
-    '/restaurant-qr-code-menu',
-    '/online-menu-for-restaurants',
-    '/free-qr-menu',
-    '/cafe-digital-menu',
-    '/blog',
-    '/contact',
-    '/llms.txt',
+  const privatePaths = [
+    '/admin/', '/super-admin/', '/api/', '/login', '/signup', '/forgot-password',
+    '/welcome', '/portefeuille', '/menu/', '/menu-designs/', '/upload-demo/',
+    '/*/commande/', '/*/fidelite', '/*/jeu', '/*/profil',
   ]
-  const sensitive = ['/admin/', '/super-admin/', '/api/', '/upload-demo/']
 
   // Generative-engine / AI crawlers — explicitly WELCOMED so Scaniha can be found
   // and cited by ChatGPT, Perplexity, Claude, Gemini, Copilot, etc. (GEO).
@@ -37,9 +22,10 @@ export default function robots(): MetadataRoute.Robots {
 
   return {
     rules: [
-      { userAgent: '*', allow: publicPaths, disallow: sensitive },
-      // Let AI engines read everything public (full site), not just the list above.
-      { userAgent: aiCrawlers, allow: '/', disallow: sensitive },
+      { userAgent: '*', allow: '/', disallow: privatePaths },
+      // Explicitly welcome AI search crawlers while preserving the same private
+      // boundaries as conventional crawlers.
+      { userAgent: aiCrawlers, allow: '/', disallow: privatePaths },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
     host: baseUrl,

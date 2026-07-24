@@ -92,21 +92,52 @@ export function getMenuCached(businessId: string, slug: string) {
   )()
 }
 
-async function fetchActiveBusinessesPublic(): Promise<Array<{ slug: string; created_at: string | null }>> {
+export interface IndexableBusiness {
+  slug: string
+  created_at: string | null
+  logo_url: string | null
+}
+
+/**
+ * Keep low-quality, private-looking and placeholder menus out of search.  This
+ * is deliberately conservative: a menu must be live, paid/within its active
+ * period and have at least one published item before it can enter the sitemap.
+ */
+export function isIndexableBusinessCandidate(input: {
+  slug?: string | null
+  name?: string | null
+  status?: string | null
+  expires_at?: string | null
+}): boolean {
+  const slug = String(input.slug || '').trim().toLowerCase()
+  const name = String(input.name || '').trim().toLowerCase()
+  const placeholder = /(^|[-_\s])(test|demo|preview|draft|private|deleted)([-_\s]|$)/
+
+  return Boolean(slug && name && input.status === 'active') &&
+    !placeholder.test(slug) &&
+    !placeholder.test(name) &&
+    (!input.expires_at || new Date(input.expires_at).getTime() > Date.now())
+}
+
+async function fetchActiveBusinessesPublic(): Promise<IndexableBusiness[]> {
   const supabase = await createPublicClient()
   const now = new Date().toISOString()
   const { data, error } = await supabase
     .from('businesses')
-    .select('slug, created_at')
+    // Inner joins are intentional: a restaurant is not useful in a search
+    // result until it has a real category containing at least one menu item.
+    .select('slug, name, status, expires_at, created_at, logo_url, categories!inner(items!inner(id))')
     .eq('status', 'active')
     .or(`expires_at.is.null,expires_at.gt.${now}`)
     .order('created_at', { ascending: false })
   if (error) return []
-  return (data || []) as Array<{ slug: string; created_at: string | null }>
+  return ((data || []) as any[])
+    .filter(isIndexableBusinessCandidate)
+    .map(({ slug, created_at, logo_url }) => ({ slug, created_at, logo_url }))
 }
 
 /** Cached active-business list for the sitemap (low-churn → 1 h TTL). */
-export function getActiveBusinessesCached(): Promise<Array<{ slug: string; created_at: string | null }>> {
+export function getActiveBusinessesCached(): Promise<IndexableBusiness[]> {
   return unstable_cache(
     fetchActiveBusinessesPublic,
     ['active-businesses'],
@@ -249,7 +280,7 @@ export async function getBusinessWithCategoriesAndItems(businessId: string) {
   return categories
 }
 
-export async function getActiveBusinesses(): Promise<Array<{ slug: string; created_at: string | null }>> {
+export async function getActiveBusinesses(): Promise<IndexableBusiness[]> {
   const supabase = await createServerClient()
   const now = new Date().toISOString()
 
@@ -258,7 +289,7 @@ export async function getActiveBusinesses(): Promise<Array<{ slug: string; creat
   // (selecting a missing column errors and silently drops every menu from the sitemap).
   const { data, error } = await supabase
     .from('businesses')
-    .select('slug, created_at')
+    .select('slug, name, status, expires_at, created_at, logo_url, categories!inner(items!inner(id))')
     .eq('status', 'active')
     .or(`expires_at.is.null,expires_at.gt.${now}`)
     .order('created_at', { ascending: false })
@@ -266,7 +297,9 @@ export async function getActiveBusinesses(): Promise<Array<{ slug: string; creat
   if (error) {
     return []
   }
-  return (data || []) as Array<{ slug: string; created_at: string | null }>
+  return ((data || []) as any[])
+    .filter(isIndexableBusinessCandidate)
+    .map(({ slug, created_at, logo_url }) => ({ slug, created_at, logo_url }))
 }
 
 export async function getAllBusinesses() {

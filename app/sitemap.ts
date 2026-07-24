@@ -1,154 +1,67 @@
 import { MetadataRoute } from 'next'
 import { getActiveBusinessesCached } from '@/lib/db/business'
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://scaniha.com'
-  
-  const businesses = await getActiveBusinessesCached()
-  
-  const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/pricing`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/faq`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/features`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/about`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/security`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/resources`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/signup`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/blog`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/qr-menu-for-restaurants`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/digital-menu-builder`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/restaurant-qr-code-menu`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/online-menu-for-restaurants`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/free-qr-menu`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/cafe-digital-menu`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.7,
-    },
-    // Competitor comparison pages (generateStaticParams in app/compare/[competitor]).
-    ...['menulog', 'qrmenu', 'menuly', 'restomenu', 'gloriafood', 'mryum', 'finedine', 'linktree'].map((c) => ({
-      url: `${baseUrl}/compare/${c}`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.6,
-    })),
-    {
-      url: `${baseUrl}/blog/how-to-create-qr-menu-for-restaurant`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/blog/benefits-of-digital-menus`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/blog/qr-code-best-practices-restaurants`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/blog/digital-menu-vs-paper-menu`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/blog/contactless-dining-future`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-  ]
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://scaniha.com').replace(/\/$/, '')
+const OG_IMAGE = `${SITE_URL}/og-scaniha.jpg`
 
-  const businessPages: MetadataRoute.Sitemap = businesses.map((business) => ({
-    url: `${baseUrl}/${business.slug}`,
-    lastModified: business.created_at ? new Date(business.created_at) : new Date(),
-    changeFrequency: 'weekly' as const,
-    priority: 0.8,
+const marketingPages = [
+  ['/', 'daily', 1],
+  ['/pricing', 'weekly', 0.9],
+  ['/faq', 'weekly', 0.9],
+  ['/features', 'weekly', 0.8],
+  ['/about', 'monthly', 0.7],
+  ['/security', 'monthly', 0.6],
+  ['/resources', 'weekly', 0.6],
+  ['/blog', 'weekly', 0.8],
+  ['/contact', 'monthly', 0.5],
+  ['/developers', 'monthly', 0.5],
+  ['/qr-menu-for-restaurants', 'weekly', 0.8],
+  ['/digital-menu-builder', 'weekly', 0.8],
+  ['/restaurant-qr-code-menu', 'weekly', 0.7],
+  ['/online-menu-for-restaurants', 'weekly', 0.7],
+  ['/free-qr-menu', 'weekly', 0.7],
+  ['/cafe-digital-menu', 'weekly', 0.7],
+] as const
+
+const blogPosts = [
+  ['how-to-create-qr-menu-for-restaurant', '2026-01-15'],
+  ['benefits-of-digital-menus', '2026-01-22'],
+  ['qr-code-best-practices-restaurants', '2026-02-05'],
+  ['digital-menu-vs-paper-menu', '2026-02-19'],
+  ['contactless-dining-future', '2026-03-01'],
+] as const
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const businesses = await getActiveBusinessesCached()
+  const staticPages: MetadataRoute.Sitemap = marketingPages.map(([path, changeFrequency, priority]) => ({
+    url: `${SITE_URL}${path}`,
+    changeFrequency,
+    priority,
+    images: [OG_IMAGE],
   }))
 
-  return [...staticPages, ...businessPages]
-}
+  const comparisonPages: MetadataRoute.Sitemap = ['menulog', 'qrmenu', 'menuly', 'restomenu', 'gloriafood', 'mryum', 'finedine', 'linktree'].map((competitor) => ({
+    url: `${SITE_URL}/compare/${competitor}`,
+    changeFrequency: 'monthly',
+    priority: 0.5,
+    images: [OG_IMAGE],
+  }))
 
+  const articlePages: MetadataRoute.Sitemap = blogPosts.map(([slug, publishedAt]) => ({
+    url: `${SITE_URL}/blog/${slug}`,
+    lastModified: new Date(`${publishedAt}T00:00:00.000Z`),
+    changeFrequency: 'monthly',
+    priority: 0.6,
+    images: [OG_IMAGE],
+  }))
+
+  const businessPages: MetadataRoute.Sitemap = businesses.map((business) => ({
+    url: `${SITE_URL}/${business.slug}`,
+    ...(business.created_at && { lastModified: new Date(business.created_at) }),
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+    ...(business.logo_url && { images: [business.logo_url] }),
+  }))
+
+  return [...staticPages, ...comparisonPages, ...articlePages, ...businessPages]
+}

@@ -6,7 +6,7 @@ import type { Order, OrderItemInput, OrderStatus } from '@/lib/orders'
  * SERVER-ONLY: the business id + ordering presence gate (qrKey/ttl) for a slug.
  * The qrKey never leaves the server — it's used only to verify the scan cookie.
  */
-export async function loadOrderingGate(slug: string): Promise<{ businessId: string; enabled: boolean; qrKey: string; ttlMin: number } | null> {
+export async function loadOrderingGate(slug: string): Promise<{ businessId: string; enabled: boolean; qrKey: string; ttlMin: number; tables: number; wifiOnly: boolean; wifiCidrs: string[]; gpsOnly: boolean; gpsLat: number | null; gpsLng: number | null; gpsRadius: number } | null> {
   try {
     const supabase: any = await createServiceRoleClient()
     const { data: business } = await supabase
@@ -17,7 +17,7 @@ export async function loadOrderingGate(slug: string): Promise<{ businessId: stri
       .maybeSingle()
     if (!business) return null
     const o = orderingConfig(business)
-    return { businessId: business.id, enabled: o.enabled, qrKey: o.qrKey, ttlMin: o.ttlMin }
+    return { businessId: business.id, enabled: o.enabled, qrKey: o.qrKey, ttlMin: o.ttlMin, tables: o.tables, wifiOnly: o.wifiOnly, wifiCidrs: o.wifiCidrs, gpsOnly: o.gpsOnly || false, gpsLat: o.gpsLat ?? null, gpsLng: o.gpsLng ?? null, gpsRadius: o.gpsRadius || 100 }
   } catch {
     return null
   }

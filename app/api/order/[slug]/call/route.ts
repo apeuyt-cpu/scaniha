@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loadOrderingGate, createServiceCall, type ServiceCallKind } from '@/lib/db/ordering'
-import { orderScanCookieName, verifyScan } from '@/lib/qr-session'
+import { orderScanCookieName, verifyOrderScan } from '@/lib/qr-session'
 import { checkRateLimit } from '@/lib/api/rate-limit'
 import { clientIp } from '@/lib/api/client-ip'
+import { isNetworkAllowed } from '@/lib/order-network'
 
 export const runtime = 'nodejs'
 
@@ -20,13 +21,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ ok: false, error: 'Service indisponible.' }, { status: 404 })
   }
 
+  const ip = clientIp(req)
+  if (gate.wifiOnly && !isNetworkAllowed(ip, gate.wifiCidrs)) {
+    return NextResponse.json({ ok: false, networkRequired: true, error: 'Connectez-vous au Wi-Fi du café.' }, { status: 403 })
+  }
   const cookie = req.cookies.get(orderScanCookieName(gate.businessId))?.value
-  if (!verifyScan(cookie, gate.businessId, gate.qrKey, gate.ttlMin)) {
+  const trustedTable = verifyOrderScan(cookie, gate.businessId, gate.qrKey, gate.ttlMin, gate.tables)
+  if (!trustedTable) {
     return NextResponse.json({ ok: false, rescanRequired: true, error: 'Scannez le QR de votre table.' }, { status: 403 })
   }
 
-  const ip = clientIp(req)
-  const rl = checkRateLimit('call:' + ip + ':' + slug, { perMinute: 6, perDay: 200 })
+  const rl = checkRateLimit(`call:${gate.businessId}:${trustedTable}:${ip}`, { perMinute: 3, perDay: 30 })
   if (!rl.ok) {
     return NextResponse.json({ ok: false, error: 'Patientez un instant avant de rappeler.' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } })
   }
@@ -38,7 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ ok: false, error: 'Numéro de table manquant.' }, { status: 400 })
   }
 
-  const res = await createServiceCall(gate.businessId, table, kind)
+  const res = await createServiceCall(gate.businessId, String(trustedTable), kind)
   if (!res.ok) return NextResponse.json({ ok: false, error: 'Service momentanément indisponible.' }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
